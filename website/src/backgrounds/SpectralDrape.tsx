@@ -135,7 +135,7 @@ void main() {
   float vis = smoothstep(0.1, 0.72, H);
   float crest = smoothstep(0.62, 1.0, H);
   float drift = uTime / uCycle;
-  vec3 base = palette(drift + aUV.x * 0.12 + aUV.y * 0.08);
+  vec3 base = palette(drift + aUV.x * 0.24 + aUV.y * 0.1);
   vec3 col = mix(base * 1.15, uHi, crest * 0.55);
   col = mix(col, base, uColorShift * flank * 0.6);
   vColor = col;
@@ -158,8 +158,8 @@ void main() {
   outColor = vec4(vColor * k, k);
 }`;
 
-/** Nosy Notch's agent colours, softened: Claude orange, a rose, violet, Codex blue, a teal. */
-export const NOSY_PALETTE = ["#E0896A", "#DC6F9C", "#8F7CFF", "#6C9BFF", "#56C4C0"];
+/** Electric indigo → violet → magenta → sunset orange, and back through violet. */
+export const DRAPE_PALETTE = ["#5B4BFF", "#9A45FF", "#F0479B", "#FF8A50", "#C24DFF"];
 
 function hexToRgb(hex: string): [number, number, number] {
   const h = hex.replace("#", "");
@@ -341,11 +341,11 @@ export default function SpectralDrape(props: SpectralDrapeProps) {
       mouse.px += (mouse.tpx - mouse.px) * kp;
       mouse.py += (mouse.tpy - mouse.py) * kp;
 
-      const palette = (p.palette ?? NOSY_PALETTE).slice(0, 6);
+      const palette = (p.palette ?? DRAPE_PALETTE).slice(0, 6);
       const pal = palette.flatMap(hexToRgb);
       gl.uniform3fv(U.uPal, new Float32Array([...pal, ...new Array(18 - pal.length).fill(0)]));
       gl.uniform1i(U.uPalN, palette.length);
-      gl.uniform3fv(U.uHi, hexToRgb(p.highlight ?? "#F4EEFF"));
+      gl.uniform3fv(U.uHi, hexToRgb(p.highlight ?? "#F1E8FF"));
       gl.uniform1f(U.uTime, t * speed);
       gl.uniform1f(U.uFlow, flow);
       gl.uniform1f(U.uAspect, w / h);
@@ -353,7 +353,7 @@ export default function SpectralDrape(props: SpectralDrapeProps) {
       gl.uniform1f(U.uFreq, p.frequency ?? 1);
       gl.uniform1f(U.uThick, p.thickness ?? 0.7);
       gl.uniform1f(U.uDepth, p.depth ?? 1);
-      gl.uniform1f(U.uStrands, Math.max(1, Math.min(12, p.strands ?? 8)));
+      gl.uniform1f(U.uStrands, Math.max(1, Math.min(12, p.strands ?? 10)));
       gl.uniform1f(U.uSeed, p.seed ?? 3);
       gl.uniform1f(U.uZoom, p.zoom ?? 1);
       gl.uniform1f(U.uPx, spacing * scale * 0.36 * (p.dotSize ?? 1));

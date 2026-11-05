@@ -3,7 +3,6 @@ import { useEffect, useState } from "react";
 export const REPO = "ddkbs/nosynotch";
 export const REPO_URL = `https://github.com/${REPO}`;
 export const RELEASES_URL = `${REPO_URL}/releases/latest`;
-export const CHANGELOG_URL = `${REPO_URL}/releases`;
 export const INSTALL_COMMAND = "npx nosynotch";
 
 export type RepoInfo = {
@@ -50,7 +49,6 @@ export function formatStars(n: number): string {
 /** Pages ask the install notch to open through this event (hero button, nav notch). */
 export const OPEN_INSTALL = "nosy:open-install";
 export function openInstall() {
-  document.getElementById("install")?.scrollIntoView({ behavior: "smooth", block: "center" });
   window.dispatchEvent(new Event(OPEN_INSTALL));
 }
 
