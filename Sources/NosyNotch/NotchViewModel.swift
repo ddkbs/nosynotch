@@ -72,6 +72,9 @@ final class NotchViewModel: ObservableObject {
     }
 
     private var flashWork: DispatchWorkItem?
+    /// When the current "needs you" card opened – a card with Allow / Deny closes after `approvalCardSeconds`.
+    private var attentionSince: Date?
+    static let approvalCardSeconds: TimeInterval = 30
     private var quietWork: DispatchWorkItem?
 
     init(store: SessionStore, media: NowPlaying, approvals: ApprovalCenter? = nil, usage: UsageStore? = nil) {
@@ -181,6 +184,7 @@ final class NotchViewModel: ObservableObject {
             celebration = nil
             failure = nil
             attention = session
+            attentionSince = Date()
             shakes += 1
             flash(for: Preferences.notificationSeconds)
         case .failed(let session):
@@ -299,8 +303,13 @@ final class NotchViewModel: ObservableObject {
         let work = DispatchWorkItem { [weak self] in
             MainActor.assumeIsolated {
                 guard let self else { return }
-                // Keep Allow / Deny on screen while the request is open.
-                if self.attentionApproval != nil { return self.flash(for: 2) }
+                // Keep Allow / Deny on screen for a while, then fold away and leave the question to the
+                // agent's own prompt (the compact notch keeps its amber bubble).
+                if let approval = self.attentionApproval {
+                    let open = Date().timeIntervalSince(self.attentionSince ?? .distantPast)
+                    if open < Self.approvalCardSeconds { return self.flash(for: min(2, Self.approvalCardSeconds - open)) }
+                    self.approvals.release(approval.id)
+                }
                 self.endFlash()
             }
         }
