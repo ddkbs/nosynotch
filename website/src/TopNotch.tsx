@@ -273,6 +273,63 @@ function Pill({ children, onClick, href, kind = "quiet" }: { children: ReactNode
   );
 }
 
+type Step = { keys: string[]; label: string };
+const COPY_STEPS: Step[] = [
+  { keys: ["⌘", "Space"], label: "type Terminal" },
+  { keys: ["⌘", "V"], label: "paste" },
+  { keys: ["↵"], label: "done" },
+];
+const DOWNLOAD_STEPS: Step[] = [
+  { keys: ["⇧", "⌘", "L"], label: "open Downloads" },
+  { keys: ["drag"], label: "to Applications" },
+  { keys: ["open"], label: "Nosy Notch" },
+];
+
+/** ① ② ③: what to do next, with key caps; a soft highlight walks through the steps. */
+function Steps({ steps }: { steps: Step[] }) {
+  const [active, setActive] = useState(0);
+  useEffect(() => {
+    const id = setInterval(() => setActive((a) => (a + 1) % steps.length), 1400);
+    return () => clearInterval(id);
+  }, [steps.length]);
+  return (
+    <div className="mt-3 grid grid-cols-3 gap-1.5 max-sm:grid-cols-1">
+      {steps.map((st, i) => (
+        <motion.div
+          key={st.label}
+          initial={{ opacity: 0, y: 6 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.25 + i * 0.12, type: "spring", stiffness: 224, damping: 22.1 }}
+          className={`flex flex-col gap-1.5 rounded-xl px-2.5 py-2 transition-colors duration-500 ${
+            active === i ? "bg-white/[0.09]" : "bg-white/[0.035]"
+          }`}
+        >
+          <span className="flex items-center gap-2">
+          <span
+            className={`grid size-[18px] shrink-0 place-items-center rounded-full border text-[10.5px] font-semibold transition-colors duration-500 ${
+              active === i ? "border-success bg-success/15 text-success" : "border-white/25 text-white/60"
+            }`}
+          >
+            {i + 1}
+          </span>
+          <span className="flex items-center gap-1">
+            {st.keys.map((k) => (
+              <kbd
+                key={k}
+                className="min-w-[20px] rounded-[5px] border border-white/15 bg-white/[0.08] px-1 py-px text-center font-sans text-[11px] font-medium text-white/90 shadow-[0_1.5px_0_rgba(255,255,255,0.12)]"
+              >
+                {k}
+              </kbd>
+            ))}
+          </span>
+          </span>
+          <span className="truncate pl-[26px] text-[11.5px] text-white/55">{st.label}</span>
+        </motion.div>
+      ))}
+    </div>
+  );
+}
+
 /**
  * The site's own notch, behaving like the app: compact at rest, open the moment the pointer is
  * over it (its rect plus 6 pt), closed the moment it leaves, on the app's spring, with the app's
@@ -393,8 +450,6 @@ export function TopNotch() {
       denied: [2600, "idle"],
       wake: [1500, "idle"],
       thanks: [3200, "idle"],
-      copied: [3200, "star"],
-      download: [3600, "star"],
     };
     const a = after[stage];
     if (!a) return;
@@ -445,8 +500,8 @@ export function TopNotch() {
     sleep: { w: COMPACT_W, h: H, t: 6, b: 12, glow: "#A78BFA", o: 0 },
     wake: { w: COMPACT_W, h: H, t: 6, b: 12, glow: "#A78BFA", o: 0.45 },
     open: { w: wide, h: H + (narrow ? 308 : 202), t: 14, b: 26, glow: "#000000", o: 0 },
-    copied: { w: wide, h: H + 104, t: 14, b: 26, glow: "#4ADE80", o: 0.55 },
-    download: { w: wide, h: H + 104, t: 14, b: 26, glow: "#4ADE80", o: 0.55 },
+    copied: { w: wide, h: H + (narrow ? 290 : 196), t: 14, b: 26, glow: "#4ADE80", o: 0.55 },
+    download: { w: wide, h: H + (narrow ? 290 : 196), t: 14, b: 26, glow: "#4ADE80", o: 0.55 },
     star: { w: wide, h: H + 88 + 40, t: 14, b: 26, glow: "#FFD45A", o: 0.55 },
     thanks: { w: wide, h: H + 88, t: 14, b: 26, glow: "#FFD45A", o: 0.55 },
     denied: { w: wide, h: H + 88, t: 14, b: 26, glow: "#F87171", o: 0.55 },
@@ -570,20 +625,35 @@ export function TopNotch() {
             {(stage === "copied" || stage === "download") &&
               card(
                 "done",
-                <div className="flex items-center gap-4 pt-0.5">
-                  <DrawnCheck size={46} />
-                  <span className="min-w-0">
-                    <span className="flex items-center gap-1.5">
-                      <span className="text-[17px] font-semibold">{stage === "copied" ? "Copied" : "Downloading"}</span>
-                      <span className="text-[13px] font-medium text-success">nosynotch</span>
+                <>
+                  <button
+                    type="button"
+                    onClick={close}
+                    aria-label="Close"
+                    className="cursor-target absolute right-3.5 top-1 grid size-[18px] place-items-center rounded-full bg-white/10 text-[9px] text-white/60 hover:bg-white/20 hover:text-white"
+                  >
+                    ✕
+                  </button>
+                  <div className="flex items-center gap-3.5">
+                    <DrawnCheck size={40} />
+                    <span className="min-w-0">
+                      <span className="flex items-center gap-1.5">
+                        <span className="text-[17px] font-semibold">{stage === "copied" ? "Copied" : "Downloading"}</span>
+                        <span className="text-[13px] font-medium text-success">{stage === "copied" ? INSTALL_COMMAND : "Nosy Notch.app"}</span>
+                      </span>
+                      <span className="mt-0.5 block text-[12px] text-white/60">
+                        {stage === "copied" ? "Three keys and it's watching:" : "Almost there:"}
+                      </span>
                     </span>
-                    <span className="mt-0.5 block text-[12px] leading-snug text-white/75">
-                      {stage === "copied"
-                        ? "Paste it into Terminal. It installs, connects your agents and starts watching."
-                        : "Unpack it, move it to Applications and open it. Settings → Agents does the rest."}
-                    </span>
-                  </span>
-                </div>,
+                  </div>
+                  <Steps steps={stage === "copied" ? COPY_STEPS : DOWNLOAD_STEPS} />
+                  <div className="mt-3 flex items-center justify-between border-t border-white/[0.08] pt-2.5 text-[11.5px] text-white/45">
+                    <span>While it installs…</span>
+                    <Pill kind="gold" href={REPO_URL} onClick={starred}>
+                      <StarIcon className="size-3" /> Star on GitHub {stars ? <span className="font-mono text-[11px] text-black/50">{formatStars(stars)}</span> : null}
+                    </Pill>
+                  </div>
+                </>,
               )}
 
             {stage === "star" &&
