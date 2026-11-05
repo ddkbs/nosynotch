@@ -292,7 +292,7 @@ struct CelebrationView: View {
     }
 
     private func summaryFallback(_ s: Session) -> String {
-        s.toolCount > 0 ? "\(s.toolCount) Tool-Aufrufe – Claude wartet auf deine nächste Nachricht." : "Claude wartet auf deine nächste Nachricht."
+        s.toolCount > 0 ? "\(Format.toolCalls(s.toolCount)) – Claude wartet auf deine nächste Nachricht." : "Claude wartet auf deine nächste Nachricht."
     }
 }
 

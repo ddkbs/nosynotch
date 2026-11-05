@@ -136,7 +136,7 @@ struct Session: Identifiable, Equatable {
         case .waiting(let message), .error(let message): return message
         case .done:
             var parts: [String] = []
-            if toolCount > 0 { parts.append("\(toolCount) Tool-Aufrufe") }
+            if toolCount > 0 { parts.append(Format.toolCalls(toolCount)) }
             if let d = lastTurnDuration { parts.append(Format.duration(d)) }
             return parts.isEmpty ? nil : parts.joined(separator: " · ")
         default: return nil
@@ -201,6 +201,10 @@ enum APIErrorText {
 }
 
 enum Format {
+    static func toolCalls(_ n: Int) -> String {
+        n == 1 ? "1 Tool-Aufruf" : "\(n) Tool-Aufrufe"
+    }
+
     static func duration(_ t: TimeInterval) -> String {
         let s = max(0, Int(t.rounded()))
         if s < 60 { return "\(s)s" }
