@@ -264,6 +264,10 @@ struct SessionRow: View {
 
             Spacer(minLength: 8)
 
+            if Preferences.contextEnabled, let context = session.contextPercent {
+                ContextRing(percent: context)
+            }
+
             if hovering {
                 Button(action: onDismiss) {
                     Image(systemName: "xmark.circle.fill")
@@ -573,6 +577,36 @@ struct NotchButton: View {
         .buttonStyle(.plain)
         .onHover { hovering = $0 }
         .animation(.easeOut(duration: 0.12), value: hovering)
+    }
+}
+
+/// A small ring showing how full a session's context window is ("72% context").
+struct ContextRing: View {
+    let percent: Double
+
+    private var color: Color {
+        switch percent {
+        case ..<60: return .white.opacity(0.55)
+        case ..<85: return Theme.amber
+        default: return Theme.danger
+        }
+    }
+
+    var body: some View {
+        HStack(spacing: 5) {
+            ZStack {
+                Circle().stroke(.white.opacity(0.12), lineWidth: 2.5)
+                Circle()
+                    .trim(from: 0, to: percent / 100)
+                    .stroke(color, style: StrokeStyle(lineWidth: 2.5, lineCap: .round))
+                    .rotationEffect(.degrees(-90))
+            }
+            .frame(width: 13, height: 13)
+            Text("\(Int(percent.rounded()))%")
+                .font(.system(size: 10, weight: .medium, design: .monospaced))
+                .foregroundStyle(.white.opacity(0.5))
+        }
+        .animation(.easeOut(duration: 0.4), value: percent)
     }
 }
 

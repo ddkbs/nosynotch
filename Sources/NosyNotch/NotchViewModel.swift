@@ -104,7 +104,7 @@ final class NotchViewModel: ObservableObject {
 
     /// Usage bars shown at the bottom of the hover view.
     var usageRows: [(agent: Agent, usage: AgentUsage)] {
-        Preferences.usageEnabled ? usage.rows : []
+        Preferences.usageEnabled ? usage.rows.filter { Preferences.showsUsage(for: $0.agent) } : []
     }
 
     /// Whether the hover view lists Claude sessions (always, unless there are none but music is playing).

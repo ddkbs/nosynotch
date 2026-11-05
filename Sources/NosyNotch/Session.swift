@@ -165,6 +165,8 @@ struct Session: Identifiable, Equatable {
     var waitingSince: Date?
     /// The 5-minute reminder for the current "done" / "waiting" already went off.
     var reminded = false
+    /// How full the context window is (0–100), when the agent tells us.
+    var contextPercent: Double?
 
     var isUnseen: Bool { unseenSince != nil }
 

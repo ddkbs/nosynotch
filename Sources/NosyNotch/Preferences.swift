@@ -14,6 +14,8 @@ enum Preferences {
         static let quietWhenFocused = "quietWhenFocused"
         static let usageEnabled = "usageEnabled"
         static let remindAfterFiveMinutes = "remindAfterFiveMinutes"
+        static let usageAgents = "usageAgents"
+        static let contextEnabled = "contextEnabled"
         static let mutedUntil = "mutedUntil"
         static let liveEqualizer = "liveEqualizer"
         static let port = "port"
@@ -38,6 +40,8 @@ enum Preferences {
             Key.quietWhenFocused: true,
             Key.usageEnabled: true,
             Key.remindAfterFiveMinutes: true,
+            Key.usageAgents: "all",
+            Key.contextEnabled: true,
             Key.liveEqualizer: false,
             Key.port: Int(EventServer.defaultPort),
         ])
@@ -86,6 +90,17 @@ enum Preferences {
     }
 
     static var isMuted: Bool { mutedUntil != nil }
+
+    /// Which agents' limits to show: "all", "claude" or "codex".
+    static var usageAgents: String { defaults.string(forKey: Key.usageAgents) ?? "all" }
+
+    static func showsUsage(for agent: Agent) -> Bool {
+        let choice = usageAgents
+        return choice == "all" || choice == agent.rawValue
+    }
+
+    /// Context-window fill ring per session in the hover list.
+    static var contextEnabled: Bool { defaults.object(forKey: Key.contextEnabled) as? Bool ?? true }
 
     /// Usage-limit bars in the hover view.
     static var usageEnabled: Bool { defaults.object(forKey: Key.usageEnabled) as? Bool ?? true }

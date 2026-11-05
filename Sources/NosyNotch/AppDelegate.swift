@@ -56,6 +56,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         startServer()
         setUpStatusItem()
         Notifier.requestAuthorizationIfNeeded()
+        usage.onContext = { [weak self] id, percent in self?.store.setContext(id, percent: percent) }
         if HookInstaller.Codex.isAvailable { usage.refreshCodex() }
 
         // First launch: open the settings so the one button that matters ("Connect Claude Code") is right there.
@@ -81,7 +82,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
                 self?.store.handle(event)
                 self?.approvals.observe(event)
                 if event.agent == .codex, ["SessionStart", "UserPromptSubmit", "Stop"].contains(event.name) {
-                    self?.usage.refreshCodex(transcriptPath: event.transcriptPath)
+                    self?.usage.refreshCodex(transcriptPath: event.transcriptPath, sessionID: event.sessionID)
                 }
             }
         }

@@ -181,6 +181,12 @@ final class SessionStore: ObservableObject {
         sessions[id] = s
     }
 
+    func setContext(_ id: String, percent: Double) {
+        guard var s = sessions[id], s.contextPercent != percent else { return }
+        s.contextPercent = min(max(percent, 0), 100)
+        sessions[id] = s
+    }
+
     func markAllSeen() {
         for s in sessions.values where s.isUnseen { markSeen(s.id) }
     }

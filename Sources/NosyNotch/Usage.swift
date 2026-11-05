@@ -58,10 +58,18 @@ final class UsageStore: ObservableObject {
 
     // MARK: - Claude Code (status line JSON)
 
+    /// Called with (session id, context fill 0–100) from Claude's status line and Codex's session files.
+    var onContext: ((String, Double) -> Void)?
+
     /// Body of `POST /usage`: the JSON Claude Code passes to its status line command.
     func ingestClaudeStatusLine(_ data: Data) {
-        guard let json = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any],
-              let limits = json["rate_limits"] as? [String: Any] else { return }
+        guard let json = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any] else { return }
+        if let id = json["session_id"] as? String,
+           let context = json["context_window"] as? [String: Any],
+           let used = Self.number(context["used_percentage"]) {
+            onContext?(id, used)
+        }
+        guard let limits = json["rate_limits"] as? [String: Any] else { return }
         func window(_ key: String) -> UsageWindow? {
             guard let w = limits[key] as? [String: Any], let used = Self.number(w["used_percentage"]) else { return nil }
             return UsageWindow(usedPercent: used, resetsAt: Self.date(w["resets_at"]))
@@ -72,13 +80,49 @@ final class UsageStore: ObservableObject {
 
     // MARK: - Codex (session files)
 
-    /// Reads the newest `rate_limits` entry from a Codex session file (or the newest one on disk).
-    func refreshCodex(transcriptPath: String? = nil) {
+    /// Reads the newest `rate_limits` entry (and the context fill of `sessionID`) from a Codex session file.
+    func refreshCodex(transcriptPath: String? = nil, sessionID: String? = nil) {
         reader.async { [weak self] in
             let url = transcriptPath.map { URL(fileURLWithPath: $0) } ?? Self.newestCodexSession()
-            guard let url, let usage = Self.codexUsage(in: url) else { return }
-            Task { @MainActor [weak self] in self?.set(usage, for: .codex) }
+            guard let url, let text = Self.tail(of: url) else { return }
+            let usage = Self.codexUsage(inText: text)
+            // Only the session's own file tells its context fill.
+            let context = sessionID == nil || transcriptPath == nil ? nil : Self.codexContext(inText: text)
+            Task { @MainActor [weak self] in
+                if let usage { self?.set(usage, for: .codex) }
+                if let sessionID, let context { self?.onContext?(sessionID, context) }
+            }
         }
+    }
+
+    private nonisolated static func tail(of url: URL, bytes: UInt64 = 512_000) -> String? {
+        guard let handle = try? FileHandle(forReadingFrom: url) else { return nil }
+        defer { try? handle.close() }
+        let size = (try? handle.seekToEnd()) ?? 0
+        try? handle.seek(toOffset: size > bytes ? size - bytes : 0)
+        guard let data = try? handle.readToEnd() else { return nil }
+        return String(decoding: data, as: UTF8.self)
+    }
+
+    /// Last `token_count` event: tokens of the latest request against the model's context window.
+    nonisolated static func codexContext(inText text: String) -> Double? {
+        for line in text.split(separator: "\n").reversed() where line.contains("\"model_context_window\"") {
+            guard let json = (try? JSONSerialization.jsonObject(with: Data(line.utf8))) as? [String: Any],
+                  let info = findKey("model_context_window", in: json) as? [String: Any],
+                  let window = number(info["model_context_window"]), window > 0,
+                  let last = info["last_token_usage"] as? [String: Any],
+                  let tokens = number(last["input_tokens"]) else { continue }
+            return min(100, tokens / window * 100)
+        }
+        return nil
+    }
+
+    /// The dictionary that contains `key` somewhere inside `object`.
+    private nonisolated static func findKey(_ key: String, in object: Any) -> Any? {
+        guard let dict = object as? [String: Any] else { return nil }
+        if dict[key] != nil { return dict }
+        for value in dict.values { if let found = findKey(key, in: value) { return found } }
+        return nil
     }
 
     nonisolated static func newestCodexSession() -> URL? {
@@ -101,13 +145,7 @@ final class UsageStore: ObservableObject {
     }
 
     /// `"rate_limits": {"primary": {"used_percent", "window_minutes", "resets_at"}, "secondary": {…}}`
-    nonisolated static func codexUsage(in url: URL) -> AgentUsage? {
-        guard let handle = try? FileHandle(forReadingFrom: url) else { return nil }
-        defer { try? handle.close() }
-        let size = (try? handle.seekToEnd()) ?? 0
-        try? handle.seek(toOffset: size > 512_000 ? size - 512_000 : 0)
-        guard let data = try? handle.readToEnd(), let text = String(data: data, encoding: .utf8) else { return nil }
-
+    nonisolated static func codexUsage(inText text: String) -> AgentUsage? {
         for line in text.split(separator: "\n").reversed() where line.contains("\"rate_limits\"") {
             guard let json = (try? JSONSerialization.jsonObject(with: Data(line.utf8))) as? [String: Any],
                   let limits = findRateLimits(in: json) else { continue }
