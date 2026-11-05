@@ -172,9 +172,10 @@ final class Recorder {
 
     static var scenes: [Scene] {
         let cwd = "/Users/you/Projects/nosynotch"
-        func ev(_ name: String, _ id: String = "rec", cwd: String = cwd, tool: String? = nil, input: [String: Any] = [:],
-                message: String? = nil, last: String? = nil, error: String? = nil, details: String? = nil) -> HookEvent {
-            HookEvent(name: name, sessionID: id, cwd: cwd, toolName: tool, toolInput: input, message: message,
+        func ev(_ name: String, _ id: String = "rec", agent: Agent = .claude, cwd: String = cwd, tool: String? = nil,
+                input: [String: Any] = [:], message: String? = nil, last: String? = nil, error: String? = nil,
+                details: String? = nil) -> HookEvent {
+            HookEvent(name: name, sessionID: id, agent: agent, cwd: cwd, toolName: tool, toolInput: input, message: message,
                       lastAssistantMessage: last, error: error, errorDetails: details)
         }
         let prompt = ev("UserPromptSubmit")
@@ -228,6 +229,20 @@ final class Recorder {
                          input: ["command": "npm run build", "description": "npm run build"])),
                 (0.0, ev("PostToolUse", "c", cwd: "/Users/you/Projects/website", tool: "Bash")),
                 (0.0, ev("Stop", "c", cwd: "/Users/you/Projects/website", last: "Build succeeded.")),
+            ]),
+            Scene(name: "codex", duration: 10, height: 200, hoverAt: 6.6, dismissFlashAt: 6.5, stillAt: 8.8, steps: [
+                (0.0, ev("UserPromptSubmit", "claude", cwd: "/Users/you/Projects/website")),
+                (0.0, ev("PreToolUse", "claude", cwd: "/Users/you/Projects/website", tool: "Bash",
+                         input: ["command": "npm run build", "description": "npm run build"])),
+                (0.3, ev("UserPromptSubmit", "cx", agent: .codex, cwd: "/Users/you/Projects/api-server")),
+                (1.6, ev("PreToolUse", "cx", agent: .codex, cwd: "/Users/you/Projects/api-server", tool: "Bash",
+                         input: ["command": "rg -n handleLogin src"])),
+                (2.6, ev("PostToolUse", "cx", agent: .codex, cwd: "/Users/you/Projects/api-server", tool: "Bash")),
+                (2.9, ev("PreToolUse", "cx", agent: .codex, cwd: "/Users/you/Projects/api-server", tool: "apply_patch",
+                         input: ["command": "*** Begin Patch\n*** Update File: src/auth/login.ts\n*** End Patch"])),
+                (4.0, ev("PostToolUse", "cx", agent: .codex, cwd: "/Users/you/Projects/api-server", tool: "apply_patch")),
+                (4.3, ev("Stop", "cx", agent: .codex, cwd: "/Users/you/Projects/api-server",
+                         last: "Fixed the login redirect and added a regression test.")),
             ]),
             Scene(name: "media", duration: 7, height: 170, hoverAt: 2.6, stillAt: 5.0, musicAt: 0.5, steps: []),
             Scene(name: "handoff", duration: 9, dismissFlashAt: 6.6, musicAt: 0.0, steps: [
