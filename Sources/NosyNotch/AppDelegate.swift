@@ -25,11 +25,31 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             // Done / needs you while you're looking at that very app (Claude, terminal, Codex …):
             // stay in the small notch, no sound.
             if let session = transition.quietCandidate, Self.isLookingAt(session) {
+                self?.store.markSeen(session.id)
                 self?.model.showQuietly(transition)
                 return
             }
             self?.model.handle(transition)
             Notifier.notify(transition)
+        }
+
+        store.onReminder = { [weak self] transition in
+            guard let self, let session = transition.quietCandidate else { return }
+            if Self.isLookingAt(session) { return self.store.markSeen(session.id) }
+            self.model.handle(transition)
+            Notifier.remind(transition)
+        }
+        // Switching to the app a session runs in counts as "seen".
+        NSWorkspace.shared.notificationCenter.addObserver(
+            forName: NSWorkspace.didActivateApplicationNotification, object: nil, queue: .main
+        ) { [weak self] note in
+            let bundleID = (note.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication)?.bundleIdentifier
+            MainActor.assumeIsolated {
+                guard let self, let bundleID else { return }
+                for session in self.store.unseen where TerminalActivator.runs(session, in: bundleID) {
+                    self.store.markSeen(session.id)
+                }
+            }
         }
 
         windowController = NotchWindowController(model: model)
@@ -100,6 +120,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         menu.delegate = self
         item.menu = menu
         statusItem = item
+        updateStatusIcon()
+        // Mute runs out on its own – keep the icon honest.
+        Timer.scheduledTimer(withTimeInterval: 30, repeats: true) { [weak self] _ in
+            MainActor.assumeIsolated { self?.updateStatusIcon() }
+        }
     }
 
     private var statusLine: String {
@@ -121,6 +146,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         menu.addItem(status)
         menu.addItem(.separator())
 
+        if let until = Preferences.mutedUntil {
+            menu.addItem(item("Unmute  (\(Self.muteDescription(until)))", #selector(unmute)))
+        } else {
+            let mute = NSMenuItem(title: "Mute", action: nil, keyEquivalent: "")
+            let sub = NSMenu()
+            for (title, hours) in [("For 1 hour", 1.0), ("For 8 hours", 8.0), ("Until I unmute", 0.0)] {
+                let entry = item(title, #selector(muteFromMenu(_:)))
+                entry.representedObject = hours
+                sub.addItem(entry)
+            }
+            mute.submenu = sub
+            menu.addItem(mute)
+        }
         menu.addItem(item("Settings…", #selector(openSettings), key: ","))
         menu.addItem(item("Play demo", #selector(playDemo), key: "d"))
         menu.addItem(.separator())
@@ -131,6 +169,29 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         let item = NSMenuItem(title: title, action: action, keyEquivalent: key)
         item.target = self
         return item
+    }
+
+    /// "until 18:30" / "until you unmute".
+    static func muteDescription(_ until: Date) -> String {
+        until == .distantFuture || until.timeIntervalSinceNow > 365 * 86_400
+            ? "until you unmute" : "until \(until.formatted(date: .omitted, time: .shortened))"
+    }
+
+    @objc private func muteFromMenu(_ sender: NSMenuItem) {
+        let hours = sender.representedObject as? Double ?? 0
+        Preferences.mutedUntil = hours > 0 ? Date().addingTimeInterval(hours * 3600) : .distantFuture
+        updateStatusIcon()
+    }
+
+    @objc private func unmute() {
+        Preferences.mutedUntil = nil
+        updateStatusIcon()
+    }
+
+    /// The menu bar ✦ gets a slash while muted.
+    func updateStatusIcon() {
+        let symbol = Preferences.isMuted ? "speaker.slash" : "sparkle"
+        statusItem?.button?.image = NSImage(systemSymbolName: symbol, accessibilityDescription: "Nosy Notch")
     }
 
     @objc private func openSettings() {

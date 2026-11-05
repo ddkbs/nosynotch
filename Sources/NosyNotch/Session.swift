@@ -159,6 +159,14 @@ struct Session: Identifiable, Equatable {
     var transcriptPath: String?
     var termProgram: String?
     var hostBundleID: String?
+    /// Finished while you weren't looking – shown as a green dot until you look at it.
+    var unseenSince: Date?
+    /// When the session started waiting for you (for the 5-minute reminder).
+    var waitingSince: Date?
+    /// The 5-minute reminder for the current "done" / "waiting" already went off.
+    var reminded = false
+
+    var isUnseen: Bool { unseenSince != nil }
 
     var projectName: String {
         guard let cwd, !cwd.isEmpty else { return agent.name }

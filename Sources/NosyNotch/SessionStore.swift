@@ -30,11 +30,19 @@ final class SessionStore: ObservableObject {
     /// Called for transitions that should trigger a celebration / alert.
     var onTransition: ((Transition) -> Void)?
 
+    /// Called when a session has been done (unseen) or waiting for 5 minutes.
+    var onReminder: ((Transition) -> Void)?
+
+    static let reminderDelay: TimeInterval = 5 * 60
+
     private var sweepTimer: Timer?
 
     init() {
-        sweepTimer = Timer.scheduledTimer(withTimeInterval: 30, repeats: true) { [weak self] _ in
-            MainActor.assumeIsolated { self?.sweep() }
+        sweepTimer = Timer.scheduledTimer(withTimeInterval: 15, repeats: true) { [weak self] _ in
+            MainActor.assumeIsolated {
+                self?.sweep()
+                self?.remind()
+            }
         }
     }
 
@@ -49,6 +57,7 @@ final class SessionStore: ObservableObject {
     var primary: Session? { ordered.first }
     var hasActivity: Bool { sessions.values.contains { $0.state.isActive } }
     var hasWaiting: Bool { sessions.values.contains { if case .waiting = $0.state { return true }; return false } }
+    var unseen: [Session] { ordered.filter(\.isUnseen) }
 
     func handle(_ event: HookEvent) {
         var s = sessions[event.sessionID] ?? Session(id: event.sessionID, agent: event.agent)
@@ -57,6 +66,7 @@ final class SessionStore: ObservableObject {
         if let t = event.termProgram { s.termProgram = t }
         if let b = event.hostBundleID { s.hostBundleID = b }
         s.lastUpdate = Date()
+        let wasWaiting: Bool = { if case .waiting = s.state { return true }; return false }()
 
         var transition: Transition?
 
@@ -65,6 +75,7 @@ final class SessionStore: ObservableObject {
             if !s.state.isActive { s.state = .idle }
 
         case "UserPromptSubmit":
+            s.unseenSince = nil
             s.state = .thinking
             s.turnStartedAt = Date()
             s.toolCount = 0
@@ -103,6 +114,7 @@ final class SessionStore: ObservableObject {
 
         case "Stop":
             s.state = .done
+            s.unseenSince = Date()
             if let start = s.turnStartedAt { s.lastTurnDuration = Date().timeIntervalSince(start) }
             s.turnStartedAt = nil
             s.lastSummary = event.lastAssistantMessage.map(Self.condense)
@@ -131,6 +143,12 @@ final class SessionStore: ObservableObject {
             break
         }
 
+        // Reminder bookkeeping: a new "waiting" or "done" gets its own reminder.
+        let isWaiting: Bool = { if case .waiting = s.state { return true }; return false }()
+        if isWaiting && !wasWaiting { s.waitingSince = Date(); s.reminded = false }
+        if !isWaiting { s.waitingSince = nil }
+        if event.name == "Stop" { s.reminded = false }
+
         sessions[s.id] = s
         if let transition { onTransition?(transition) }
 
@@ -156,6 +174,36 @@ final class SessionStore: ObservableObject {
         sessions[id] = s
     }
 
+    /// You looked at the session (its app came to the front, you hovered the list, clicked, closed the card).
+    func markSeen(_ id: String) {
+        guard var s = sessions[id], s.isUnseen else { return }
+        s.unseenSince = nil
+        sessions[id] = s
+    }
+
+    func markAllSeen() {
+        for s in sessions.values where s.isUnseen { markSeen(s.id) }
+    }
+
+    /// Fire the 5-minute reminder for unseen "done" and unanswered "waiting" sessions.
+    private func remind() {
+        guard Preferences.remindAfterFiveMinutes else { return }
+        let now = Date()
+        for (id, s) in sessions where !s.reminded {
+            var due: Transition?
+            if let since = s.unseenSince, s.state == .done, now.timeIntervalSince(since) >= Self.reminderDelay {
+                due = .finished(s)
+            } else if let since = s.waitingSince, now.timeIntervalSince(since) >= Self.reminderDelay {
+                due = .needsAttention(s)
+            }
+            guard let due else { continue }
+            var updated = s
+            updated.reminded = true
+            sessions[id] = updated
+            onReminder?(due)
+        }
+    }
+
     func dismiss(_ id: String) {
         sessions[id] = nil
     }
@@ -171,7 +219,8 @@ final class SessionStore: ObservableObject {
                 updated.state = .idle
                 updated.turnStartedAt = nil
                 sessions[id] = updated
-            case .idle where age > 60 * 60, .done where age > 60 * 60, .error where age > 60 * 60:
+            case .done where s.isUnseen && age > 12 * 60 * 60, .done where !s.isUnseen && age > 60 * 60,
+                 .idle where age > 60 * 60, .error where age > 60 * 60:
                 sessions[id] = nil
             default:
                 break

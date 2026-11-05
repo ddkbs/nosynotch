@@ -13,6 +13,8 @@ enum Preferences {
         static let approvalsInNotch = "approvalsInNotch"
         static let quietWhenFocused = "quietWhenFocused"
         static let usageEnabled = "usageEnabled"
+        static let remindAfterFiveMinutes = "remindAfterFiveMinutes"
+        static let mutedUntil = "mutedUntil"
         static let liveEqualizer = "liveEqualizer"
         static let port = "port"
     }
@@ -35,6 +37,7 @@ enum Preferences {
             Key.approvalsInNotch: true,
             Key.quietWhenFocused: true,
             Key.usageEnabled: true,
+            Key.remindAfterFiveMinutes: true,
             Key.liveEqualizer: false,
             Key.port: Int(EventServer.defaultPort),
         ])
@@ -69,6 +72,20 @@ enum Preferences {
 
     /// "Done" while you're already looking at that app: small check in the notch, no sound, no banner.
     static var quietWhenFocused: Bool { defaults.object(forKey: Key.quietWhenFocused) as? Bool ?? true }
+
+    /// Remind again when a "done" stayed unseen or a question unanswered for 5 minutes.
+    static var remindAfterFiveMinutes: Bool { defaults.object(forKey: Key.remindAfterFiveMinutes) as? Bool ?? true }
+
+    /// Sounds and macOS banners are off until this date (`.distantFuture` = until you unmute).
+    static var mutedUntil: Date? {
+        get {
+            guard let date = defaults.object(forKey: Key.mutedUntil) as? Date, date > Date() else { return nil }
+            return date
+        }
+        set { defaults.set(newValue, forKey: Key.mutedUntil) }
+    }
+
+    static var isMuted: Bool { mutedUntil != nil }
 
     /// Usage-limit bars in the hover view.
     static var usageEnabled: Bool { defaults.object(forKey: Key.usageEnabled) as? Bool ?? true }

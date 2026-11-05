@@ -54,7 +54,19 @@ final class NotchViewModel: ObservableObject {
     /// Incremented to trigger the shake animation.
     @Published private(set) var shakes: CGFloat = 0
     @Published var isHovering = false {
-        didSet { if oldValue != isHovering { recompute() } }
+        didSet {
+            guard oldValue != isHovering else { return }
+            recompute()
+            // Looking at the session list for a moment counts as "seen".
+            if isHovering, !store.unseen.isEmpty {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) { [weak self] in
+                    MainActor.assumeIsolated {
+                        guard let self, self.isHovering, self.presentation == .expanded else { return }
+                        self.store.markAllSeen()
+                    }
+                }
+            }
+        }
     }
 
     private var flashWork: DispatchWorkItem?
@@ -204,12 +216,20 @@ final class NotchViewModel: ObservableObject {
         recompute()
     }
 
-    /// The session the compact notch is about (the quiet "done" wins for its few seconds).
+    /// The session the compact notch is about (the quiet "done" wins for its few seconds, then unseen ones).
     var compactSession: Session? {
-        quietDone.flatMap { store.sessions[$0.id] ?? $0 } ?? store.primary
+        if let quiet = quietDone { return store.sessions[quiet.id] ?? quiet }
+        if !store.hasActivity && !store.hasWaiting, let unseen = store.unseen.first { return unseen }
+        return store.primary
+    }
+
+    /// Nothing running, but something finished that you haven't looked at yet: the green dot.
+    var showsUnseenDot: Bool {
+        quietDone == nil && !store.hasActivity && !store.hasWaiting && !store.unseen.isEmpty
     }
 
     func dismissFlash() {
+        if let celebration { store.markSeen(celebration.session.id) }
         // ✕ on a permission request: hand it back to the terminal / Codex prompt right away.
         if let approval = attentionApproval { approvals.release(approval.id) }
         endFlash()
@@ -256,6 +276,8 @@ final class NotchViewModel: ObservableObject {
             next = .compact
         } else if hasMedia && (media.isPlaying || Preferences.mediaShowWhenPaused) {
             next = .media
+        } else if !store.unseen.isEmpty {
+            next = .compact
         } else {
             next = .hidden
         }

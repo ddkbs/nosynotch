@@ -121,6 +121,11 @@ struct NotchView: View {
         HStack(spacing: 0) {
             MediaArtwork(image: media.artwork)
                 .frame(width: 20, height: 20)
+                .overlay(alignment: .topTrailing) {
+                    if !store.unseen.isEmpty {
+                        UnseenDot(size: 7).offset(x: 3, y: -3)
+                    }
+                }
                 .id(media.track?.id)
                 .transition(.scale(scale: 0.2).combined(with: .opacity))
                 .frame(width: Self.wingContent, alignment: .center)
@@ -162,6 +167,9 @@ struct NotchView: View {
                             .background(Capsule().fill(.white.opacity(0.12)))
                     } else if primary.turnStartedAt != nil, model.presentation == .expanded {
                         ElapsedText(since: primary.turnStartedAt)
+                    } else if model.showsUnseenDot {
+                        UnseenDot(count: store.unseen.count)
+                            .transition(.scale(scale: 0.2).combined(with: .opacity))
                     } else {
                         StatusIndicator(session: primary)
                             .transition(.scale(scale: 0.2).combined(with: .opacity))
@@ -226,6 +234,9 @@ struct SessionRow: View {
         HStack(spacing: 12) {
             ClaudeSpark(mode: SparkMode(session.state), color: session.accent)
                 .frame(width: 22, height: 22)
+                .overlay(alignment: .topTrailing) {
+                    if session.isUnseen { UnseenDot(size: 7).offset(x: 3, y: -2) }
+                }
 
             VStack(alignment: .leading, spacing: 3) {
                 HStack(spacing: 6) {
@@ -275,6 +286,35 @@ struct SessionRow: View {
         .onTapGesture { TerminalActivator.activate(session) }
         .animation(.easeOut(duration: 0.15), value: hovering)
         .animation(.spring(response: 0.3, dampingFraction: 0.8), value: session.state)
+    }
+}
+
+/// A softly breathing green dot: something finished that you haven't looked at yet.
+struct UnseenDot: View {
+    var size: CGFloat = 8
+    var count = 1
+
+    var body: some View {
+        TimelineView(.animation(minimumInterval: 1.0 / 30.0)) { timeline in
+            let t = timeline.date.timeIntervalSinceReferenceDate
+            let breath = 0.5 + 0.5 * sin(t * 2.2)
+            ZStack {
+                Circle()
+                    .fill(Theme.success.opacity(0.25 * breath))
+                    .frame(width: size * 2.2, height: size * 2.2)
+                Circle()
+                    .fill(Theme.success)
+                    .frame(width: size, height: size)
+                    .shadow(color: Theme.success.opacity(0.8), radius: 3 + 2 * breath)
+                if count > 1 {
+                    Text("\(count)")
+                        .font(.system(size: 9, weight: .bold, design: .rounded))
+                        .foregroundStyle(Theme.success)
+                        .offset(x: size + 5)
+                }
+            }
+        }
+        .frame(width: size, height: size)
     }
 }
 

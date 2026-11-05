@@ -33,13 +33,29 @@ enum Notifier {
         }
     }
 
-    private static func play(_ name: String, if enabled: Bool) {
-        guard enabled else { return }
-        NSSound(named: NSSound.Name(name))?.play()
+    /// The 5-minute reminder: a softer sound, same banner.
+    static func remind(_ transition: Transition) {
+        switch transition {
+        case .finished(let s):
+            play("Glass", if: Preferences.soundDone, volume: 0.4)
+            post(title: "\(s.projectName) – still unseen", body: s.lastSummary ?? "\(s.agent.name) finished 5 minutes ago.")
+        case .needsAttention(let s):
+            play("Funk", if: Preferences.soundAttention, volume: 0.5)
+            post(title: "\(s.projectName) – \(s.agent.name) is still waiting",
+                 body: { if case .waiting(let m) = s.state { return m }; return "Please check your terminal." }())
+        default:
+            break
+        }
+    }
+
+    private static func play(_ name: String, if enabled: Bool, volume: Float = 1) {
+        guard enabled, !Preferences.isMuted, let sound = NSSound(named: NSSound.Name(name))?.copy() as? NSSound else { return }
+        sound.volume = volume
+        sound.play()
     }
 
     private static func post(title: String, body: String) {
-        guard canUseUserNotifications, Preferences.systemNotifications else { return }
+        guard canUseUserNotifications, Preferences.systemNotifications, !Preferences.isMuted else { return }
         let content = UNMutableNotificationContent()
         content.title = title
         content.body = body
@@ -73,6 +89,10 @@ enum TerminalActivator {
     static func isFrontmost(_ session: Session) -> Bool {
         guard let front = NSWorkspace.shared.frontmostApplication?.bundleIdentifier else { return false }
         return candidates(for: session).contains(front)
+    }
+
+    static func runs(_ session: Session, in bundleID: String) -> Bool {
+        candidates(for: session).contains(bundleID)
     }
 
     static func activate(_ session: Session) {
