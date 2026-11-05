@@ -1,0 +1,77 @@
+import AppKit
+import UserNotifications
+
+/// Sounds + (optional) macOS notifications. The notch animation itself lives in the views.
+@MainActor
+enum Notifier {
+    /// UNUserNotificationCenter crashes when the binary isn't inside an .app bundle (e.g. `swift run`).
+    private static var canUseUserNotifications: Bool {
+        Bundle.main.bundleIdentifier != nil && Bundle.main.bundleURL.pathExtension == "app"
+    }
+
+    static func requestAuthorizationIfNeeded() {
+        guard canUseUserNotifications, Preferences.systemNotifications else { return }
+        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound]) { _, _ in }
+    }
+
+    static func notify(_ transition: Transition) {
+        switch transition {
+        case .finished(let s):
+            play("Glass")
+            post(title: "\(s.projectName) – fertig",
+                 body: s.lastSummary ?? s.statusDetail ?? "Claude ist fertig.")
+        case .needsAttention(let s):
+            play("Funk")
+            post(title: "\(s.projectName) – Claude braucht dich",
+                 body: { if case .waiting(let m) = s.state { return m }; return "Bitte schau ins Terminal." }())
+        case .started:
+            break
+        }
+    }
+
+    private static func play(_ name: String) {
+        guard Preferences.soundEnabled else { return }
+        NSSound(named: NSSound.Name(name))?.play()
+    }
+
+    private static func post(title: String, body: String) {
+        guard canUseUserNotifications, Preferences.systemNotifications else { return }
+        let content = UNMutableNotificationContent()
+        content.title = title
+        content.body = body
+        let request = UNNotificationRequest(identifier: UUID().uuidString, content: content, trigger: nil)
+        UNUserNotificationCenter.current().add(request)
+    }
+}
+
+/// Brings the terminal / editor that runs a session to the front.
+@MainActor
+enum TerminalActivator {
+    private static let termProgramBundles: [String: String] = [
+        "iTerm.app": "com.googlecode.iterm2",
+        "Apple_Terminal": "com.apple.Terminal",
+        "vscode": "com.microsoft.VSCode",
+        "WarpTerminal": "dev.warp.Warp-Stable",
+        "ghostty": "com.mitchellh.ghostty",
+        "WezTerm": "com.github.wez.wezterm",
+        "Hyper": "co.zeit.hyper",
+        "tmux": "com.apple.Terminal",
+    ]
+
+    static func activate(_ session: Session) {
+        var candidates: [String] = []
+        if let b = session.hostBundleID { candidates.append(b) }
+        if let t = session.termProgram, let b = termProgramBundles[t] { candidates.append(b) }
+
+        for bundleID in candidates {
+            if let app = NSRunningApplication.runningApplications(withBundleIdentifier: bundleID).first {
+                app.activate()
+                return
+            }
+        }
+        if let bundleID = candidates.first,
+           let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundleID) {
+            NSWorkspace.shared.openApplication(at: url, configuration: NSWorkspace.OpenConfiguration(), completionHandler: nil)
+        }
+    }
+}
