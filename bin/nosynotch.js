@@ -40,17 +40,34 @@ const HOOK_EVENTS = [
   ['PreCompact', null],
 ];
 
-// Must stay identical to HookInstaller.command(port:) in the Swift app.
-const HOOK_COMMAND = [
-  'curl -s -m 2 -X POST',
-  "-H 'Content-Type: application/json'",
-  "-H 'Expect:'",
-  '-H "X-Term-Program: ${TERM_PROGRAM:-}"',
-  '-H "X-Bundle-Id: ${__CFBundleIdentifier:-}"',
-  '--data-binary @-',
-  `'http://127.0.0.1:${PORT}/event?src=${MARKER}'`,
-  '>/dev/null 2>&1 || true',
-].join(' ');
+// Codex (CLI and the Codex mode of the ChatGPT app): ~/.codex/hooks.json. [event, matcher, timeout in s]
+const CODEX_EVENTS = [
+  ['SessionStart', null, 5],
+  ['SessionEnd', null, 3], // Codex caps SessionEnd and Interrupt at 3 s
+  ['UserPromptSubmit', null, 5],
+  ['PreToolUse', '*', 5],
+  ['PostToolUse', '*', 5],
+  ['PermissionRequest', '*', 5],
+  ['Stop', null, 5],
+  ['Interrupt', null, 3],
+  ['SubagentStop', null, 5],
+  ['PreCompact', null, 5],
+];
+
+// Must stay identical to HookInstaller.command(port:agent:) in the Swift app.
+const hookCommand = (agent = 'claude') =>
+  [
+    'curl -s -m 2 -X POST',
+    "-H 'Content-Type: application/json'",
+    "-H 'Expect:'",
+    '-H "X-Term-Program: ${TERM_PROGRAM:-}"',
+    '-H "X-Bundle-Id: ${__CFBundleIdentifier:-}"',
+    '--data-binary @-',
+    `'http://127.0.0.1:${PORT}/event?src=${MARKER}${agent === 'claude' ? '' : `&agent=${agent}`}'`,
+    '>/dev/null 2>&1 || true',
+  ].join(' ');
+const HOOK_COMMAND = hookCommand();
+const CODEX_COMMAND = hookCommand('codex');
 
 // ───────────────────────────── output helpers ─────────────────────────────
 
@@ -248,37 +265,51 @@ const isOurs = (group) =>
   group.hooks.some((h) => typeof h?.command === 'string' && [MARKER, LEGACY.marker].some((m) => h.command.includes(m)));
 
 // Only the current command counts – hooks from an older version get replaced.
-const isCurrent = (group) => Array.isArray(group?.hooks) && group.hooks.some((h) => h?.command === HOOK_COMMAND);
+const isCurrent = (command) => (group) => Array.isArray(group?.hooks) && group.hooks.some((h) => h?.command === command);
 
-function hooksInstalledIn(file) {
+function hooksInstalledIn(file, events = HOOK_EVENTS, command = HOOK_COMMAND) {
   const hooks = readSettings(file).hooks || {};
-  return HOOK_EVENTS.every(([name]) => (hooks[name] || []).some(isCurrent));
+  return events.every(([name]) => (hooks[name] || []).some(isCurrent(command)));
 }
 
-const hooksInstalled = () => settingsFiles().every(hooksInstalledIn);
+const codexHome = () => {
+  const env = process.env.CODEX_HOME;
+  return env ? env.replace(/^~(?=$|\/)/, HOME) : path.join(HOME, '.codex');
+};
+const codexAvailable = () => fs.existsSync(codexHome());
+const codexHooksFile = () => path.join(codexHome(), 'hooks.json');
+const codexHooksInstalled = () => hooksInstalledIn(codexHooksFile(), CODEX_EVENTS, CODEX_COMMAND);
+
+const hooksInstalled = () => settingsFiles().every((f) => hooksInstalledIn(f)) && (!codexAvailable() || codexHooksInstalled());
 
 function installHooks() {
   for (const file of settingsFiles()) installHooksIn(file);
   console.log(dim('  Restart Claude Code sessions that are already running so they pick up the hooks.'));
+  if (codexAvailable()) {
+    installHooksIn(codexHooksFile(), CODEX_EVENTS, CODEX_COMMAND);
+    console.log(dim('  Codex runs new hooks only after you trust them once:'));
+    console.log(dim('  ChatGPT app → Codex → Settings → Hooks, or type /hooks in the Codex CLI.'));
+  }
 }
 
-function installHooksIn(file) {
+function installHooksIn(file, events = HOOK_EVENTS, command = HOOK_COMMAND) {
   const settings = readSettings(file);
   const hooks = settings.hooks || {};
-  for (const [name, matcher] of HOOK_EVENTS) {
+  for (const [name, matcher, timeout = 5] of events) {
     const groups = (hooks[name] || []).filter((g) => !isOurs(g));
-    const group = { hooks: [{ type: 'command', command: HOOK_COMMAND, timeout: 5 }] };
+    const group = { hooks: [{ type: 'command', command, timeout }] };
     if (matcher) group.matcher = matcher;
     groups.push(group);
     hooks[name] = groups;
   }
   settings.hooks = hooks;
   writeSettings(file, settings);
-  ok(`Hooks added to ${pretty(file)} ${dim('(backup: settings.json.nosynotch.bak)')}`);
+  ok(`Hooks added to ${pretty(file)} ${dim(`(backup: ${path.basename(file)}.nosynotch.bak)`)}`);
 }
 
 function removeHooks() {
   for (const file of settingsFiles()) removeHooksIn(file);
+  removeHooksIn(codexHooksFile());
 }
 
 function removeHooksIn(file) {
@@ -390,11 +421,14 @@ async function status() {
     const label = i === 0 ? '  Hooks:      ' : '              ';
     console.log(`${label}${hooksInstalledIn(file) ? green('✓') : dim('–')} ${pretty(path.dirname(file))}`);
   });
+  if (codexAvailable()) {
+    console.log(`  Codex:      ${codexHooksInstalled() ? green('✓') : dim('–')} ${pretty(codexHooksFile())}`);
+  }
   console.log(`  Autostart:  ${fs.existsSync(LAUNCH_AGENT) ? green('on') : dim('off')}`);
 }
 
 function help() {
-  console.log(`${orange('✦')} ${bold('nosynotch')} ${dim(pkg.version)} – Claude Code status in your MacBook notch
+  console.log(`${orange('✦')} ${bold('nosynotch')} ${dim(pkg.version)} – Claude Code & Codex status in your MacBook notch
 
   ${bold('npx nosynotch')}              install (if needed), add hooks, start
   ${bold('npx nosynotch stop')}         stop
@@ -424,7 +458,7 @@ async function main() {
       if (hadAutostart) autostart(true);
       if (!hooksInstalled()) installHooks();
       await start();
-      console.log(`\n  ${bold('Done!')} Look at your notch the next time Claude works.`);
+      console.log(`\n  ${bold('Done!')} Look at your notch the next time Claude or Codex works.`);
       console.log(dim('  Settings: click ✦ in the menu bar → Settings…  (or `npx nosynotch settings`)'));
       console.log(dim('  Try it:   `npx nosynotch demo` plays every animation.'));
       break;
