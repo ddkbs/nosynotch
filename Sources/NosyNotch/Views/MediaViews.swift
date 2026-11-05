@@ -46,23 +46,32 @@ struct EqualizerBars: View {
             let t = timeline.date.timeIntervalSinceReferenceDate
             let levels = playing ? spectrum?.levels : nil
             HStack(alignment: .center, spacing: 2.5) {
-                ForEach(0..<AudioSpectrum.bandCount, id: \.self) { i in
-                    let level: Double = {
-                        if let levels { return Double(levels[i]) }
-                        // No audio (yet): a bouncier fallback with a shared "beat".
-                        let beat = pow(0.5 + 0.5 * sin(t * 5.2), 3)
-                        let wobble = 0.5 + 0.5 * sin(t * (3.4 + Double(i) * 0.9) + Double(i) * 1.3)
-                        return 0.25 + 0.45 * wobble + 0.3 * beat * (i == 0 || i == 1 ? 1 : 0.6)
-                    }()
+                ForEach(0..<AudioSpectrum.bandCount, id: \.self) { (i: Int) in
                     Capsule()
                         .fill(color)
-                        .frame(width: 3, height: playing ? 3 + 15 * CGFloat(min(1, max(0, level))) : 3)
+                        .frame(width: 3, height: liveHeight(band: i, levels: levels, t: t))
                         .shadow(color: color.opacity(playing ? 0.6 : 0), radius: 3)
                 }
             }
             .frame(height: 20)
         }
         .animation(.easeOut(duration: 0.25), value: playing)
+    }
+
+    /// Bar height for one band. Kept out of the view builder: Xcode 16's type checker times out on it inline.
+    private func liveHeight(band i: Int, levels: [Float]?, t: Double) -> CGFloat {
+        guard playing else { return 3 }
+        let level: Double
+        if let levels {
+            level = Double(levels[i])
+        } else {
+            // No audio (yet): a bouncier fallback with a shared "beat".
+            let beat: Double = pow(0.5 + 0.5 * sin(t * 5.2), 3)
+            let wobble: Double = 0.5 + 0.5 * sin(t * (3.4 + Double(i) * 0.9) + Double(i) * 1.3)
+            let weight: Double = (i == 0 || i == 1) ? 1 : 0.6
+            level = 0.25 + 0.45 * wobble + 0.3 * beat * weight
+        }
+        return 3 + 15 * CGFloat(min(1, max(0, level)))
     }
 
     private var classicBars: some View {
