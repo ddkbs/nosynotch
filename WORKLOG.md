@@ -1,5 +1,10 @@
 # WORKLOG
 
+## 2026-11-05 (6)
+- GitHub-Repo umbenannt: `ddkbs/claude-notch` → **`ddkbs/nosynotch`** (Remote, `REPO` in der CLI, package.json, Settings-Link angepasst).
+- **Release v0.1.0** getaggt: CI grün, Release mit `NosyNotch-macos.tar.gz` (Universal arm64+x86_64, ad-hoc signiert) liegt auf GitHub. npm-Publish übersprungen (kein `NPM_TOKEN`).
+- Offen (nur David kann das): Repo öffentlich stellen (sonst 404 beim Download für andere), npm-Token als Secret `NPM_TOKEN` anlegen, dann Release-Workflow für `v0.1.0` erneut ausführen → npm publish.
+
 ## 2026-11-05 (5)
 - **Name: Nosy Notch** (npm/CLI `nosynotch`, App `Nosy Notch.app`, Bundle-ID `dev.davidkubus.nosynotch`, Daten `~/.nosynotch`). Grund: „Claude“ ist Marke von Anthropic. Alte claude-notch-Hooks werden erkannt und ersetzt, `npx nosynotch` räumt alte App/LaunchAgent/Ordner weg. GitHub-Repo heißt noch `ddkbs/claude-notch` (Release-Downloads zeigen dorthin).
 - **Alles Englisch**: App, CLI, README, docs. WORKLOG bleibt deutsch.
