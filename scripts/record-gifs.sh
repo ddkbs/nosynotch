@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Renders every notch animation into GIFs (docs/gifs/) and stills of the expanded notch (docs/screenshots/).
+# Renders every notch animation into GIFs in docs/gifs/ (STILLS=1 also saves PNG stills to docs/screenshots/).
 #
 #   ./scripts/record-gifs.sh            all scenes
 #   ./scripts/record-gifs.sh done error only these scenes
@@ -32,7 +32,8 @@ for dir in "$FRAMES"/*/; do
   echo "✓ $out ($(du -h "$out" | cut -f1 | tr -d ' '))"
 done
 
-if [[ -d "$FRAMES/stills" ]]; then
+# Stills of the fully expanded notch (PNG) only on request: STILLS=1 ./scripts/record-gifs.sh
+if [[ "${STILLS:-0}" == 1 && -d "$FRAMES/stills" ]]; then
   mkdir -p docs/screenshots
   for png in "$FRAMES"/stills/*.png; do
     cp "$png" "docs/screenshots/$(basename "$png")"
