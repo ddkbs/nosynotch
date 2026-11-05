@@ -24,6 +24,8 @@ final class Recorder {
         var allowAt: TimeInterval?
         /// Pretend the session's app is in front: "Done" stays small.
         var focused = false
+        /// Fill in made-up usage limits for the hover view.
+        var usage = false
         let steps: [(TimeInterval, HookEvent)]
     }
 
@@ -66,6 +68,13 @@ final class Recorder {
         model.hasPhysicalNotch = true
         store.onChange = { model.recompute() }
         store.onTransition = { scene.focused ? model.showQuietly($0) : model.handle($0) }
+        if scene.usage {
+            let now = Date()
+            model.usage.set(AgentUsage(fiveHour: UsageWindow(usedPercent: 38, resetsAt: now + 2 * 3600 + 840),
+                                       week: UsageWindow(usedPercent: 71, resetsAt: now + 3 * 86_400)), for: .claude)
+            model.usage.set(AgentUsage(fiveHour: UsageWindow(usedPercent: 12, resetsAt: now + 4 * 3600),
+                                       week: UsageWindow(usedPercent: 90, resetsAt: now + 86_400)), for: .codex)
+        }
 
         let size = CGSize(width: Self.width, height: scene.height)
         let host = NSHostingView(rootView: RecordingStage(model: model, store: store))
@@ -266,6 +275,11 @@ final class Recorder {
                 (4.0, ev("PostToolUse", "cx", agent: .codex, cwd: "/Users/you/Projects/api-server", tool: "apply_patch")),
                 (4.3, ev("Stop", "cx", agent: .codex, cwd: "/Users/you/Projects/api-server",
                          last: "Fixed the login redirect and added a regression test.")),
+            ]),
+            Scene(name: "usage", duration: 5, height: 250, hoverAt: 0.8, stillAt: 3.5, usage: true, steps: [
+                (0.0, ev("UserPromptSubmit", "a")),
+                (0.0, ev("PreToolUse", "a", tool: "Edit", input: ["file_path": "\(cwd)/Sources/NotchView.swift"])),
+                (0.0, ev("UserPromptSubmit", "cx", agent: .codex, cwd: "/Users/you/Projects/api-server")),
             ]),
             Scene(name: "media", duration: 7, height: 170, hoverAt: 2.6, stillAt: 5.0, musicAt: 0.5, steps: []),
             Scene(name: "handoff", duration: 9, dismissFlashAt: 6.6, musicAt: 0.0, steps: [
