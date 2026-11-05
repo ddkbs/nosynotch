@@ -10,6 +10,7 @@ Live-Status von **Claude Code** direkt in der MacBook-Notch – mit Animationen.
 |---|---|
 | ![Denkt nach](docs/gifs/thinking.gif) | ![Braucht dich](docs/gifs/attention.gif) |
 | ![Fertig](docs/gifs/done.gif) | ![Fehler](docs/gifs/error.gif) |
+| ![Media-Player](docs/gifs/media.gif) | ![Zurück zur Musik](docs/gifs/handoff.gif) |
 
 **[→ Alle Animationen und Screenshots mit Erklärung](docs/animations.md)**
 
@@ -21,6 +22,8 @@ Live-Status von **Claude Code** direkt in der MacBook-Notch – mit Animationen.
 | **Komprimiert** | violetter, sich zusammenziehender Spark |
 | **Fertig** | Notch klappt auf, Häkchen zeichnet sich, Konfetti-Burst, Projekt + Dauer + Zusammenfassung der letzten Antwort, Sound |
 | **Fehler** (API-Fehler, Rate-Limit …) | Notch klappt auf, rotes Glühen, flackernder Spark, übersetzte Fehlermeldung, Sound |
+| **Media-Player** (Claude macht Pause) | Läuft Spotify oder Apple Music, zeigt die Notch links das Cover und rechts einen Equalizer in der Farbe des Covers. Hover → Player mit Titel, Fortschritt (klickbar) und Zurück / Play / Weiter |
+| **✕** | Jede Benachrichtigung hat ein ✕ – danach geht die Notch direkt zurück zur Musik |
 | **Hover** | Liste aller laufenden Sessions mit Status, aktuellem Tool und Timer. Klick → springt ins richtige Terminal |
 
 Funktioniert mit mehreren parallelen Sessions. Auf Macs ohne Notch hängt eine „virtuelle“ Notch mittig an der Menüleiste.
@@ -112,9 +115,23 @@ Für jedes Event (`SessionStart`, `SessionEnd`, `UserPromptSubmit`, `PreToolUse`
 `matcher` braucht es nur bei den Tool-Events (`PreToolUse`, `PostToolUse`, `PostToolUseFailure`, `PermissionRequest`).
 </details>
 
+## Media-Player
+
+Die Notch ist auch dann nützlich, wenn Claude nichts tut: Spielt **Spotify** oder **Apple Music**, wird sie zum Mini-Player.
+Claude hat immer Vorrang. Sobald eine Session arbeitet oder dich braucht, übernimmt der Claude-Status, danach kommt die Musik zurück.
+
+- Titel und Status kommen von den Benachrichtigungen, die Spotify und Musik ohnehin systemweit senden. Dafür braucht es keine Berechtigung.
+- Für Play/Pause, Weiter und Spulen fragt macOS einmal pro Player, ob Claude Notch ihn steuern darf („Automation“).
+- Cover: Für Spotify wird die öffentliche oEmbed-Schnittstelle von Spotify abgefragt, für Musik die iTunes-Suche von Apple.
+  Dabei gehen Track-ID bzw. Künstler + Titel an Spotify/Apple, sonst nichts.
+- Andere Quellen (Browser, YouTube, Podcasts) gehen noch nicht: Apple hat die dafür nötige private MediaRemote-Schnittstelle
+  mit macOS 15.4 für Drittanbieter-Apps gesperrt.
+- Abschalten: Menüleiste ✦ → „Media-Player in der Notch“.
+
 ## Einstellungen (Menüleiste ✦)
 
-- **Sound bei Fertig / Rückfrage**: an (Glass / Funk)
+- **Sound bei Fertig / Rückfrage / Fehler**: an (Glass / Funk / Basso)
+- **Media-Player in der Notch**: an
 - **macOS-Mitteilungen**: aus (die Notch ist ja die Benachrichtigung). Funktioniert nur aus der gebauten `.app`, nicht per `swift run`.
 
 ## Entwicklung
@@ -140,6 +157,7 @@ Sources/ClaudeNotch/
 ├── NotchViewModel.swift             Präsentation (hidden/compact/expanded/celebrating/attention) + Größen
 ├── NotchWindow.swift                transparentes NSPanel über der Notch, Hover ohne Klicks zu klauen
 ├── Demo.swift                       Demo-Ablauf
+├── NowPlaying.swift                 Spotify / Apple Music: Track, Cover, Steuerung
 ├── Recorder.swift                   nimmt alle Animationen als Frames auf (--record, für die GIFs)
 └── Views/                           NotchShape, ClaudeSpark, Indikatoren, Konfetti, Häkchen …
 ```

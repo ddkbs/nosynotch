@@ -6,7 +6,7 @@ Standbilder mit ausgeklappter Notch: [Screenshots](#screenshots).
 
 | | |
 |---|---|
-| [Denkt nach](#denkt-nach) · [Tool läuft](#tool-läuft) · [Braucht dich](#braucht-dich) · [Fertig](#fertig) | [Fehler](#fehler) · [Komprimiert](#komprimiert) · [Mehrere Sessions](#mehrere-sessions-hover) · [Kompletter Ablauf](#kompletter-ablauf) |
+| [Denkt nach](#denkt-nach) · [Tool läuft](#tool-läuft) · [Braucht dich](#braucht-dich) · [Fertig](#fertig) | [Fehler](#fehler) · [Komprimiert](#komprimiert) · [Mehrere Sessions](#mehrere-sessions-hover) · [Media-Player](#media-player) · [Zurück zur Musik](#zurück-zur-musik) · [Kompletter Ablauf](#kompletter-ablauf) |
 
 ## Denkt nach
 
@@ -91,6 +91,23 @@ Maus über die Notch: Liste aller laufenden Sessions mit Status, aktuellem Tool 
 holt das richtige Terminal nach vorn, ✕ entfernt eine Session aus der Liste. Bei mehreren Sessions
 zeigt die kompakte Notch immer die wichtigste (Braucht dich / Fehler > Arbeitet > Fertig > Bereit).
 
+## Media-Player
+
+![Media-Player](gifs/media.gif)
+
+**Auslöser:** Spotify oder Apple Music spielt, und keine Claude-Session arbeitet oder wartet.
+
+Links das Cover, rechts tanzen vier Balken in der Farbe des Covers (pausiert: flach). Hover öffnet den
+Player: Cover (Klick öffnet die App), Titel, Künstler, Fortschritt (Klick/Ziehen spult) und
+Zurück / Play-Pause / Weiter. Song und Cover in den GIFs sind erfunden.
+
+## Zurück zur Musik
+
+![Zurück zur Musik](gifs/handoff.gif)
+
+Musik läuft → Claude bekommt einen Prompt und übernimmt die Notch → „Fertig“ → Klick auf ✕ →
+die Notch zeigt wieder die Musik. Ohne Klick passiert dasselbe nach 6 Sekunden von allein.
+
 ## Kompletter Ablauf
 
 ![Demo](gifs/demo.gif)
@@ -108,7 +125,7 @@ Ausgeklappte Notch als PNG (2×), z. B. für Blogposts oder die GitHub-Social-Pr
 | ![Mehrere Sessions](screenshots/hover.png) | ![Fertig](screenshots/done.png) |
 | ![Braucht dich](screenshots/attention.png) | ![Fehler](screenshots/error.png) |
 | ![Denkt nach](screenshots/thinking.png) | ![Tool läuft](screenshots/tools.png) |
-| ![Komprimiert](screenshots/compacting.png) | |
+| ![Komprimiert](screenshots/compacting.png) | ![Media-Player](screenshots/media.png) |
 
 ## GIFs neu aufnehmen
 
