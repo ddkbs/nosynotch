@@ -95,6 +95,12 @@ async function start() {
   fail(`The app did not respond. Is something else using port ${PORT}?\n  Try it directly: "${BINARY}"`);
 }
 
+async function openSettings() {
+  if (!(await isRunning())) fail('Nosy Notch is not running – start it with `npx nosynotch`.');
+  await fetch(`${BASE}/settings`, { method: 'POST', signal: AbortSignal.timeout(800) });
+  ok('Settings opened.');
+}
+
 async function stop({ quiet = false } = {}) {
   let stopped = false;
   try {
@@ -394,6 +400,7 @@ function help() {
   ${bold('npx nosynotch stop')}         stop
   ${bold('npx nosynotch restart')}      restart
   ${bold('npx nosynotch status')}       show status
+  ${bold('npx nosynotch settings')}     open the settings window
   ${bold('npx nosynotch demo')}         play every animation
   ${bold('npx nosynotch autostart')}    start at login      ${dim('(autostart off to disable)')}
   ${bold('npx nosynotch hooks')}        only add the hooks  ${dim('(hooks off to remove)')}
@@ -417,11 +424,16 @@ async function main() {
       if (hadAutostart) autostart(true);
       if (!hooksInstalled()) installHooks();
       await start();
-      console.log(dim('  Tip: `npx nosynotch demo` plays every animation, `npx nosynotch autostart` starts it at login.'));
+      console.log(`\n  ${bold('Done!')} Look at your notch the next time Claude works.`);
+      console.log(dim('  Settings: click ✦ in the menu bar → Settings…  (or `npx nosynotch settings`)'));
+      console.log(dim('  Try it:   `npx nosynotch demo` plays every animation.'));
       break;
     }
     case 'stop':
       await stop();
+      break;
+    case 'settings':
+      await openSettings();
       break;
     case 'restart':
       await stop({ quiet: true });
