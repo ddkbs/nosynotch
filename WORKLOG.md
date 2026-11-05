@@ -2,9 +2,10 @@
 
 ## 2026-11-05 (8)
 - **Leises „Fertig“**: Ist die App der Sitzung vorne (Claude-App, Terminal, VS Code, ChatGPT …), zeigt die Notch bei `Stop` nur kurz (3 s) einen grünen Haken in der kompakten Leiste – keine Karte, kein Sound, kein Banner. Sonst wie bisher groß.
-- Entscheidung: Vergleich auf App-Ebene (Bundle-ID aus `$__CFBundleIdentifier` bzw. `TERM_PROGRAM` vs. `frontmostApplication`), Fenster/Tab ist nicht erkennbar. Claude-App setzt `com.anthropic.claudefordesktop`. Gilt nur für „Fertig“ – „Braucht dich“ und Fehler bleiben groß. Abschaltbar in Settings → Notifications.
+- Nachtrag: auch **„Braucht dich“** bleibt klein, wenn die App vorne ist (kein Sound, keine Karte, bernsteinfarbene Blase in der Leiste); der Permission-Hook antwortet dann sofort ohne Entscheidung → der App-eigene Dialog übernimmt. Live geprüft mit Claude-App vorne. Fehler bleiben immer groß.
+- Entscheidung: Vergleich auf App-Ebene (Bundle-ID aus `$__CFBundleIdentifier` bzw. `TERM_PROGRAM` vs. `frontmostApplication`), Fenster/Tab ist nicht erkennbar. Claude-App setzt `com.anthropic.claudefordesktop`. Abschaltbar in Settings → Notifications.
 - Neues GIF `quiet-done.gif`.
-- Offen: wie (7).
+- Offen: Wechselt man während „Braucht dich“ weg von der App, poppt nichts nachträglich groß auf (nur die Leiste). Sonst wie (7).
 
 ## 2026-11-05 (7)
 - **Codex-Unterstützung** (Codex CLI + Codex-Modus der ChatGPT-App): gleiche curl-Hooks in `~/.codex/hooks.json` (bzw. `$CODEX_HOME`), URL mit `&agent=codex`. Sitzungen merken sich ihren Agenten: blauer Spark, „Codex“/„Claude“-Badge, Icons für `apply_patch`/`update_plan`/`web_search`, `Interrupt`-Hook → sofort „Ready“. Settings-Abschnitt „Codex“, CLI installiert/entfernt/zeigt Codex-Hooks mit. Neues GIF `codex.gif`.
