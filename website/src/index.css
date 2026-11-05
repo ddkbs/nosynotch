@@ -1,0 +1,320 @@
+@import "tailwindcss";
+
+@font-face {
+  font-family: "Geist";
+  src: url("/fonts/Geist-Variable.woff2") format("woff2");
+  font-weight: 100 900;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Geist Mono";
+  src: url("/fonts/GeistMono-Variable.woff2") format("woff2");
+  font-weight: 100 900;
+  font-display: swap;
+}
+
+/* Each variant sets --accent (and optionally --accent-2) on :root from its entry point. */
+:root {
+  --background: #060607;
+  --foreground: #f5f5f6;
+  --muted-foreground: #8e8e96;
+  --faint: #56565e;
+  --border: rgb(255 255 255 / 8%);
+  --border-strong: rgb(255 255 255 / 14%);
+  --panel: rgb(14 14 17 / 72%);
+  --panel-solid: #0e0e11;
+  --accent: #e0896a;
+  --accent-2: #8f7cff;
+}
+
+@theme inline {
+  --font-sans: "Geist", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "Geist Mono", ui-monospace, monospace;
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-faint: var(--faint);
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
+  --color-panel: var(--panel);
+  --color-panel-solid: var(--panel-solid);
+  --color-accent: var(--accent);
+  --color-accent-2: var(--accent-2);
+  --animate-shimmer: shimmer 2.2s linear infinite;
+  --animate-blink: blink 1.1s steps(1) infinite;
+}
+
+@keyframes shimmer {
+  from {
+    background-position: 200% 0;
+  }
+  to {
+    background-position: -200% 0;
+  }
+}
+@keyframes blink {
+  50% {
+    opacity: 0;
+  }
+}
+
+html {
+  scroll-behavior: smooth;
+  color-scheme: dark;
+}
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+::selection {
+  background: color-mix(in oklch, var(--accent) 45%, transparent);
+  color: #fff;
+}
+
+.text-shimmer {
+  background: linear-gradient(
+    90deg,
+    var(--muted-foreground) 35%,
+    #fff 50%,
+    var(--muted-foreground) 65%
+  );
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: var(--animate-shimmer);
+}
+
+
+/* Long-form docs typography. */
+.prose-docs h2 {
+  margin: 3rem 0 0.75rem;
+  font-size: 1.6rem;
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  scroll-margin-top: 6rem;
+}
+.prose-docs h3 {
+  margin: 2rem 0 0.5rem;
+  font-size: 1.1rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+.prose-docs p,
+.prose-docs li {
+  color: var(--muted-foreground);
+  line-height: 1.75;
+  font-size: 15.5px;
+}
+.prose-docs p {
+  margin: 0.75rem 0;
+}
+.prose-docs ul,
+.prose-docs ol {
+  margin: 0.75rem 0;
+  padding-left: 1.25rem;
+}
+.prose-docs ul {
+  list-style: disc;
+}
+.prose-docs ol {
+  list-style: decimal;
+}
+.prose-docs li::marker {
+  color: var(--faint);
+}
+.prose-docs strong {
+  color: var(--foreground);
+  font-weight: 600;
+}
+.prose-docs a {
+  color: var(--foreground);
+  text-decoration: underline;
+  text-decoration-color: color-mix(in oklch, var(--accent) 70%, transparent);
+  text-underline-offset: 3px;
+}
+.prose-docs code {
+  font-family: var(--font-mono);
+  font-size: 0.86em;
+  padding: 0.12em 0.4em;
+  border-radius: 6px;
+  background: rgb(255 255 255 / 6%);
+  color: var(--foreground);
+}
+.prose-docs pre {
+  margin: 1rem 0;
+  padding: 1rem 1.1rem;
+  overflow-x: auto;
+  border: 1px solid var(--border-strong);
+  border-radius: 12px;
+  background: var(--panel-solid);
+  font-family: var(--font-mono);
+  font-size: 13px;
+  line-height: 1.65;
+}
+.prose-docs pre code {
+  padding: 0;
+  background: none;
+}
+.prose-docs table {
+  width: 100%;
+  margin: 1rem 0;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+.prose-docs th,
+.prose-docs td {
+  padding: 0.55rem 0.75rem;
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+  color: var(--muted-foreground);
+}
+.prose-docs th {
+  color: var(--foreground);
+  font-weight: 500;
+}
+.prose-docs img {
+  display: block;
+  max-height: 520px;
+  max-width: 100%;
+  margin: 1.25rem auto;
+  border-radius: 12px;
+  border: 1px solid var(--border-strong);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+}
+
+/* Rotating accent border for the active install mode. */
+@property --beam-angle {
+  syntax: "<angle>";
+  initial-value: 0deg;
+  inherits: false;
+}
+@keyframes beam-spin {
+  to {
+    --beam-angle: 360deg;
+  }
+}
+.mode-beam {
+  background: conic-gradient(
+    from var(--beam-angle),
+    rgb(255 255 255 / 12%) 0deg,
+    var(--accent) 60deg,
+    rgb(255 255 255 / 12%) 120deg,
+    rgb(255 255 255 / 12%) 360deg
+  );
+  animation: beam-spin 3.2s linear infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .mode-beam {
+    animation: none;
+  }
+}
+
+/* The custom cursor replaces the system one on devices with a fine pointer. */
+@media (pointer: fine) {
+  html.nosy-cursor,
+  html.nosy-cursor * {
+    cursor: none !important;
+  }
+}
+
+.text-nosy {
+  background: linear-gradient(100deg, #f4a585 0%, #e0896a 22%, #dc6f9c 48%, #8f7cff 74%, #6c9bff 100%);
+  background-size: 220% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: nosy-drift 14s ease-in-out infinite alternate;
+}
+@keyframes nosy-drift {
+  to {
+    background-position: 100% 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .text-nosy {
+    animation: none;
+  }
+}
+
+/* The wallpaper behind the notch, like the recordings. */
+.mac-wallpaper {
+  background:
+    radial-gradient(60% 90% at 8% 30%, #2a5cff 0%, transparent 60%),
+    radial-gradient(55% 80% at 42% 8%, #8a3dfa 0%, transparent 62%),
+    radial-gradient(50% 90% at 80% 55%, #ff4d8c 0%, transparent 60%),
+    radial-gradient(45% 70% at 102% 105%, #ff9440 0%, transparent 60%),
+    radial-gradient(45% 60% at -5% 110%, #0dcbf2 0%, transparent 60%),
+    #1a1f5c;
+}
+
+@keyframes nav-eq {
+  from { transform: scaleY(0.5); }
+  to { transform: scaleY(1.6); }
+}
+
+/* Notch cursor: idle it is a small ring with a spark; on targets it wraps the element. */
+.notch-cursor {
+  border: 1.5px solid rgb(255 255 255 / 0.55);
+  background: rgb(0 0 0 / 0.25);
+  box-shadow: 0 0 18px -4px var(--cursor-glow, var(--accent));
+  animation: cursor-glow 12s linear infinite;
+  will-change: transform, width, height;
+}
+.notch-cursor[data-mode="target"] {
+  border-color: rgb(255 255 255 / 0.32);
+  background: transparent;
+  box-shadow:
+    0 0 0 1px rgb(0 0 0 / 0.4),
+    0 0 26px -6px var(--cursor-glow, var(--accent));
+}
+.notch-cursor[data-mode="text"] {
+  border-color: transparent;
+  background: rgb(255 255 255 / 0.85);
+  box-shadow: none;
+}
+.notch-cursor-spark {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 9px;
+  height: 9px;
+  margin: -4.5px 0 0 -4.5px;
+  color: var(--cursor-glow, var(--accent));
+  animation: spin-slow 3.2s linear infinite;
+  transition: opacity 0.25s, transform 0.4s;
+}
+.notch-cursor[data-mode="target"] .notch-cursor-spark {
+  left: 0;
+  top: 0;
+  width: 11px;
+  height: 11px;
+  margin: -5.5px 0 0 -5.5px;
+  filter: drop-shadow(0 0 6px var(--cursor-glow, var(--accent)));
+}
+.notch-cursor[data-mode="text"] .notch-cursor-spark {
+  opacity: 0;
+}
+@property --cursor-glow {
+  syntax: "<color>";
+  initial-value: #e0896a;
+  inherits: true;
+}
+@keyframes cursor-glow {
+  0% { --cursor-glow: #e0896a; }
+  25% { --cursor-glow: #dc6f9c; }
+  50% { --cursor-glow: #8f7cff; }
+  75% { --cursor-glow: #6c9bff; }
+  100% { --cursor-glow: #e0896a; }
+}
+@keyframes spin-slow {
+  to { rotate: 360deg; }
+}
