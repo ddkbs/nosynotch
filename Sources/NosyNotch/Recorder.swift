@@ -175,13 +175,15 @@ final class Recorder {
     }
 
     /// The view's current state at `scale` pixels per point, independent of the screen's backing scale.
+    /// Plain sRGB: the screen's own profile would be baked into the pixels, and ffmpeg ignores ICC profiles.
     static func snapshot(_ view: NSView) -> NSBitmapImageRep? {
         let bounds = view.bounds
         guard let rep = NSBitmapImageRep(bitmapDataPlanes: nil,
                                          pixelsWide: Int((bounds.width * scale).rounded()),
                                          pixelsHigh: Int((bounds.height * scale).rounded()),
                                          bitsPerSample: 8, samplesPerPixel: 4, hasAlpha: true, isPlanar: false,
-                                         colorSpaceName: .deviceRGB, bytesPerRow: 0, bitsPerPixel: 0)
+                                         colorSpaceName: .calibratedRGB, bytesPerRow: 0, bitsPerPixel: 0)?
+            .retagging(with: .sRGB)
         else { return nil }
         rep.size = bounds.size
         view.cacheDisplay(in: bounds, to: rep)
