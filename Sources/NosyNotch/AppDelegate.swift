@@ -5,7 +5,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private lazy var store = SessionStore()
     private lazy var nowPlaying = NowPlaying()
     private lazy var approvals = ApprovalCenter()
-    private lazy var model = NotchViewModel(store: store, media: nowPlaying, approvals: approvals)
+    private lazy var usage = UsageStore()
+    private lazy var model = NotchViewModel(store: store, media: nowPlaying, approvals: approvals, usage: usage)
     private var windowController: NotchWindowController?
     private var server: EventServer?
     private var statusItem: NSStatusItem?
@@ -35,6 +36,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         startServer()
         setUpStatusItem()
         Notifier.requestAuthorizationIfNeeded()
+        if HookInstaller.Codex.isAvailable { usage.refreshCodex() }
 
         // First launch: open the settings so the one button that matters ("Connect Claude Code") is right there.
         if !UserDefaults.standard.bool(forKey: "didShowWelcome") {
@@ -58,6 +60,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             Task { @MainActor in
                 self?.store.handle(event)
                 self?.approvals.observe(event)
+                if event.agent == .codex, ["SessionStart", "UserPromptSubmit", "Stop"].contains(event.name) {
+                    self?.usage.refreshCodex(transcriptPath: event.transcriptPath)
+                }
             }
         }
         server.onPermission = { [weak self] event, reply in
@@ -70,6 +75,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         }
         server.onQuit = {
             Task { @MainActor in NSApp.terminate(nil) }
+        }
+        server.onUsage = { [weak self] data in
+            Task { @MainActor in self?.usage.ingestClaudeStatusLine(data) }
         }
         server.onSettings = { [weak self] in
             Task { @MainActor in self?.settings.show() }

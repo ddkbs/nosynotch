@@ -12,6 +12,8 @@ enum Preferences {
         static let mediaShowWhenPaused = "mediaShowWhenPaused"
         static let approvalsInNotch = "approvalsInNotch"
         static let quietWhenFocused = "quietWhenFocused"
+        static let usageEnabled = "usageEnabled"
+        static let liveEqualizer = "liveEqualizer"
         static let port = "port"
     }
 
@@ -32,6 +34,8 @@ enum Preferences {
             Key.mediaShowWhenPaused: false,
             Key.approvalsInNotch: true,
             Key.quietWhenFocused: true,
+            Key.usageEnabled: true,
+            Key.liveEqualizer: false,
             Key.port: Int(EventServer.defaultPort),
         ])
     }
@@ -65,6 +69,12 @@ enum Preferences {
 
     /// "Done" while you're already looking at that app: small check in the notch, no sound, no banner.
     static var quietWhenFocused: Bool { defaults.object(forKey: Key.quietWhenFocused) as? Bool ?? true }
+
+    /// Usage-limit bars in the hover view.
+    static var usageEnabled: Bool { defaults.object(forKey: Key.usageEnabled) as? Bool ?? true }
+
+    /// Bigger equalizer that follows the actual music (needs the "audio recording" permission).
+    static var liveEqualizer: Bool { defaults.bool(forKey: Key.liveEqualizer) }
 
     static var port: UInt16 {
         UInt16(clamping: defaults.integer(forKey: Key.port))

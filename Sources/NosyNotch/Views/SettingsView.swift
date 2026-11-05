@@ -46,6 +46,8 @@ struct SettingsView: View {
     @AppStorage(Preferences.Key.mediaShowWhenPaused) private var mediaShowWhenPaused = false
     @AppStorage(Preferences.Key.approvalsInNotch) private var approvalsInNotch = true
     @AppStorage(Preferences.Key.quietWhenFocused) private var quietWhenFocused = true
+    @AppStorage(Preferences.Key.usageEnabled) private var usageEnabled = true
+    @AppStorage(Preferences.Key.liveEqualizer) private var liveEqualizer = false
 
     @State private var launchAtLogin = LoginItem.isEnabled
     @State private var hooks: [(path: String, installed: Bool)] = []
@@ -124,6 +126,21 @@ struct SettingsView: View {
                     Text("Permissions")
                 } footer: {
                     FooterText("Claude Code keeps its own dialog open meanwhile – answer wherever you like. Codex shows its prompt once you click ✕ or after 45 s. Your deny rules always win.")
+                }
+
+                Section {
+                    Toggle("Show usage limits when hovering the notch", isOn: $usageEnabled)
+                        .onChange(of: usageEnabled) { _, on in
+                            do {
+                                if on, HookInstaller.isInstalled { try HookInstaller.installStatusLine(port: Preferences.port) }
+                                if !on { try HookInstaller.uninstallStatusLine() }
+                            } catch { problem = error.localizedDescription }
+                            actions.settingsChanged()
+                        }
+                } header: {
+                    Text("Usage")
+                } footer: {
+                    FooterText("5-hour and weekly limits as bars. Claude (Pro / Max): Claude Code only shares them with its status line, so Nosy Notch adds a silent one – unless you already have your own. Codex: read from its session files. Updates whenever the agent answers.")
                 }
 
                 Section("General") {

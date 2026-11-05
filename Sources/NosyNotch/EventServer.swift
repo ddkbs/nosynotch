@@ -6,6 +6,7 @@ import Network
 ///   POST /event   – body: hook stdin JSON
 ///   POST /permission – body: PermissionRequest hook JSON; the response (the hook's stdout) is held back
 ///                    until the user decides in the notch
+///   POST /usage   – body: Claude Code status line JSON (rate limits)
 ///   GET  /health  – returns "ok"
 ///   POST /quit    – terminates the app (used by `npx nosynotch stop`)
 ///   POST /settings – opens the settings window (used by `npx nosynotch settings`)
@@ -19,6 +20,7 @@ final class EventServer: @unchecked Sendable {
     private let onEvent: @Sendable (HookEvent) -> Void
     var onQuit: (@Sendable () -> Void)?
     var onSettings: (@Sendable () -> Void)?
+    var onUsage: (@Sendable (Data) -> Void)?
     /// A permission hook waits for an answer. Call `reply` exactly once with the hook's stdout (nil = no decision).
     var onPermission: (@Sendable (HookEvent, @escaping @Sendable (String?) -> Void) -> Void)?
 
@@ -120,6 +122,9 @@ final class EventServer: @unchecked Sendable {
             } else {
                 status = "400 Bad Request"
             }
+        case ("POST", "/usage"):
+            status = "200 OK"
+            onUsage?(request.body)
         case ("GET", "/health"):
             status = "200 OK"
         case ("POST", "/quit"):

@@ -34,6 +34,9 @@ final class NotchViewModel: ObservableObject {
     let store: SessionStore
     let media: NowPlaying
     let approvals: ApprovalCenter
+    let usage: UsageStore
+
+    static let usageRowHeight: CGFloat = 24
 
     /// Extra height for the Allow / Deny row.
     static let approvalRowHeight: CGFloat = 40
@@ -55,11 +58,14 @@ final class NotchViewModel: ObservableObject {
     private var flashWork: DispatchWorkItem?
     private var quietWork: DispatchWorkItem?
 
-    init(store: SessionStore, media: NowPlaying, approvals: ApprovalCenter? = nil) {
+    init(store: SessionStore, media: NowPlaying, approvals: ApprovalCenter? = nil, usage: UsageStore? = nil) {
         self.store = store
         self.media = media
         let approvals = approvals ?? ApprovalCenter()
         self.approvals = approvals
+        let usage = usage ?? UsageStore(load: false)
+        self.usage = usage
+        usage.onChange = { [weak self] in self?.objectWillChange.send() }
         media.onChange = { [weak self] in self?.recompute() }
         approvals.onChange = { [weak self] in
             guard let self else { return }
@@ -82,6 +88,11 @@ final class NotchViewModel: ObservableObject {
     /// A track is loaded in Spotify / Music and the media player is enabled.
     var hasMedia: Bool { Preferences.mediaEnabled && media.track != nil }
 
+    /// Usage bars shown at the bottom of the hover view.
+    var usageRows: [(agent: Agent, usage: AgentUsage)] {
+        Preferences.usageEnabled ? usage.rows : []
+    }
+
     /// Whether the hover view lists Claude sessions (always, unless there are none but music is playing).
     var showsSessionList: Bool { !store.sessions.isEmpty || !hasMedia }
 
@@ -102,6 +113,8 @@ final class NotchViewModel: ObservableObject {
             if showsSessionList {
                 height += 10 + CGFloat(min(max(store.sessions.count, 1), Self.maxRows)) * Self.rowHeight
             }
+            let usageCount = usageRows.count
+            if usageCount > 0 { height += 8 + CGFloat(usageCount) * Self.usageRowHeight }
             return CGSize(width: wide, height: height)
         case .celebrating:
             return CGSize(width: wide, height: notchSize.height + 104)
@@ -115,7 +128,8 @@ final class NotchViewModel: ObservableObject {
     /// Size of the window that hosts the notch – big enough for the largest state plus glow.
     var canvasSize: CGSize {
         CGSize(width: Self.expandedWidth + 80,
-               height: notchSize.height + 10 + Self.mediaCardHeight + 10 + CGFloat(Self.maxRows) * Self.rowHeight + 12 + 40)
+               height: notchSize.height + 10 + Self.mediaCardHeight + 10 + CGFloat(Self.maxRows) * Self.rowHeight
+                   + 8 + 2 * Self.usageRowHeight + 12 + 40)
     }
 
     var topRadius: CGFloat { Self.topRadius(for: presentation) }

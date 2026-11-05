@@ -70,6 +70,11 @@ struct NotchView: View {
                     if model.showsSessionList {
                         SessionList(store: store)
                     }
+                    let usageRows = model.usageRows
+                    if !usageRows.isEmpty {
+                        UsageBars(rows: usageRows)
+                            .padding(.top, 8)
+                    }
                 }
                 .transition(.blurFade.combined(with: .move(edge: .top)))
             case .celebrating:
@@ -527,5 +532,83 @@ struct NotchButton: View {
         .buttonStyle(.plain)
         .onHover { hovering = $0 }
         .animation(.easeOut(duration: 0.12), value: hovering)
+    }
+}
+
+// MARK: - Usage limits
+
+/// "Claude  5h ▓▓▓░░ 23%   Week ▓░░░░ 41%" – one row per agent, at the bottom of the hover view.
+struct UsageBars: View {
+    let rows: [(agent: Agent, usage: AgentUsage)]
+
+    var body: some View {
+        VStack(spacing: 0) {
+            ForEach(rows, id: \.agent) { row in
+                HStack(spacing: 12) {
+                    AgentBadge(agent: row.agent)
+                        .frame(width: 46, alignment: .leading)
+                    UsageMeter(label: "5h", window: row.usage.fiveHour?.current)
+                    UsageMeter(label: "Week", window: row.usage.week?.current)
+                }
+                .frame(height: NotchViewModel.usageRowHeight)
+            }
+        }
+        .padding(.horizontal, 24)
+    }
+}
+
+struct UsageMeter: View {
+    let label: String
+    let window: UsageWindow?
+
+    private var fraction: Double { min(max((window?.usedPercent ?? 0) / 100, 0), 1) }
+
+    private var color: Color {
+        switch fraction {
+        case ..<0.6: return Theme.success
+        case ..<0.85: return Theme.amber
+        default: return Theme.danger
+        }
+    }
+
+    var body: some View {
+        HStack(spacing: 6) {
+            Text(label)
+                .font(.system(size: 10, weight: .medium))
+                .foregroundStyle(.white.opacity(0.5))
+                .frame(width: 30, alignment: .leading)
+            GeometryReader { geo in
+                ZStack(alignment: .leading) {
+                    Capsule().fill(.white.opacity(0.1))
+                    if window != nil {
+                        Capsule().fill(color).frame(width: max(4, geo.size.width * fraction))
+                    }
+                }
+            }
+            .frame(height: 5)
+            Text(hovering ? resetText : percentText)
+                .font(.system(size: 10, weight: .semibold, design: .monospaced))
+                .foregroundStyle(.white.opacity(hovering ? 0.55 : 0.75))
+                .frame(width: 44, alignment: .trailing)
+                .contentTransition(.opacity)
+        }
+        .contentShape(Rectangle())
+        .onHover { hovering = $0 }
+        .animation(.easeOut(duration: 0.15), value: hovering)
+    }
+
+    @State private var hovering = false
+
+    private var percentText: String {
+        window.map { "\(Int($0.usedPercent.rounded()))%" } ?? "–"
+    }
+
+    /// Hover a meter to see when it resets: "↻ 2h 5m" / "↻ 3d".
+    private var resetText: String {
+        guard let date = window?.resetsAt else { return percentText }
+        let s = max(0, Int(date.timeIntervalSinceNow))
+        if s >= 86_400 { return "↻ \(s / 86_400)d \((s % 86_400) / 3600)h" }
+        if s >= 3600 { return "↻ \(s / 3600)h \((s % 3600) / 60)m" }
+        return "↻ \(max(1, s / 60))m"
     }
 }

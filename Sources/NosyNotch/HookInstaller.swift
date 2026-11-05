@@ -126,9 +126,45 @@ enum HookInstaller {
 
     static func install(port: UInt16 = EventServer.defaultPort) throws {
         for url in settingsURLs { try install(port: port, at: url) }
+        if Preferences.usageEnabled { try installStatusLine(port: port) }
+    }
+
+    // MARK: Status line (usage limits)
+
+    /// Claude Code passes rate limits (Pro/Max) only to its status line command. We add a silent one that
+    /// forwards the JSON – but only where you don't have a status line of your own.
+    static func statusLineCommand(port: UInt16) -> String {
+        "curl -s -m 1 -X POST -H 'Content-Type: application/json' -H 'Expect:' --data-binary @- "
+            + "'http://127.0.0.1:\(port)/usage?src=\(marker)' >/dev/null 2>&1; true"
+    }
+
+    enum StatusLine: Equatable {
+        case ours, none, theirs
+    }
+
+    static func statusLine(at url: URL) -> StatusLine {
+        guard let line = (try? load(url))?["statusLine"] as? [String: Any] else { return .none }
+        return ((line["command"] as? String) ?? "").contains(marker) ? .ours : .theirs
+    }
+
+    static func installStatusLine(port: UInt16 = EventServer.defaultPort) throws {
+        for url in settingsURLs where statusLine(at: url) != .theirs {
+            var settings = try load(url)
+            settings["statusLine"] = ["type": "command", "command": statusLineCommand(port: port)]
+            try save(settings, to: url)
+        }
+    }
+
+    static func uninstallStatusLine() throws {
+        for url in settingsURLs where statusLine(at: url) == .ours {
+            var settings = try load(url)
+            settings["statusLine"] = nil
+            try save(settings, to: url)
+        }
     }
 
     static func uninstall() throws {
+        try uninstallStatusLine()
         for url in settingsURLs where FileManager.default.fileExists(atPath: url.path) { try uninstall(at: url) }
     }
 
