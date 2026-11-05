@@ -1,98 +1,124 @@
-# claude-notch ✦
+<h1 align="center">Nosy Notch</h1>
 
-Live-Status von **Claude Code** direkt in der MacBook-Notch – mit Animationen.
+<p align="center">
+  <b>Your MacBook notch keeps an eye on Claude Code – and plays your music while Claude takes a break.</b>
+</p>
 
-![claude-notch: ausgeklappte Notch mit drei Sessions](docs/screenshots/hover.png)
+<p align="center">
+  <img src="docs/gifs/demo.gif" alt="Nosy Notch: Claude thinks, uses tools, asks for permission and finishes" width="720">
+</p>
 
-![claude-notch Demo](docs/gifs/demo.gif)
+<p align="center">
+  <code>npx nosynotch</code> · macOS 14+ · no account, no App Store, no Xcode
+</p>
 
-| | |
+<table>
+  <tr>
+    <td align="center" width="50%"><img src="docs/gifs/thinking.gif" alt="Thinking"><br><b>Thinking</b><br><sub>The notch slides open, the spark spins</sub></td>
+    <td align="center" width="50%"><img src="docs/gifs/tools.gif" alt="Working"><br><b>Working</b><br><sub>Live icon for every tool Claude uses</sub></td>
+  </tr>
+  <tr>
+    <td align="center"><img src="docs/gifs/attention.gif" alt="Needs you"><br><b>Needs you</b><br><sub>Permission prompt or question – glow, shake, sound</sub></td>
+    <td align="center"><img src="docs/gifs/done.gif" alt="Done"><br><b>Done</b><br><sub>Checkmark, confetti and a summary of the answer</sub></td>
+  </tr>
+  <tr>
+    <td align="center"><img src="docs/gifs/media.gif" alt="Music"><br><b>Music</b><br><sub>Spotify / Apple Music player while Claude is idle</sub></td>
+    <td align="center"><img src="docs/gifs/handoff.gif" alt="Back to music"><br><b>Back to music</b><br><sub>Close a notification with ✕ and the music returns</sub></td>
+  </tr>
+  <tr>
+    <td align="center"><img src="docs/gifs/error.gif" alt="Error"><br><b>Error</b><br><sub>Rate limit, overload, auth problems …</sub></td>
+    <td align="center"><img src="docs/gifs/hover.gif" alt="All sessions"><br><b>All sessions</b><br><sub>Hover to see every running session</sub></td>
+  </tr>
+</table>
+
+<p align="center"><a href="docs/animations.md"><b>→ Every animation explained</b></a></p>
+
+## Install
+
+```bash
+npx nosynotch
+```
+
+That's it. The command
+
+1. downloads the app to `~/.nosynotch/` (or builds it locally with Swift if there is no release yet),
+2. adds the hooks to your Claude Code settings (a backup `settings.json.nosynotch.bak` is created),
+3. starts Nosy Notch in the background – no Dock icon, just a ✦ in the menu bar.
+
+Restart Claude Code sessions that are already running once so they load the hooks. New sessions work right away.
+
+```bash
+npx nosynotch demo        # play every animation
+npx nosynotch autostart   # start at login (autostart off to disable)
+npx nosynotch status      # what is installed and running
+npx nosynotch stop
+npx nosynotch uninstall   # removes app, hooks and autostart
+```
+
+## What it shows
+
+| State | Notch |
 |---|---|
-| ![Denkt nach](docs/gifs/thinking.gif) | ![Braucht dich](docs/gifs/attention.gif) |
-| ![Fertig](docs/gifs/done.gif) | ![Fehler](docs/gifs/error.gif) |
-| ![Media-Player](docs/gifs/media.gif) | ![Zurück zur Musik](docs/gifs/handoff.gif) |
+| **Thinking** | Slides out sideways, the spark rotates and pulses, three dots dance on the right |
+| **Working** | Spark spins faster, the right wing shows the tool (terminal, pencil, magnifier, globe …) |
+| **Needs you** | Opens up with an amber glow and a shake, waving hand, the question or the command it wants to run, sound |
+| **Compacting** | Purple spark that shrinks and turns backwards |
+| **Done** | Checkmark draws itself, confetti, project, duration and the start of Claude's answer, sound |
+| **Error** | Red glow and a sputtering spark when a turn dies from an API error (rate limit, overload, auth …) |
+| **Music** | When Claude is idle: album cover left, equalizer in the cover's colour right. Hover for the player |
+| **Hover** | List of all sessions with status, current tool and timer. Click jumps to the right terminal |
 
-**[→ Alle Animationen und Screenshots mit Erklärung](docs/animations.md)**
+Works with several sessions at once. Macs without a notch get a virtual one in the middle of the menu bar.
 
-| Zustand | Notch |
-|---|---|
-| **Denkt nach** | Notch fährt seitlich aus, das Spark-Logo rotiert, Strahlen pulsieren als Welle, rechts tanzen drei Punkte |
-| **Tool läuft** | Spark dreht schneller, rechts das Tool-Icon (Terminal, Stift, Lupe, Globus …) mit Puls |
-| **Braucht dich** (Permission/Rückfrage) | Notch klappt auf, oranges Glühen, Shake, winkende Hand + Nachricht, Sound |
-| **Komprimiert** | violetter, sich zusammenziehender Spark |
-| **Fertig** | Notch klappt auf, Häkchen zeichnet sich, Konfetti-Burst, Projekt + Dauer + Zusammenfassung der letzten Antwort, Sound |
-| **Fehler** (API-Fehler, Rate-Limit …) | Notch klappt auf, rotes Glühen, flackernder Spark, übersetzte Fehlermeldung, Sound |
-| **Media-Player** (Claude macht Pause) | Läuft Spotify oder Apple Music, zeigt die Notch links das Cover und rechts einen Equalizer in der Farbe des Covers. Hover → Player mit Titel, Fortschritt (klickbar) und Zurück / Play / Weiter |
-| **✕** | Jede Benachrichtigung hat ein ✕ – danach geht die Notch direkt zurück zur Musik |
-| **Hover** | Liste aller laufenden Sessions mit Status, aktuellem Tool und Timer. Klick → springt ins richtige Terminal |
-
-Funktioniert mit mehreren parallelen Sessions. Auf Macs ohne Notch hängt eine „virtuelle“ Notch mittig an der Menüleiste.
-
-## Wie es funktioniert
+## How it works
 
 ```
-Claude Code ──hook (curl, ~15 ms)──▶ 127.0.0.1:7823/event ──▶ ClaudeNotch.app (SwiftUI-Panel über der Notch)
+Claude Code ──hook (curl, ~15 ms)──▶ 127.0.0.1:7823/event ──▶ Nosy Notch (SwiftUI panel over the notch)
 ```
 
-Kein MCP-Server nötig: Ein MCP-Server wird nur aufgerufen, wenn *Claude* sich entscheidet, ein Tool zu benutzen. Für einen Live-Status braucht man aber jedes Lifecycle-Event. Genau dafür gibt es **Claude Code Hooks**
-(`UserPromptSubmit`, `PreToolUse`, `PostToolUse(Failure)`, `PermissionRequest`, `Notification`, `Stop`, `StopFailure`,
-`SessionStart/End`, `PreCompact`, `SubagentStop`).
-Jeder Hook ist ein einzeiliges `curl`, das das Hook-JSON an die App schickt. Läuft die App nicht, schlägt `curl` sofort fehl,
-`|| true` sorgt dafür, dass Claude Code davon nie blockiert wird.
+Nosy Notch uses [Claude Code hooks](https://code.claude.com/docs/en/hooks), not MCP: an MCP server is only called when *Claude*
+decides to use a tool, but a live status needs every lifecycle event (`UserPromptSubmit`, `PreToolUse`, `PostToolUse`,
+`PermissionRequest`, `Notification`, `Stop`, `StopFailure`, `PreCompact`, `SessionStart/End` …).
 
-### Verbindung mit Claude Code
+Every hook is a one-line `curl` that posts the hook's JSON to the app. If the app isn't running, `curl` fails instantly and
+`|| true` makes sure Claude Code is never blocked or slowed down.
 
-Es gibt nichts zu koppeln oder einzuloggen: Sobald die Hooks in der `settings.json` stehen, schickt **jede** Claude-Code-Session
-(Terminal, VS Code, Desktop-App mit Claude Code) ihre Events an die Notch. Zu beachten:
+There is nothing to pair or log into: once the hooks are in `settings.json`, **every** Claude Code session – terminal, VS Code,
+the desktop app – reports to the notch.
 
-- **Laufende Sessions neu starten.** Claude Code liest die Hooks beim Start. Neue Sessions sind sofort dabei.
-- **Mehrere Accounts / `CLAUDE_CONFIG_DIR`.** Wer mit `CLAUDE_CONFIG_DIR=~/.claude-work` o. ä. arbeitet, hat eine eigene
-  `settings.json`. `npx claude-notch` trägt die Hooks deshalb in `~/.claude`, in `$CLAUDE_CONFIG_DIR` und in jeden
-  `~/.claude-*`-Ordner ein, der wie ein Config-Ordner aussieht. `npx claude-notch status` zeigt, wo sie stehen.
-  Kommt später ein neuer Account dazu: einfach `npx claude-notch hooks` noch mal ausführen.
-- **Testen:** `npx claude-notch status` muss bei jedem Ordner ✓ zeigen, dann in einer neuen Session etwas fragen. Die Notch
-  sollte sofort ausfahren. Wenn nicht: `curl -s 127.0.0.1:7823/health` prüft, ob die App läuft.
+**Several accounts / `CLAUDE_CONFIG_DIR`:** each config directory has its own `settings.json`. Nosy Notch installs the hooks into
+`~/.claude`, `$CLAUDE_CONFIG_DIR` and every `~/.claude-*` folder that looks like a config directory. `npx nosynotch status`
+lists each one. Added an account later? Run `npx nosynotch hooks` again.
 
-## Installation
+## Music
+
+When no Claude session is busy and **Spotify** or **Apple Music** is playing, the notch turns into a mini player. Claude always
+wins: as soon as a session works or needs you, the notch switches over, and the music comes back afterwards.
+
+- Track info comes from the notifications Spotify and Music broadcast anyway – no permission needed.
+- For play/pause, next and seeking, macOS asks once per player whether Nosy Notch may control it ("Automation").
+- Covers: Spotify's public oEmbed endpoint and Apple's iTunes Search. Only the track ID (Spotify) or artist + title (Music) is sent.
+- Browser audio, YouTube and podcasts aren't supported yet: Apple closed the private MediaRemote API to third-party apps in macOS 15.4.
+
+## Settings
+
+Click the ✦ in the menu bar: sounds (done / needs you / error), music player on/off, macOS notifications, install or remove
+hooks, play the demo.
+
+## Build from source
+
+Requires macOS 14+ and the free Xcode Command Line Tools (`xcode-select --install`).
 
 ```bash
-npx claude-notch
+swift run                      # run directly
+./scripts/build-app.sh --open  # build and open build/Nosy Notch.app
 ```
-
-Das war's. Der Befehl
-1. lädt die fertige Binary von GitHub Releases nach `~/.claude-notch/` (gibt es kein Release, kompiliert er sie lokal mit Swift),
-2. trägt die Hooks in `~/.claude/settings.json` ein (und in weitere Config-Ordner, siehe oben; vorher wird jeweils `settings.json.claude-notch.bak` angelegt),
-3. startet den Notch-Helfer im Hintergrund (ohne Dock-Icon, nur ein ✦ in der Menüleiste).
-
-**Kein Apple-Developer-Account, kein App Store, kein Xcode-Projekt.** Die Binary ist ad-hoc signiert. Dateien, die über Node/curl
-geladen werden, bekommen kein Quarantäne-Flag, deshalb meckert Gatekeeper nicht.
-
-Bereits laufende Claude-Code-Sessions einmal neu starten, damit sie die Hooks laden.
-
-```bash
-npx claude-notch demo        # alle Animationen vorführen
-npx claude-notch autostart   # beim Login starten (autostart off)
-npx claude-notch status
-npx claude-notch stop
-npx claude-notch uninstall   # entfernt App, Hooks und Autostart
-```
-
-Global installieren geht auch: `npm i -g claude-notch`, danach einfach `claude-notch`.
-
-### Aus dem Quellcode
-
-Voraussetzung: macOS 14+ und die kostenlosen Xcode Command Line Tools (`xcode-select --install`).
-
-```bash
-swift run
-```
-
-oder als `.app`: `./scripts/build-app.sh --open`.
 
 <details>
-<summary>Hooks manuell eintragen</summary>
+<summary>Add the hooks manually</summary>
 
-Für jedes Event (`SessionStart`, `SessionEnd`, `UserPromptSubmit`, `PreToolUse`, `PostToolUse`, `PostToolUseFailure`, `PermissionRequest`, `Notification`, `Stop`, `StopFailure`, `SubagentStop`, `PreCompact`):
+For every event (`SessionStart`, `SessionEnd`, `UserPromptSubmit`, `PreToolUse`, `PostToolUse`, `PostToolUseFailure`,
+`PermissionRequest`, `Notification`, `Stop`, `StopFailure`, `SubagentStop`, `PreCompact`):
 
 ```json
 {
@@ -104,7 +130,7 @@ Für jedes Event (`SessionStart`, `SessionEnd`, `UserPromptSubmit`, `PreToolUse`
           {
             "type": "command",
             "timeout": 5,
-            "command": "curl -s -m 2 -X POST -H 'Content-Type: application/json' -H 'Expect:' -H \"X-Term-Program: ${TERM_PROGRAM:-}\" -H \"X-Bundle-Id: ${__CFBundleIdentifier:-}\" --data-binary @- 'http://127.0.0.1:7823/event?src=claude-notch' >/dev/null 2>&1 || true"
+            "command": "curl -s -m 2 -X POST -H 'Content-Type: application/json' -H 'Expect:' -H \"X-Term-Program: ${TERM_PROGRAM:-}\" -H \"X-Bundle-Id: ${__CFBundleIdentifier:-}\" --data-binary @- 'http://127.0.0.1:7823/event?src=nosynotch' >/dev/null 2>&1 || true"
           }
         ]
       }
@@ -112,55 +138,38 @@ Für jedes Event (`SessionStart`, `SessionEnd`, `UserPromptSubmit`, `PreToolUse`
   }
 }
 ```
-`matcher` braucht es nur bei den Tool-Events (`PreToolUse`, `PostToolUse`, `PostToolUseFailure`, `PermissionRequest`).
+
+`matcher` is only needed for the tool events (`PreToolUse`, `PostToolUse`, `PostToolUseFailure`, `PermissionRequest`).
 </details>
 
-## Media-Player
+## Development
 
-Die Notch ist auch dann nützlich, wenn Claude nichts tut: Spielt **Spotify** oder **Apple Music**, wird sie zum Mini-Player.
-Claude hat immer Vorrang. Sobald eine Session arbeitet oder dich braucht, übernimmt der Claude-Status, danach kommt die Musik zurück.
+`swift run` starts without an app bundle, so macOS notifications don't work there – everything else does.
 
-- Titel und Status kommen von den Benachrichtigungen, die Spotify und Musik ohnehin systemweit senden. Dafür braucht es keine Berechtigung.
-- Für Play/Pause, Weiter und Spulen fragt macOS einmal pro Player, ob Claude Notch ihn steuern darf („Automation“).
-- Cover: Für Spotify wird die öffentliche oEmbed-Schnittstelle von Spotify abgefragt, für Musik die iTunes-Suche von Apple.
-  Dabei gehen Track-ID bzw. Künstler + Titel an Spotify/Apple, sonst nichts.
-- Andere Quellen (Browser, YouTube, Podcasts) gehen noch nicht: Apple hat die dafür nötige private MediaRemote-Schnittstelle
-  mit macOS 15.4 für Drittanbieter-Apps gesperrt.
-- Abschalten: Menüleiste ✦ → „Media-Player in der Notch“.
+Re-record the GIFs: `./scripts/record-gifs.sh` (needs `ffmpeg`), see [docs/animations.md](docs/animations.md#re-recording-the-gifs).
 
-## Einstellungen (Menüleiste ✦)
-
-- **Sound bei Fertig / Rückfrage / Fehler**: an (Glass / Funk / Basso)
-- **Media-Player in der Notch**: an
-- **macOS-Mitteilungen**: aus (die Notch ist ja die Benachrichtigung). Funktioniert nur aus der gebauten `.app`, nicht per `swift run`.
-
-## Entwicklung
-
-`swift run` startet ohne App-Bundle, also ohne macOS-Mitteilungen. Alles andere funktioniert.
-
-GIFs für README und `docs/` neu aufnehmen: `./scripts/record-gifs.sh` (braucht `ffmpeg`), siehe [docs/animations.md](docs/animations.md#gifs-neu-aufnehmen).
-
-Releases: Version in `package.json` hochzählen, Tag `vX.Y.Z` pushen. GitHub Actions baut die Universal-Binary (arm64 + x86_64),
-hängt sie ans Release und veröffentlicht auf npm, falls das Secret `NPM_TOKEN` gesetzt ist.
+Releases: bump the version in `package.json` and push a tag `vX.Y.Z`. GitHub Actions builds the universal binary
+(arm64 + x86_64), attaches it to the release and publishes to npm if the `NPM_TOKEN` secret is set.
 
 ```
-bin/claude-notch.js                  npx-CLI (Download, Hooks, Start/Stop, Autostart)
-Sources/ClaudeNotch/
-├── main.swift / AppDelegate.swift   App-Lifecycle, Menüleisten-Item, CLI-Flags
-├── EventServer.swift                Mini-HTTP-Server (Network.framework, nur Loopback)
-├── HookEvent.swift                  Hook-JSON → Event
-├── SessionStore.swift               Event-Stream → Zustand pro Session
-├── Session.swift                    Zustände, Tool-Icons/Labels, Farben
-├── Transcript.swift                 liest die letzte Antwort aus dem Transcript (für „Fertig“)
-├── HookInstaller.swift              settings.json aller Claude-Config-Ordner patchen
-├── Notifier.swift                   Sounds, Mitteilungen, Terminal aktivieren
-├── NotchViewModel.swift             Präsentation (hidden/compact/expanded/celebrating/attention) + Größen
-├── NotchWindow.swift                transparentes NSPanel über der Notch, Hover ohne Klicks zu klauen
-├── Demo.swift                       Demo-Ablauf
-├── NowPlaying.swift                 Spotify / Apple Music: Track, Cover, Steuerung
-├── Recorder.swift                   nimmt alle Animationen als Frames auf (--record, für die GIFs)
-└── Views/                           NotchShape, ClaudeSpark, Indikatoren, Konfetti, Häkchen …
+bin/nosynotch.js                     npx CLI (download, hooks, start/stop, autostart)
+Sources/NosyNotch/
+├── main.swift / AppDelegate.swift   app lifecycle, menu bar item, CLI flags
+├── EventServer.swift                tiny HTTP server (Network.framework, loopback only)
+├── HookEvent.swift                  hook JSON → event
+├── SessionStore.swift               event stream → state per session
+├── Session.swift                    states, tool icons/labels, colours, error texts
+├── NowPlaying.swift                 Spotify / Apple Music: track, cover, controls
+├── Transcript.swift                 reads the last answer from the transcript (for "Done")
+├── HookInstaller.swift              patches settings.json in every Claude config directory
+├── Notifier.swift                   sounds, notifications, bringing the terminal to the front
+├── NotchViewModel.swift             presentation (hidden/compact/expanded/…/media) and sizes
+├── NotchWindow.swift                transparent NSPanel over the notch, hover without stealing clicks
+├── Demo.swift / Recorder.swift      demo run, GIF recorder (--record)
+└── Views/                           notch shape, spark, indicators, confetti, checkmark, media player …
 ```
 
-Hinweis: Bricht man einen Turn mit Esc/Ctrl-C ab, sendet Claude Code kein `Stop`. Die Session fällt dann nach einem Timeout
-(10 Min. Denken / 30 Min. Tool) auf „Bereit“ zurück, spätestens beim nächsten Prompt stimmt alles wieder. In der Hover-Liste kann man sie auch per ✕ wegklicken.
+If you interrupt a turn with Esc / Ctrl-C, Claude Code sends no `Stop` event. The session then falls back to "Ready" after a
+timeout (10 min thinking / 30 min tool), at the latest with your next prompt. You can also remove it from the hover list with ✕.
+
+Not affiliated with Anthropic. Claude is a trademark of Anthropic.

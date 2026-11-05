@@ -1,138 +1,123 @@
-# Alle Animationen
+# Every animation
 
-Jede Animation mit dem Claude-Code-Hook, der sie auslöst. Alle GIFs und Screenshots sind echte Aufnahmen
-der App (`./scripts/record-gifs.sh`), nur der Desktop dahinter ist gestellt.
-Standbilder mit ausgeklappter Notch: [Screenshots](#screenshots).
+Each animation with the Claude Code hook that triggers it. All GIFs are real recordings of the app
+(`./scripts/record-gifs.sh`); only the desktop behind it is staged.
 
-| | |
-|---|---|
-| [Denkt nach](#denkt-nach) · [Tool läuft](#tool-läuft) · [Braucht dich](#braucht-dich) · [Fertig](#fertig) | [Fehler](#fehler) · [Komprimiert](#komprimiert) · [Mehrere Sessions](#mehrere-sessions-hover) · [Media-Player](#media-player) · [Zurück zur Musik](#zurück-zur-musik) · [Kompletter Ablauf](#kompletter-ablauf) |
+[Thinking](#thinking) · [Working](#working) · [Needs you](#needs-you) · [Done](#done) · [Error](#error) ·
+[Compacting](#compacting) · [All sessions](#all-sessions-hover) · [Music](#music) · [Back to music](#back-to-music) ·
+[Full run](#full-run)
 
-## Denkt nach
+## Thinking
 
-![Denkt nach](gifs/thinking.gif)
+<img src="gifs/thinking.gif" alt="Thinking" width="560">
 
-**Auslöser:** `UserPromptSubmit`, `PostToolUse`
+**Trigger:** `UserPromptSubmit`, `PostToolUse`
 
-Die Notch fährt seitlich aus. Links rotiert der Spark, seine Strahlen pulsieren als Welle, rechts hüpfen drei Punkte.
+The notch slides out sideways. On the left the spark rotates and its rays pulse like a wave, on the right three dots bounce.
 
-## Tool läuft
+## Working
 
-![Tool läuft](gifs/tools.gif)
+<img src="gifs/tools.gif" alt="Working" width="560">
 
-**Auslöser:** `PreToolUse`
+**Trigger:** `PreToolUse`
 
-Der Spark dreht schneller, rechts erscheint das Icon des Tools mit Puls:
+The spark spins faster and the right wing shows the tool's icon:
 
 | Tool | Icon | Tool | Icon |
 |---|---|---|---|
-| Bash | Terminal | Grep / Glob | Lupe / Ordner |
-| Edit / Write | Stift | WebFetch / WebSearch | Globus / Kompass |
-| Read | Dokument | Task / Agent | zwei Personen |
-| TodoWrite | Checkliste | MCP-Tools | Puzzleteil |
+| Bash | terminal | Grep / Glob | magnifier / folder |
+| Edit / Write | pencil | WebFetch / WebSearch | globe / compass |
+| Read | document | Task / Agent | two people |
+| TodoWrite | checklist | MCP tools | puzzle piece |
 
-In der Hover-Liste steht zusätzlich, *was* gerade passiert („Bearbeitet Parser.swift“, „Führt aus · Run tests“).
+The hover list also says *what* is happening ("Editing Parser.swift", "Running · Run tests").
 
-## Braucht dich
+## Needs you
 
-![Braucht dich](gifs/attention.gif)
+<img src="gifs/attention.gif" alt="Needs you" width="560">
 
-**Auslöser:** `PermissionRequest` (sofort, wenn der Erlaubnis-Dialog aufgeht) und `Notification`
-(z. B. Rückfragen, MCP-Eingaben)
+**Trigger:** `PermissionRequest` (the moment the permission dialog opens) and `Notification` (questions, MCP input …)
 
-Die Notch klappt auf, glüht orange und schüttelt sich, die Hand winkt, dazu der Sound „Funk“. Sobald du
-im Terminal antwortest, geht die Notch von allein wieder zu. Die Erinnerung „waiting for your input“, die
-Claude Code ~60 s nach einem fertigen Turn schickt, wird bewusst ignoriert.
+The notch opens with an amber glow and a shake, a hand waves, and the "Funk" sound plays. The message says which tool
+and command Claude wants to run. As soon as you answer in the terminal, the notch closes by itself. The "waiting for your
+input" reminder Claude Code sends ~60 s after a finished turn is ignored on purpose.
 
-## Fertig
+## Done
 
-![Fertig](gifs/done.gif)
+<img src="gifs/done.gif" alt="Done" width="560">
 
-**Auslöser:** `Stop`
+**Trigger:** `Stop`
 
-Häkchen zeichnet sich, Konfetti-Burst, grünes Glühen, Sound „Glass“. Angezeigt werden Projekt, Dauer
-des Turns und der Anfang der letzten Antwort. Klick springt ins Terminal.
+A checkmark draws itself, confetti bursts, green glow, "Glass" sound. Shows the project, how long the turn took and the start
+of Claude's last answer. Click to jump to the terminal, ✕ to close.
 
-## Fehler
+## Error
 
-![Fehler](gifs/error.gif)
+<img src="gifs/error.gif" alt="Error" width="560">
 
-**Auslöser:** `StopFailure` (der Turn ist wegen eines API-Fehlers abgebrochen)
+**Trigger:** `StopFailure` (the turn ended because of an API error)
 
-Rotes Glühen, ein flackernder Spark und ein kurz zuckendes Warndreieck, Sound „Basso“. Der Fehlercode
-wird übersetzt:
+Red glow, a sputtering spark and a twitching warning sign, "Basso" sound. The error code is translated:
 
-| `error` | Anzeige |
+| `error` | Shown as |
 |---|---|
-| `rate_limit` | Rate-Limit erreicht |
-| `overloaded` | API ist überlastet |
-| `authentication_failed` | Anmeldung fehlgeschlagen |
-| `billing_error` | Problem mit der Abrechnung |
-| `server_error` | Serverfehler bei der API |
-| `max_output_tokens` | Antwort hat das Token-Limit erreicht |
-| … | API-Fehler + Details |
+| `rate_limit` | Rate limit reached |
+| `overloaded` | API is overloaded |
+| `authentication_failed` | Authentication failed |
+| `billing_error` | Billing problem |
+| `server_error` | API server error |
+| `max_output_tokens` | Response hit the token limit |
+| … | API error + details |
 
-Fehlgeschlagene *Tools* (`PostToolUseFailure`, z. B. ein roter Test) lösen bewusst keinen Alarm aus:
-Das ist normaler Arbeitsalltag, Claude macht danach einfach weiter.
+Failed *tools* (`PostToolUseFailure`, e.g. a red test) deliberately don't raise an alarm – that's everyday work and Claude
+just carries on.
 
-## Komprimiert
+## Compacting
 
-![Komprimiert](gifs/compacting.gif)
+<img src="gifs/compacting.gif" alt="Compacting" width="560">
 
-**Auslöser:** `PreCompact`
+**Trigger:** `PreCompact`
 
-Violetter Spark, der sich gegenläufig dreht und zusammenzieht.
+A purple spark that turns backwards and contracts.
 
-## Mehrere Sessions (Hover)
+## All sessions (hover)
 
-![Hover](gifs/hover.gif)
+<img src="gifs/hover.gif" alt="All sessions" width="560">
 
-Maus über die Notch: Liste aller laufenden Sessions mit Status, aktuellem Tool und Timer. Ein Klick
-holt das richtige Terminal nach vorn, ✕ entfernt eine Session aus der Liste. Bei mehreren Sessions
-zeigt die kompakte Notch immer die wichtigste (Braucht dich / Fehler > Arbeitet > Fertig > Bereit).
+Move the pointer over the notch: a list of every session with status, current tool and timer. Click brings the right
+terminal to the front, ✕ removes a session. With several sessions the compact notch always shows the most important one
+(needs you / error > working > done > ready).
 
-## Media-Player
+## Music
 
-![Media-Player](gifs/media.gif)
+<img src="gifs/media.gif" alt="Music" width="560">
 
-**Auslöser:** Spotify oder Apple Music spielt, und keine Claude-Session arbeitet oder wartet.
+**Trigger:** Spotify or Apple Music is playing and no Claude session is working or waiting.
 
-Links das Cover, rechts tanzen vier Balken in der Farbe des Covers (pausiert: flach). Hover öffnet den
-Player: Cover (Klick öffnet die App), Titel, Künstler, Fortschritt (Klick/Ziehen spult) und
-Zurück / Play-Pause / Weiter. Song und Cover in den GIFs sind erfunden.
+Cover on the left, four bars dancing in the cover's colour on the right (flat when paused). Hover opens the player: cover
+(click opens the app), title, artist, progress (click or drag to seek) and previous / play-pause / next. The song and cover in
+the GIFs are made up.
 
-## Zurück zur Musik
+## Back to music
 
-![Zurück zur Musik](gifs/handoff.gif)
+<img src="gifs/handoff.gif" alt="Back to music" width="560">
 
-Musik läuft → Claude bekommt einen Prompt und übernimmt die Notch → „Fertig“ → Klick auf ✕ →
-die Notch zeigt wieder die Musik. Ohne Klick passiert dasselbe nach 6 Sekunden von allein.
+Music plays → Claude gets a prompt and takes over the notch → "Done" → click ✕ → the notch shows the music again.
+Without a click the same happens after 6 seconds.
 
-## Kompletter Ablauf
+## Full run
 
-![Demo](gifs/demo.gif)
+<img src="gifs/demo.gif" alt="Full run" width="720">
 
-Denken → Grep → Edit → Erlaubnis für Bash → Tests laufen → Fertig. Live vorführen lässt sich das mit
-`npx claude-notch demo`.
+Thinking → Grep → Edit → permission for Bash → tests run → done. Play it live with `npx nosynotch demo`.
 
-## Screenshots
-
-Ausgeklappte Notch als PNG (2×), z. B. für Blogposts oder die GitHub-Social-Preview. Liegen in
-[`docs/screenshots/`](screenshots/).
-
-| | |
-|---|---|
-| ![Mehrere Sessions](screenshots/hover.png) | ![Fertig](screenshots/done.png) |
-| ![Braucht dich](screenshots/attention.png) | ![Fehler](screenshots/error.png) |
-| ![Denkt nach](screenshots/thinking.png) | ![Tool läuft](screenshots/tools.png) |
-| ![Komprimiert](screenshots/compacting.png) | ![Media-Player](screenshots/media.png) |
-
-## GIFs neu aufnehmen
+## Re-recording the GIFs
 
 ```bash
-./scripts/record-gifs.sh            # alle
-./scripts/record-gifs.sh done error # nur diese
+./scripts/record-gifs.sh             # all scenes
+./scripts/record-gifs.sh done error  # only these
 ```
 
-Braucht `ffmpeg` (`brew install ffmpeg`). Unten links erscheint kurz ein kleines Fenster, das
-aufgenommen wird. Die Szenen und der Zeitpunkt jedes Screenshots stehen in `Sources/ClaudeNotch/Recorder.swift`.
+Needs `ffmpeg` (`brew install ffmpeg`). A small window shows up in the bottom-left corner while recording – leave it
+uncovered. The scenes live in `Sources/NosyNotch/Recorder.swift`. `STILLS=1` also saves a PNG of each fully expanded notch
+to `docs/screenshots/`.
