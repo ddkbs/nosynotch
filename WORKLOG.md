@@ -1,5 +1,15 @@
 # WORKLOG
 
+## 2026-11-05 (15)
+- **Website neu** (Version A gewählt; B und Docs entfernt, kein sketchy-Layout mehr): macOS-Menüleiste mit eigener Notch oben am Fenster (Hover „psst… get me“, Ring = Scrollfortschritt, öffnet die Install-Anfrage Deny / Download / Allow; Deny = „Fine. I'll just keep watching.“ bleibt). Hero mit Pfeil „psst, that's me“.
+- **Momente live statt GIF**: Notch in React nach den SwiftUI-Views nachgebaut (`website/src/notch/`: Maße 185×32, Flügel 46, 460 breit, Funke mit 10 Strahlen, Codex-Sechseck, Cursor-Würfel, Done/Needs-you/Sessions+Usage/Musik). „Needs you“ ist klickbar. Schalter zeigt alternativ die echte Aufnahme (`public/demo/*.mp4`).
+- Weitere Sektionen: Agenten-Karten (Hover weckt das Symbol), „Just nod“ (Maus hoch/runter = Allow, links/rechts = Deny), Hook-Pipeline mit „Try to send something to the internet“ → „nope.“, Finale „Let it watch.“
+- Hintergrund: 10 statt 8 Strands, neue Palette `DRAPE_PALETTE` (Indigo → Violett → Magenta → Orange), stärkerer räumlicher Verlauf.
+- 5 Cursor (Notch, Spark, Eye, Swarm, System); Umschalter nur in `npm run dev` (Punkt unten rechts, Tasten 1–5), Wahl in localStorage.
+- Achtung: Commit `a6fd388` (Limit-Reset, anderer Account) hat meine vorgemerkten Website-Löschungen mitgenommen → zwischen `a6fd388` und `e12c92c` baut die Website nicht. Künftig vor `git commit` nur eigene Dateien stagen (`git add <pfade>`).
+- Vorschlag offen: Recorder auf virtuelle Uhr + 60 fps + 3× umbauen (schärfere GIFs fürs README, MP4 für Website).
+- Offen: David prüft Bewegung/Cursor live und wählt Cursor; Vercel-Deploy auf `nosynotch.davidkubus.dev`.
+
 ## 2026-11-05 (13)
 - **Limit-Reset-Benachrichtigung**: Erreicht ein 5h- oder Wochenlimit, das bei ≥ 80 % stand, seine Reset-Zeit → Notch-Karte „Claude/Codex is ready again“ (Ring läuft leer, Pfeil dreht sich), Sound „Hero“, optional Banner. Arbeitet mit den zuletzt bekannten Werten (Timer alle 20 s, vor jedem Update geprüft), feuert auch nach App-Start einmal, wenn der Reset bis zu 12 h her ist; bereits gemeldete Resets in UserDefaults. Settings → Usage, standardmäßig an. GIF `limit-reset.gif`.
 - Reddit-Launch-Seite (Artifact) mit Posts für 23 Subreddits erstellt; vor dem Posten: Repo public, `NPM_TOKEN` + Tag, LICENSE.
