@@ -3,7 +3,12 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import { formatStars, INSTALL_COMMAND, OPEN_INSTALL, RELEASES_URL, REPO_URL, useRepoInfo } from "./lib";
 import { Confetti, DrawnCheck } from "./notch/Confetti";
 import { AGENT_COLOR, CodexGlyph, CursorGlyph, Spark } from "./notch/Glyphs";
-import { NotchShell } from "./notch/NotchShell";
+
+// The app's geometry: a 185 × 32 notch, 46 pt wings, 460 pt when it opens.
+const H = 32;
+const COMPACT_W = 185 + 2 * 46;
+const WIDE = 460;
+import { cardTransition, expandedTransition, NotchShell } from "./notch/NotchShell";
 
 type Stage =
   | "idle"
@@ -19,10 +24,6 @@ type Stage =
   | "peek";
 
 const STAR_AFTER_MS = 45_000;
-/** How long the pointer rests on the notch before it opens: passing by does nothing. */
-const HOVER_INTENT_MS = 260;
-/** A calm, critically damped spring: the notch grows, it doesn't shoot out. */
-const SOFT = { type: "spring", stiffness: 150, damping: 26, mass: 1.1 } as const;
 const SLEEP_AFTER_MS = 20_000;
 const SELECTION_LINES = [
   "ooh, juicy. copying that?",
@@ -226,25 +227,6 @@ function Tile({
   );
 }
 
-function Close({ onClick }: { onClick: () => void }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      aria-label="Close"
-      className="cursor-target absolute right-4 top-3 grid size-6 place-items-center rounded-full bg-white/10 text-[11px] text-white/60 transition-colors hover:bg-white/20 hover:text-white"
-    >
-      ✕
-    </button>
-  );
-}
-
-const fade = {
-  initial: { opacity: 0, filter: "blur(8px)", y: -4 },
-  animate: { opacity: 1, filter: "blur(0px)", y: 0, transition: { delay: 0.12, duration: 0.32 } },
-  exit: { opacity: 0, filter: "blur(6px)", transition: { duration: 0.1 } },
-};
-
 function formatAway(ms: number) {
   const s = Math.round(ms / 1000);
   if (s < 60) return `${s}s`;
@@ -252,10 +234,57 @@ function formatAway(ms: number) {
   return m < 60 ? `${m}m ${s % 60}s` : `${Math.floor(m / 60)}h ${m % 60}m`;
 }
 
+
+/** The strip at notch height: something on the left wing, something on the right, like `claudeHeader`. */
+function Wings({ left, right }: { left?: ReactNode; right?: ReactNode }) {
+  const pop = (node: ReactNode, key: string) => (
+    <motion.span
+      key={key}
+      className="grid place-items-center"
+      initial={{ scale: 0.2, opacity: 0 }}
+      animate={{ scale: 1, opacity: 1 }}
+      exit={{ scale: 0.2, opacity: 0 }}
+      transition={{ type: "spring", stiffness: 224, damping: 22.1 }}
+    >
+      {node}
+    </motion.span>
+  );
+  return (
+    <div className="flex items-center justify-between px-1" style={{ height: H }}>
+      <span className="grid w-8 place-items-center">
+        <AnimatePresence mode="popLayout" initial={false}>
+          {left && pop(left, (left as { key?: string }).key ?? "l")}
+        </AnimatePresence>
+      </span>
+      <span className="grid w-8 place-items-center">
+        <AnimatePresence mode="popLayout" initial={false}>
+          {right && pop(right, (right as { key?: string }).key ?? "r")}
+        </AnimatePresence>
+      </span>
+    </div>
+  );
+}
+
+function Pill({ children, onClick, href, kind = "quiet" }: { children: ReactNode; onClick?: () => void; href?: string; kind?: "quiet" | "gold" }) {
+  const cls = `cursor-target inline-flex h-[26px] items-center gap-1.5 rounded-full px-3.5 text-[12px] font-semibold transition-colors ${
+    kind === "gold" ? "bg-[#FFD45A]/90 text-black hover:bg-[#FFD45A]" : "bg-white/[0.11] text-white/90 hover:bg-white/20"
+  }`;
+  return href ? (
+    <a href={href} target="_blank" rel="noreferrer" onClick={onClick} className={cls}>
+      {children}
+    </a>
+  ) : (
+    <button type="button" onClick={onClick} className={cls}>
+      {children}
+    </button>
+  );
+}
+
 /**
- * The site's own notch, hanging from the top of the window. Hover it and it opens straight into
- * the install card; it asks for a star once, says welcome back, falls asleep when you idle, and
- * gets curious when you select text.
+ * The site's own notch, behaving like the app: compact at rest, open the moment the pointer is
+ * over it (its rect plus 6 pt), closed the moment it leaves, on the app's spring, with the app's
+ * transitions. Opened from a button it stays until closed. It also asks for a star, says welcome
+ * back, falls asleep when you idle and gets curious when you select text.
  */
 export function TopNotch() {
   const [stage, setStage] = useState<Stage>("idle");
@@ -265,30 +294,32 @@ export function TopNotch() {
   const [away, setAway] = useState(0);
   const [line, setLine] = useState(SELECTION_LINES[0]);
   const [copiedSel, setCopiedSel] = useState(false);
+  const [vw, setVw] = useState(() => window.innerWidth);
   const stageRef = useRef(stage);
   stageRef.current = stage;
-  const closeTimer = useRef(0);
-  const openTimer = useRef(0);
+  const pinnedRef = useRef(pinned);
+  pinnedRef.current = pinned;
   const narrow = useNarrow();
   const { archive, version, stars } = useRepoInfo();
   const typed = useTyped(INSTALL_COMMAND, stage === "open");
 
+  useEffect(() => {
+    const on = () => setVw(window.innerWidth);
+    window.addEventListener("resize", on);
+    return () => window.removeEventListener("resize", on);
+  }, []);
+
   const calm = () => ["idle", "sleep", "welcome", "peek", "wake"].includes(stageRef.current);
 
   const open = (pin: boolean) => {
-    clearTimeout(closeTimer.current);
-    if (stageRef.current !== "open") setStage("open");
-    if (pin) {
-      setPinned(true);
-      setTimeout(() => setShake((s) => s + 1), 280);
-    }
+    setStage("open");
+    if (pin) setPinned(true);
   };
   const close = () => {
     setPinned(false);
     setStage("idle");
   };
 
-  // Buttons elsewhere on the page open it pinned.
   useEffect(() => {
     const on = () => open(true);
     window.addEventListener(OPEN_INSTALL, on);
@@ -376,7 +407,7 @@ export function TopNotch() {
     return () => document.removeEventListener("selectionchange", on);
   }, []);
 
-  // Short-lived states go back to idle by themselves.
+  // Flashes fold away by themselves, like the app's flash(for:).
   useEffect(() => {
     const after: Partial<Record<Stage, [number, Stage]>> = {
       denied: [2600, "idle"],
@@ -403,7 +434,6 @@ export function TopNotch() {
     return () => clearTimeout(id);
   }, [stage]);
 
-  // Escape closes.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && !calm() && close();
     window.addEventListener("keydown", onKey);
@@ -429,254 +459,244 @@ export function TopNotch() {
     setTimeout(() => setBurst((b) => b + 1), 150);
   };
 
-  const wide = narrow ? "calc(100vw - 16px)" : 600;
-  const S: Record<Stage, { w: number | string; h: number; r: number; f: number; glow: string; o: number }> = {
-    idle: { w: 236, h: 32, r: 12, f: 6, glow: "#A78BFA", o: 0.25 },
-    sleep: { w: 236, h: 32, r: 12, f: 6, glow: "#A78BFA", o: 0.1 },
-    wake: { w: 250, h: 40, r: 16, f: 8, glow: "#A78BFA", o: 0.5 },
-    open: { w: wide, h: narrow ? 300 : 248, r: 30, f: 16, glow: "#B04DFF", o: 0.38 },
-    copied: { w: narrow ? wide : 480, h: 132, r: 28, f: 14, glow: "#4ADE80", o: 0.55 },
-    download: { w: narrow ? wide : 480, h: 132, r: 28, f: 14, glow: "#4ADE80", o: 0.55 },
-    star: { w: narrow ? wide : 470, h: 128, r: 28, f: 14, glow: "#FFD45A", o: 0.55 },
-    thanks: { w: narrow ? wide : 420, h: 96, r: 26, f: 12, glow: "#FFD45A", o: 0.55 },
-    denied: { w: 320, h: 72, r: 24, f: 10, glow: "#F87171", o: 0.35 },
-    welcome: { w: 340, h: 66, r: 22, f: 10, glow: "#4ADE80", o: 0.35 },
-    peek: { w: narrow ? wide : 380, h: 70, r: 22, f: 10, glow: "#A78BFA", o: 0.4 },
+  // NotchViewModel.size: compact = notch + wings; everything else opens to 460 pt.
+  const wide = Math.min(WIDE, vw - 16);
+  const S: Record<Stage, { w: number; h: number; t: number; b: number; glow: string; o: number }> = {
+    idle: { w: COMPACT_W, h: H, t: 6, b: 12, glow: "#A78BFA", o: 0.18 },
+    sleep: { w: COMPACT_W, h: H, t: 6, b: 12, glow: "#A78BFA", o: 0 },
+    wake: { w: COMPACT_W, h: H, t: 6, b: 12, glow: "#A78BFA", o: 0.45 },
+    open: { w: wide, h: H + (narrow ? 308 : 202), t: 14, b: 26, glow: "#000000", o: 0 },
+    copied: { w: wide, h: H + 104, t: 14, b: 26, glow: "#4ADE80", o: 0.55 },
+    download: { w: wide, h: H + 104, t: 14, b: 26, glow: "#4ADE80", o: 0.55 },
+    star: { w: wide, h: H + 88 + 40, t: 14, b: 26, glow: "#FFD45A", o: 0.55 },
+    thanks: { w: wide, h: H + 88, t: 14, b: 26, glow: "#FFD45A", o: 0.55 },
+    denied: { w: wide, h: H + 88, t: 14, b: 26, glow: "#F87171", o: 0.55 },
+    welcome: { w: wide, h: H + 88, t: 14, b: 26, glow: "#4ADE80", o: 0.55 },
+    peek: { w: wide, h: H + 88, t: 14, b: 26, glow: "#A78BFA", o: 0.55 },
   };
   const size = S[stage];
 
+  // The wings, per state, like the app's header.
+  const wings: Record<Stage, [ReactNode, ReactNode]> = {
+    idle: [<Spark key="s-idle" mode="idle" color="#A78BFA" />, <ScrollRing key="ring" />],
+    sleep: [<Zzz key="zzz" />, <Eyes key="sleep" mood="sleep" size={0.55} />],
+    wake: [<Spark key="s-work" mode="working" color="#A78BFA" />, <Eyes key="wide" mood="wide" size={0.55} />],
+    open: [<Spark key="s-think" mode="thinking" color="#B04DFF" />, <ScrollRing key="ring" />],
+    copied: [<Spark key="s-done" mode="done" color="#4ADE80" />, null],
+    download: [<Spark key="s-done" mode="done" color="#4ADE80" />, null],
+    star: [<StarIcon key="star" className="size-[15px] text-[#FFD45A]" />, null],
+    thanks: [<StarIcon key="star" className="size-[15px] text-[#FFD45A]" />, null],
+    denied: [<Spark key="s-err" mode="error" color="#F87171" />, null],
+    welcome: [<Spark key="s-idle" mode="idle" color="#A78BFA" />, <span key="dot" className="size-[7px] rounded-full bg-success shadow-[0_0_8px_#4ADE80]" />],
+    peek: [<Spark key="s-think" mode="thinking" color="#A78BFA" />, null],
+  };
+
+  const card = (key: string, children: ReactNode, className = "") => (
+    <motion.div key={key} {...cardTransition} className={`absolute inset-x-0 top-[32px] px-[22px] pt-3 text-left ${className}`}>
+      {children}
+    </motion.div>
+  );
+
   return (
+    // Hover area: the notch plus 6 pt around it, like NotchWindow.updateHover().
     <div
-      className="relative"
-      onMouseEnter={() => {
-        clearTimeout(closeTimer.current);
-        if (stageRef.current === "open") return;
-        if (!calm()) return;
-        openTimer.current = window.setTimeout(() => calm() && open(false), HOVER_INTENT_MS);
-      }}
+      className="-m-1.5 p-1.5"
+      onMouseEnter={() => calm() && open(false)}
       onMouseLeave={() => {
-        clearTimeout(openTimer.current);
-        if (stageRef.current === "open" && !pinned) {
-          clearTimeout(closeTimer.current);
-          closeTimer.current = window.setTimeout(() => setStage("idle"), 450);
-        }
+        if (stageRef.current === "open" && !pinnedRef.current) setStage("idle");
       }}
     >
-      <NotchShell width={size.w} height={size.h} radius={size.r} flare={size.f} glow={size.glow} glowOpacity={size.o} shake={shake} spring={SOFT}>
-        <AnimatePresence mode="popLayout" initial={false}>
-          {(stage === "idle" || stage === "sleep" || stage === "wake") && (
-            <motion.button
-              key="compact"
-              type="button"
-              onClick={() => open(true)}
-              aria-label="Install Nosy Notch"
-              className="cursor-target absolute inset-0 flex items-center justify-between px-3"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0, transition: { duration: 0.08 } }}
-            >
-              {stage === "sleep" ? (
-                <>
-                  <Zzz />
-                  <Eyes mood="sleep" size={0.7} />
-                  <span className="w-6" />
-                </>
-              ) : stage === "wake" ? (
-                <>
-                  <Spark mode="working" color="#A78BFA" size={16} />
-                  <span className="flex items-center gap-2 font-mono text-[11.5px] text-white/85">
-                    <Eyes mood="wide" size={0.7} /> oh! hi.
+      <div className="relative">
+        <NotchShell width={size.w} height={size.h} topRadius={size.t} bottomRadius={size.b} glow={size.glow} glowOpacity={size.o} shake={shake}>
+          <button
+            type="button"
+            onClick={() => (stage === "open" ? undefined : open(true))}
+            aria-label="Install Nosy Notch"
+            className="cursor-target block w-full"
+          >
+            <Wings left={wings[stage][0]} right={wings[stage][1]} />
+          </button>
+
+          <AnimatePresence initial={false}>
+            {stage === "open" && (
+              <motion.div key="open" {...expandedTransition} className="absolute inset-x-0 top-[32px] px-2 pt-3 text-left">
+                <div className="flex items-center gap-3">
+                  <span className="relative grid size-10 shrink-0 place-items-center rounded-[12px] bg-gradient-to-b from-[#1b1b22] to-[#0b0b0f] shadow-[inset_0_0_0_1px_rgba(255,255,255,0.1),0_6px_20px_-6px_rgba(176,77,255,0.7)]">
+                    <span className="absolute left-1/2 top-0 h-[8px] w-[20px] -translate-x-1/2 rounded-b-[5px] bg-black shadow-[0_0_0_1px_rgba(255,255,255,0.08)]" />
+                    <span className="mt-1.5">
+                      <Spark mode="thinking" color="#B04DFF" size={18} />
+                    </span>
                   </span>
-                  <span className="w-4" />
-                </>
-              ) : (
-                <>
-                  <Spark mode="idle" color="#A78BFA" size={16} />
-                  <ScrollRing />
-                </>
-              )}
-            </motion.button>
-          )}
-
-          {stage === "open" && (
-            <motion.div
-              key="open"
-              initial={{ opacity: 1 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0, filter: "blur(6px)", transition: { duration: 0.12 } }}
-              className="absolute inset-0 px-5 pb-4 pt-10 text-left sm:px-6"
-            >
-              {/* A slow aurora and a dot grid inside the notch, echoing the drape. */}
-              <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden>
-                <motion.div
-                  className="absolute -bottom-24 left-1/2 h-48 w-[130%] -translate-x-1/2 rounded-[50%] blur-3xl"
-                  style={{ background: "conic-gradient(from 0deg, #5B4BFF, #B04DFF, #FF4F9A, #FF8A50, #5B4BFF)" }}
-                  animate={{ rotate: 360, opacity: [0.28, 0.4, 0.28] }}
-                  transition={{ rotate: { duration: 14, repeat: Infinity, ease: "linear" }, opacity: { duration: 5, repeat: Infinity } }}
-                />
-                <div className="absolute inset-0 opacity-[0.18] [background-image:radial-gradient(rgba(255,255,255,0.6)_0.6px,transparent_0.8px)] [background-size:9px_9px] [mask-image:linear-gradient(to_bottom,transparent,black)]" />
-              </div>
-
-              <div className="rise relative flex items-center gap-3.5" style={{ animationDelay: "180ms" }}>
-                <span className="relative grid size-11 shrink-0 place-items-center rounded-[13px] bg-gradient-to-b from-[#1b1b22] to-[#0b0b0f] shadow-[inset_0_0_0_1px_rgba(255,255,255,0.1),0_6px_20px_-6px_rgba(176,77,255,0.7)]">
-                  <span className="absolute left-1/2 top-0 h-[9px] w-[22px] -translate-x-1/2 rounded-b-[6px] bg-black shadow-[0_0_0_1px_rgba(255,255,255,0.08)]" />
-                  <span className="mt-1.5">
-                    <Spark mode="thinking" color="#B04DFF" size={20} />
+                  <span className="min-w-0 flex-1">
+                    <span className="flex items-center gap-1.5">
+                      <span className="text-[15px] font-semibold">Nosy Notch</span>
+                      <span className="text-[12px] font-medium text-violet">v{version ?? "0.2.0"}</span>
+                    </span>
+                    <span className="block truncate text-[12px] text-white/55">Your notch, keeping an eye on your agents.</span>
                   </span>
-                </span>
-                <span className="min-w-0 flex-1">
-                  <span className="flex items-center gap-2">
-                    <span className="text-[16px] font-semibold tracking-[-0.01em]">Nosy Notch</span>
-                    <span className="rounded-full bg-white/10 px-1.5 py-px font-mono text-[10px] text-white/70">v{version ?? "0.2.0"}</span>
+                  <span className="hidden items-center gap-1.5 sm:flex" title="Works with Claude Code, Codex and Cursor">
+                    <Spark mode="idle" size={14} color={AGENT_COLOR.claude} />
+                    <CodexGlyph mode="idle" size={14} />
+                    <CursorGlyph mode="idle" size={14} />
                   </span>
-                  <span className="block truncate text-[12.5px] text-white/55">Your notch, keeping an eye on your agents.</span>
-                </span>
-                <span className="hidden items-center gap-2 sm:flex" title="Works with Claude Code, Codex and Cursor">
-                  <Spark mode="idle" size={15} color={AGENT_COLOR.claude} />
-                  <CodexGlyph mode="idle" size={15} />
-                  <CursorGlyph mode="idle" size={15} />
-                </span>
-                {pinned && <Close onClick={close} />}
-              </div>
+                  {pinned && (
+                    <button
+                      type="button"
+                      onClick={close}
+                      aria-label="Close"
+                      className="cursor-target grid size-[18px] place-items-center rounded-full bg-white/10 text-[9px] text-white/60 hover:bg-white/20 hover:text-white"
+                    >
+                      ✕
+                    </button>
+                  )}
+                </div>
 
-              <button
-                type="button"
-                onClick={copy}
-                style={{ animationDelay: "250ms" }}
-                className="rise cursor-target group relative mt-3.5 flex w-full items-center gap-2.5 rounded-[14px] bg-black/60 px-4 py-2.5 text-left font-mono text-[13.5px] ring-1 ring-white/10 transition-colors hover:ring-white/25"
-              >
-                <span className="text-[#B04DFF]">~</span>
-                <span className="text-white/35">$</span>
-                <span className="text-white">{typed}</span>
-                <span className="-ml-1.5 h-4 w-[7px] animate-blink bg-white/80" aria-hidden />
-                <span className="ml-auto rounded-md bg-white/10 px-1.5 py-0.5 text-[10.5px] text-white/50 transition-colors group-hover:bg-white group-hover:text-black">
-                  click to copy
-                </span>
-              </button>
-
-              <div className="rise relative mt-3 flex gap-2 max-sm:flex-col" style={{ animationDelay: "320ms" }}>
-                <Tile primary onClick={copy} hint="⌘C">
-                  <svg viewBox="0 0 24 24" className="size-4" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-                    <path d="m5 7 5 5-5 5M12.5 17H19" />
-                  </svg>
-                  Copy & install
-                </Tile>
-                <Tile href={archive ?? RELEASES_URL} onClick={() => setStage("download")}>
-                  <svg viewBox="0 0 24 24" className="size-4" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-                    <path d="M12 4v11m0 0-4.5-4.5M12 15l4.5-4.5M5 20h14" />
-                  </svg>
-                  Download .app
-                </Tile>
-                <Tile href={REPO_URL} onClick={starred} hint={stars ? formatStars(stars) : undefined}>
-                  <StarIcon className="size-4 text-[#FFD45A] transition-transform duration-500 group-hover:rotate-[72deg] group-hover:scale-125" />
-                  Star
-                </Tile>
-              </div>
-
-              <div style={{ animationDelay: "390ms" }} className="rise relative mt-3 flex items-center justify-between font-mono text-[10.5px] text-white/35">
-                <span>macOS 14+ · Node 18+ · no account</span>
-                <button type="button" onClick={() => setStage("denied")} className="cursor-target transition-colors hover:text-white/80">
-                  nah, not today
+                <button
+                  type="button"
+                  onClick={copy}
+                  className="cursor-target group mt-2.5 flex h-10 w-full items-center gap-2 rounded-xl bg-white/[0.06] px-3.5 text-left font-mono text-[13px] transition-colors hover:bg-white/[0.1]"
+                >
+                  <span className="text-white/35">$</span>
+                  <span>{typed}</span>
+                  <span className="-ml-1 h-4 w-[7px] animate-blink bg-white/80" aria-hidden />
+                  <span className="ml-auto text-[10.5px] text-white/35 transition-colors group-hover:text-white/80">click to copy</span>
                 </button>
-              </div>
-            </motion.div>
-          )}
 
-          {(stage === "copied" || stage === "download") && (
-            <motion.div key="done" {...fade} className="absolute inset-0 flex items-center gap-4 px-6 pt-6 text-left">
-              <DrawnCheck size={44} />
-              <span className="min-w-0">
-                <span className="block text-[15.5px] font-semibold">{stage === "copied" ? "Copied. Paste it into Terminal." : "On its way."}</span>
-                <span className="mt-0.5 block text-[12.5px] leading-snug text-white/60">
-                  {stage === "copied"
-                    ? "It installs, connects your agents and starts watching."
-                    : "Unpack, move it to Applications, open it. Settings → Agents does the rest."}
-                </span>
-              </span>
-              <Close onClick={close} />
-            </motion.div>
-          )}
+                <div className={`mt-2.5 flex gap-2 ${narrow ? "flex-col" : ""}`}>
+                  <Tile primary onClick={copy}>
+                    <svg viewBox="0 0 24 24" className="size-4" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                      <path d="m5 7 5 5-5 5M12.5 17H19" />
+                    </svg>
+                    Copy & install
+                  </Tile>
+                  <Tile href={archive ?? RELEASES_URL} onClick={() => setStage("download")}>
+                    <svg viewBox="0 0 24 24" className="size-4" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                      <path d="M12 4v11m0 0-4.5-4.5M12 15l4.5-4.5M5 20h14" />
+                    </svg>
+                    Download
+                  </Tile>
+                  <Tile href={REPO_URL} onClick={starred} hint={stars ? formatStars(stars) : undefined}>
+                    <StarIcon className="size-4 text-[#FFD45A] transition-transform duration-500 group-hover:rotate-[72deg] group-hover:scale-125" />
+                    Star
+                  </Tile>
+                </div>
 
-          {stage === "star" && (
-            <motion.div key="star" {...fade} className="absolute inset-0 flex items-center gap-4 px-5 pt-7 text-left">
-              <StarBurst />
-              <span className="min-w-0 flex-1">
-                <span className="block text-[14.5px] font-semibold">psst… one tiny favour?</span>
-                <span className="mt-0.5 block text-[12.5px] leading-snug text-white/60">A star helps other devs find me. I'll watch extra closely.</span>
-                <span className="mt-2.5 flex gap-2">
-                  <a
-                    href={REPO_URL}
-                    target="_blank"
-                    rel="noreferrer"
-                    onClick={starred}
-                    className="cursor-target inline-flex h-8 items-center gap-1.5 rounded-full bg-[#FFD45A] px-3.5 text-[12.5px] font-semibold text-black transition-shadow hover:shadow-[0_0_24px_-2px_#FFD45A]"
-                  >
-                    <StarIcon className="size-3.5" /> Star on GitHub
-                    {stars ? <span className="font-mono text-[11px] text-black/50">{formatStars(stars)}</span> : null}
-                  </a>
-                  <button type="button" onClick={close} className="cursor-target h-8 rounded-full px-3 text-[12.5px] font-medium text-white/50 hover:text-white">
-                    maybe later
+                <div className="mt-2.5 flex items-center justify-between font-mono text-[10.5px] text-white/35">
+                  <span>macOS 14+ · Node 18+ · free</span>
+                  <button type="button" onClick={() => setStage("denied")} className="cursor-target transition-colors hover:text-white/80">
+                    nah, not today
                   </button>
-                </span>
-              </span>
-            </motion.div>
-          )}
+                </div>
+              </motion.div>
+            )}
 
-          {stage === "thanks" && (
-            <motion.div key="thanks" {...fade} className="absolute inset-0 flex items-center justify-center gap-3 px-5 pt-5">
-              <StarIcon className="size-6 text-[#FFD45A] drop-shadow-[0_0_10px_#FFD45A]" />
-              <span className="text-[13.5px] font-medium">You're the best. Watching extra closely now.</span>
-              <Eyes mood="look" size={0.75} />
-            </motion.div>
-          )}
+            {(stage === "copied" || stage === "download") &&
+              card(
+                "done",
+                <div className="flex items-center gap-4 pt-0.5">
+                  <DrawnCheck size={46} />
+                  <span className="min-w-0">
+                    <span className="flex items-center gap-1.5">
+                      <span className="text-[17px] font-semibold">{stage === "copied" ? "Copied" : "Downloading"}</span>
+                      <span className="text-[13px] font-medium text-success">nosynotch</span>
+                    </span>
+                    <span className="mt-0.5 block text-[12px] leading-snug text-white/75">
+                      {stage === "copied"
+                        ? "Paste it into Terminal. It installs, connects your agents and starts watching."
+                        : "Unpack it, move it to Applications and open it. Settings → Agents does the rest."}
+                    </span>
+                  </span>
+                </div>,
+              )}
 
-          {stage === "denied" && (
-            <motion.div key="denied" {...fade} className="absolute inset-0 flex items-center justify-center gap-3 pt-4">
-              <Eyes mood="offended" />
-              <span className="text-[13px] text-white/80">Fine. I'll just keep watching.</span>
-            </motion.div>
-          )}
+            {stage === "star" &&
+              card(
+                "star",
+                <>
+                  <div className="flex items-center gap-3.5">
+                    <StarBurst />
+                    <span className="min-w-0">
+                      <span className="flex items-center gap-1.5">
+                        <span className="text-[15px] font-semibold">Nosy Notch needs you</span>
+                        <span className="text-[12px] font-medium text-[#FFD45A]">GitHub</span>
+                      </span>
+                      <span className="mt-0.5 block text-[12px] text-white/70">A star helps other devs find me. I'll watch extra closely.</span>
+                    </span>
+                  </div>
+                  <div className="mt-2.5 flex items-center gap-2">
+                    <span className="mr-auto text-[11px] text-white/35">or press Esc</span>
+                    <Pill onClick={close}>Maybe later</Pill>
+                    <Pill kind="gold" href={REPO_URL} onClick={starred}>
+                      <StarIcon className="size-3" /> Star {stars ? <span className="font-mono text-[11px] text-black/50">{formatStars(stars)}</span> : null}
+                    </Pill>
+                  </div>
+                </>,
+              )}
 
-          {stage === "welcome" && (
-            <motion.div key="welcome" {...fade} className="absolute inset-0 flex items-center justify-center gap-3 pt-4">
-              <span className="relative grid size-3 place-items-center">
-                <span className="absolute size-3 rounded-full bg-success/40" style={{ animation: "breathe 2s ease-in-out infinite" }} />
-                <span className="size-[7px] rounded-full bg-success shadow-[0_0_8px_#4ADE80]" />
-              </span>
-              <span className="text-[13px] text-white/85">
-                Welcome back. You were gone <span className="font-mono text-success">{formatAway(away)}</span>.
-              </span>
-            </motion.div>
-          )}
+            {stage === "thanks" &&
+              card(
+                "thanks",
+                <div className="flex items-center gap-3.5 pt-1">
+                  <StarIcon className="size-9 text-[#FFD45A] drop-shadow-[0_0_12px_#FFD45A]" />
+                  <span className="text-[13.5px] font-medium">You're the best. Watching extra closely now.</span>
+                  <Eyes mood="look" size={0.75} />
+                </div>,
+              )}
 
-          {stage === "peek" && (
-            <motion.div key="peek" {...fade} className="absolute inset-0 flex items-center gap-3 px-5 pt-4">
-              <Eyes mood="read" size={0.8} />
-              <span className="flex-1 truncate text-[13px] text-white/85">{copiedSel ? "copied. our little secret." : line}</span>
-              <button
-                type="button"
-                onMouseDown={(e) => e.preventDefault()}
-                onClick={async () => {
-                  try {
-                    await navigator.clipboard.writeText(document.getSelection()?.toString() ?? "");
-                  } catch {
-                    /* ignore */
-                  }
-                  setCopiedSel(true);
-                }}
-                className="cursor-target h-7 rounded-full bg-white/10 px-3 text-[11.5px] font-semibold hover:bg-white/20"
-              >
-                {copiedSel ? "✓" : "copy"}
-              </button>
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </NotchShell>
+            {stage === "denied" &&
+              card(
+                "denied",
+                <div className="flex items-center gap-3.5 pt-1.5">
+                  <Eyes mood="offended" />
+                  <span className="text-[14px] text-white/85">Fine. I'll just keep watching.</span>
+                </div>,
+              )}
 
-      {/* Confetti flies out of the notch, not clipped by it. */}
-      <span className="pointer-events-none absolute left-1/2" style={{ top: typeof size.h === "number" ? size.h - 30 : 100 }}>
-        <Confetti burst={burst} count={44} spread={2} />
-      </span>
+            {stage === "welcome" &&
+              card(
+                "welcome",
+                <div className="flex items-center gap-3.5 pt-1.5">
+                  <span className="relative grid size-11 place-items-center rounded-full bg-success/15">
+                    <span className="absolute size-5 rounded-full bg-success/30" style={{ animation: "breathe 2s ease-in-out infinite" }} />
+                    <span className="size-2.5 rounded-full bg-success shadow-[0_0_10px_#4ADE80]" />
+                  </span>
+                  <span>
+                    <span className="block text-[15px] font-semibold">Welcome back</span>
+                    <span className="block text-[12px] text-white/70">
+                      You were gone <span className="font-mono text-success">{formatAway(away)}</span>. I kept watching.
+                    </span>
+                  </span>
+                </div>,
+              )}
+
+            {stage === "peek" &&
+              card(
+                "peek",
+                <div className="flex items-center gap-3.5 pt-1.5">
+                  <Eyes mood="read" size={0.9} />
+                  <span className="min-w-0 flex-1 truncate text-[13.5px] text-white/85">{copiedSel ? "copied. our little secret." : line}</span>
+                  <Pill
+                    onClick={async () => {
+                      try {
+                        await navigator.clipboard.writeText(document.getSelection()?.toString() ?? "");
+                      } catch {
+                        /* ignore */
+                      }
+                      setCopiedSel(true);
+                    }}
+                  >
+                    {copiedSel ? "✓" : "Copy"}
+                  </Pill>
+                </div>,
+              )}
+          </AnimatePresence>
+        </NotchShell>
+
+        {/* Confetti flies out of the notch, not clipped by it. */}
+        <span className="pointer-events-none absolute left-1/2" style={{ top: size.h - 40 }}>
+          <Confetti burst={burst} count={44} spread={2} />
+        </span>
+      </div>
     </div>
   );
 }

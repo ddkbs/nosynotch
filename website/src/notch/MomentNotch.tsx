@@ -2,7 +2,7 @@ import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useState, type ReactNode } from "react";
 import { Confetti, DrawnCheck } from "./Confetti";
 import { AGENT_COLOR, AGENT_NAME, AgentGlyph, Equalizer, Spark, ThinkingDots, ToolIcon, type Agent, type SparkMode, TOOL_ICON } from "./Glyphs";
-import { NotchShell } from "./NotchShell";
+import { cardTransition, expandedTransition, NotchShell } from "./NotchShell";
 
 export type MomentId = "thinking" | "working" | "attention" | "done" | "unseen" | "sessions" | "agents" | "music";
 
@@ -13,11 +13,6 @@ const WING = 46;
 const COMPACT_W = NOTCH_W + 2 * WING;
 const WIDE = 460;
 
-const fade = {
-  initial: { opacity: 0, scale: 0.92, filter: "blur(6px)" },
-  animate: { opacity: 1, scale: 1, filter: "blur(0px)", transition: { delay: 0.12, duration: 0.35 } },
-  exit: { opacity: 0, scale: 0.96, filter: "blur(4px)", transition: { duration: 0.15 } },
-};
 
 function Wings({ left, right }: { left?: ReactNode; right?: ReactNode }) {
   return (
@@ -169,16 +164,17 @@ export function MomentNotch({ moment, onSettled }: { moment: MomentId; onSettled
             ? "media"
             : "compact";
 
+  // NotchViewModel.size / topRadius / bottomRadius and NotchView's glow, per presentation.
   const size =
     view === "attention"
-      ? { w: WIDE, h: H + 88 + 40, r: 26, f: 14, glow: "#F5A524", o: 0.55 }
+      ? { w: WIDE, h: H + 88 + 40, b: 26, t: 14, glow: "#F5A524", o: 0.55 }
       : view === "done"
-        ? { w: WIDE, h: H + 104, r: 26, f: 14, glow: "#4ADE80", o: 0.55 }
+        ? { w: WIDE, h: H + 104, b: 26, t: 14, glow: "#4ADE80", o: 0.55 }
         : view === "sessions"
-          ? { w: WIDE, h: H + 12 + 10 + 3 * 50 + 8 + 2 * 24 + 6, r: 26, f: 14, glow: "#D97757", o: 0.18 }
+          ? { w: WIDE, h: H + 12 + 10 + 3 * 50 + 8 + 2 * 24, b: 26, t: 14, glow: "#000000", o: 0 }
           : view === "media"
-            ? { w: COMPACT_W, h: H, r: 12, f: 6, glow: "#F26B9E", o: 0.22 }
-            : { w: COMPACT_W, h: H, r: 12, f: 6, glow: moment === "unseen" ? "#4ADE80" : "#D97757", o: 0.18 };
+            ? { w: COMPACT_W, h: H, b: 12, t: 6, glow: "#F26B9E", o: 0.22 }
+            : { w: COMPACT_W, h: H, b: 12, t: 6, glow: moment === "unseen" ? "#4ADE80" : "#D97757", o: 0.18 };
 
   const agents: Agent[] = ["claude", "codex", "cursor"];
   const agent = moment === "agents" ? agents[agentIdx % 3] : "claude";
@@ -225,14 +221,12 @@ export function MomentNotch({ moment, onSettled }: { moment: MomentId; onSettled
   }
 
   return (
-    <NotchShell width={size.w} height={size.h} radius={size.r} flare={size.f} glow={size.glow} glowOpacity={size.o} shake={shake}>
-      <div style={{ paddingInline: size.f - 6 }}>
-        <Wings left={left} right={right} />
-      </div>
+    <NotchShell width={size.w} height={size.h} topRadius={size.t} bottomRadius={size.b} glow={size.glow} glowOpacity={size.o} shake={shake}>
+      <Wings left={left} right={right} />
 
       <AnimatePresence mode="popLayout">
         {view === "attention" && (
-          <motion.div key="attention" {...fade} className="absolute inset-x-0 top-[32px] px-[22px] pt-3">
+          <motion.div key="attention" {...cardTransition} className="absolute inset-x-0 top-[32px] px-[22px] pt-3">
             <Close onClick={() => decide("denied")} />
             <div className="flex items-center gap-3.5">
               <span className="grid size-11 shrink-0 place-items-center rounded-full bg-amber/20">
@@ -270,7 +264,7 @@ export function MomentNotch({ moment, onSettled }: { moment: MomentId; onSettled
         )}
 
         {view === "done" && (
-          <motion.div key="done" {...fade} className="absolute inset-x-0 top-[32px] flex items-center gap-4 px-[22px] pt-3.5 text-left">
+          <motion.div key="done" {...cardTransition} className="absolute inset-x-0 top-[32px] flex items-center gap-4 px-[22px] pt-3.5 text-left">
             <Close />
             <span className="relative grid size-[52px] shrink-0 place-items-center">
               <Confetti burst={burst} />
@@ -292,7 +286,7 @@ export function MomentNotch({ moment, onSettled }: { moment: MomentId; onSettled
         )}
 
         {view === "sessions" && (
-          <motion.div key="sessions" {...fade} className="absolute inset-x-0 top-[32px] px-[14px] pt-3 text-left">
+          <motion.div key="sessions" {...expandedTransition} className="absolute inset-x-0 top-[32px] px-[14px] pt-3 text-left">
             {SESSIONS.map((s) => (
               <div key={s.project} className="flex h-[50px] items-center gap-3 rounded-xl px-2.5 hover:bg-white/[0.05]">
                 <AgentGlyph agent={s.agent} mode={s.mode} size={20} color={s.mode === "done" ? "#4ADE80" : undefined} />
