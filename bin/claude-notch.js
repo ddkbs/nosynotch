@@ -82,14 +82,14 @@ async function isRunning() {
 }
 
 async function start() {
-  if (await isRunning()) return ok('Claude Notch läuft bereits.');
+  if (await isRunning()) return ok('Claude Notch is already running.');
   const child = spawn(BINARY, [], { detached: true, stdio: 'ignore' });
   child.unref();
   for (let i = 0; i < 30; i++) {
     await sleep(150);
-    if (await isRunning()) return ok(`Claude Notch läuft ${dim(`(${BASE})`)}`);
+    if (await isRunning()) return ok(`Claude Notch is running ${dim(`(${BASE})`)}`);
   }
-  fail(`Die App hat nicht geantwortet. Läuft schon etwas anderes auf Port ${PORT}?\n  Teste direkt: "${BINARY}"`);
+  fail(`The app did not respond. Is something else using port ${PORT}?\n  Try it directly: "${BINARY}"`);
 }
 
 async function stop({ quiet = false } = {}) {
@@ -100,7 +100,7 @@ async function stop({ quiet = false } = {}) {
   } catch {}
   if (!stopped) stopped = run('/usr/bin/pkill', ['-x', 'ClaudeNotch']).status === 0;
   if (stopped) await sleep(400);
-  if (!quiet) stopped ? ok('Claude Notch beendet.') : info('Claude Notch lief nicht.');
+  if (!quiet) stopped ? ok('Claude Notch stopped.') : info('Claude Notch was not running.');
 }
 
 // ───────────────────────────── installing the binary ─────────────────────────────
@@ -123,7 +123,7 @@ async function ensureApp({ force = false } = {}) {
     if (!binary) binary = buildFromSource(work);
     assembleApp(binary);
     fs.writeFileSync(VERSION_FILE, pkg.version);
-    ok(`Claude Notch ${pkg.version} installiert ${dim(`→ ${APP}`)}`);
+    ok(`Claude Notch ${pkg.version} installed ${dim(`→ ${APP}`)}`);
   } finally {
     fs.rmSync(work, { recursive: true, force: true });
   }
@@ -132,11 +132,11 @@ async function ensureApp({ force = false } = {}) {
 /** Fetch the prebuilt universal binary from GitHub Releases. Returns its path or null. */
 async function download(work) {
   const url = `https://github.com/${REPO}/releases/download/v${pkg.version}/ClaudeNotch-macos.tar.gz`;
-  info(`Lade Claude Notch ${pkg.version} …`);
+  info(`Downloading Claude Notch ${pkg.version} …`);
   try {
     const res = await fetch(url, { redirect: 'follow', signal: AbortSignal.timeout(60_000) });
     if (!res.ok) {
-      console.log(dim(`  Kein Release gefunden (${res.status}).`));
+      console.log(dim(`  No release found (${res.status}).`));
       return null;
     }
     const archive = path.join(work, 'ClaudeNotch.tar.gz');
@@ -145,7 +145,7 @@ async function download(work) {
     const binary = path.join(work, 'ClaudeNotch');
     return fs.existsSync(binary) ? binary : null;
   } catch (e) {
-    console.log(dim(`  Download fehlgeschlagen (${e.message}).`));
+    console.log(dim(`  Download failed (${e.message}).`));
     return null;
   }
 }
@@ -154,19 +154,19 @@ async function download(work) {
 function buildFromSource(work) {
   if (!has('swift')) {
     fail(
-      'Kein fertiges Release verfügbar und kein Swift-Compiler gefunden.\n' +
-        `  Installiere die (kostenlosen) Xcode Command Line Tools: ${bold('xcode-select --install')}\n` +
-        '  und starte danach `npx claude-notch` erneut.'
+      'No prebuilt release available and no Swift compiler found.\n' +
+        `  Install the (free) Xcode Command Line Tools: ${bold('xcode-select --install')}\n` +
+        '  and run `npx claude-notch` again.'
     );
   }
-  info('Kompiliere aus dem Quellcode (einmalig, ~1 Min.) …');
+  info('Compiling from source (one-time, ~1 min) …');
   const src = path.join(work, 'src');
   fs.mkdirSync(src);
   for (const entry of ['Package.swift', 'Sources']) {
     fs.cpSync(path.join(PKG_ROOT, entry), path.join(src, entry), { recursive: true });
   }
   const build = run('swift', ['build', '-c', 'release'], { cwd: src, stdio: 'inherit' });
-  if (build.status !== 0) fail('Build fehlgeschlagen (siehe Ausgabe oben).');
+  if (build.status !== 0) fail('Build failed (see output above).');
   const binPath = spawnSync('swift', ['build', '-c', 'release', '--show-bin-path'], { cwd: src, encoding: 'utf8' })
     .stdout.trim();
   return path.join(binPath, 'ClaudeNotch');
@@ -224,7 +224,7 @@ function readSettings(file) {
   try {
     return JSON.parse(text);
   } catch (e) {
-    fail(`${file} ist kein gültiges JSON (${e.message}). Bitte manuell prüfen.`);
+    fail(`${file} is not valid JSON (${e.message}). Please check it manually.`);
   }
 }
 
@@ -246,7 +246,7 @@ const hooksInstalled = () => settingsFiles().every(hooksInstalledIn);
 
 function installHooks() {
   for (const file of settingsFiles()) installHooksIn(file);
-  console.log(dim('  Bereits laufende Claude-Code-Sessions einmal neu starten, damit sie die Hooks laden.'));
+  console.log(dim('  Restart Claude Code sessions that are already running so they pick up the hooks.'));
 }
 
 function installHooksIn(file) {
@@ -261,7 +261,7 @@ function installHooksIn(file) {
   }
   settings.hooks = hooks;
   writeSettings(file, settings);
-  ok(`Hooks in ${pretty(file)} eingetragen ${dim('(Backup: settings.json.claude-notch.bak)')}`);
+  ok(`Hooks added to ${pretty(file)} ${dim('(backup: settings.json.claude-notch.bak)')}`);
 }
 
 function removeHooks() {
@@ -279,7 +279,7 @@ function removeHooksIn(file) {
   }
   if (Object.keys(settings.hooks).length === 0) delete settings.hooks;
   writeSettings(file, settings);
-  ok(`Hooks aus ${pretty(file)} entfernt.`);
+  ok(`Hooks removed from ${pretty(file)}.`);
 }
 
 // ───────────────────────────── autostart (LaunchAgent) ─────────────────────────────
@@ -302,20 +302,20 @@ function autostart(on) {
 </plist>
 `
     );
-    ok('Autostart beim Login aktiviert.');
+    ok('Autostart at login enabled.');
   } else if (fs.existsSync(LAUNCH_AGENT)) {
     run('/bin/launchctl', ['bootout', `${domain}/${LABEL}`]);
     fs.rmSync(LAUNCH_AGENT);
-    ok('Autostart deaktiviert.');
+    ok('Autostart disabled.');
   } else {
-    info('Autostart war nicht aktiv.');
+    info('Autostart was not enabled.');
   }
 }
 
 // ───────────────────────────── demo ─────────────────────────────
 
 async function demo() {
-  if (!(await isRunning())) fail('Claude Notch läuft nicht – starte es mit `npx claude-notch`.');
+  if (!(await isRunning())) fail('Claude Notch is not running – start it with `npx claude-notch`.');
   const sid = `demo-${process.pid}`;
   const cwd = process.cwd();
   const send = (name, extra = {}) =>
@@ -334,15 +334,15 @@ async function demo() {
     [500, 'Notification', { message: 'Claude needs your permission to use Bash', notification_type: 'permission_prompt' }],
     [3500, 'PreToolUse', { tool_name: 'Bash', tool_input: { command: 'npm test', description: 'Run tests' } }],
     [2500, 'PostToolUse', { tool_name: 'Bash' }],
-    [1500, 'Stop', { last_assistant_message: 'Parser refactored – alle 42 Tests grün.' }],
+    [1500, 'Stop', { last_assistant_message: 'Parser refactored – all 42 tests pass.' }],
     [8000, 'SessionEnd'],
   ];
-  info('Spiele Demo ab – schau auf die Notch …');
+  info('Playing the demo – watch your notch …');
   for (const [delay, name, extra] of steps) {
     await sleep(delay);
     await send(name, extra);
   }
-  ok('Demo fertig.');
+  ok('Demo finished.');
 }
 
 // ───────────────────────────── commands ─────────────────────────────
@@ -350,7 +350,7 @@ async function demo() {
 async function status() {
   const running = await isRunning();
   console.log(`${bold('Claude Notch')} ${dim(pkg.version)}`);
-  console.log(`  App:        ${running ? green('läuft') : dim('gestoppt')}  ${dim(installedVersion() ? APP : 'nicht installiert')}`);
+  console.log(`  App:        ${running ? green('running') : dim('stopped')}  ${dim(installedVersion() ? APP : 'not installed')}`);
   const files = settingsFiles();
   files.forEach((file, i) => {
     const label = i === 0 ? '  Hooks:      ' : '              ';
@@ -360,17 +360,17 @@ async function status() {
 }
 
 function help() {
-  console.log(`${orange('✦')} ${bold('claude-notch')} ${dim(pkg.version)} – Claude-Code-Status in der MacBook-Notch
+  console.log(`${orange('✦')} ${bold('claude-notch')} ${dim(pkg.version)} – Claude Code status in your MacBook notch
 
-  ${bold('npx claude-notch')}              installieren (falls nötig), Hooks eintragen, starten
-  ${bold('npx claude-notch stop')}         beenden
-  ${bold('npx claude-notch restart')}      neu starten
-  ${bold('npx claude-notch status')}       Status anzeigen
-  ${bold('npx claude-notch demo')}         alle Animationen vorführen
-  ${bold('npx claude-notch autostart')}    beim Login starten  ${dim('(autostart off zum Abschalten)')}
-  ${bold('npx claude-notch hooks')}        nur Hooks eintragen ${dim('(hooks off zum Entfernen)')}
-  ${bold('npx claude-notch update')}       neueste Binary neu laden
-  ${bold('npx claude-notch uninstall')}    alles entfernen (App, Hooks, Autostart)
+  ${bold('npx claude-notch')}              install (if needed), add hooks, start
+  ${bold('npx claude-notch stop')}         stop
+  ${bold('npx claude-notch restart')}      restart
+  ${bold('npx claude-notch status')}       show status
+  ${bold('npx claude-notch demo')}         play every animation
+  ${bold('npx claude-notch autostart')}    start at login      ${dim('(autostart off to disable)')}
+  ${bold('npx claude-notch hooks')}        only add the hooks  ${dim('(hooks off to remove)')}
+  ${bold('npx claude-notch update')}       download the latest binary
+  ${bold('npx claude-notch uninstall')}    remove everything (app, hooks, autostart)
 `);
 }
 
@@ -380,14 +380,14 @@ async function main() {
 
   if (['help', '--help', '-h'].includes(cmd)) return help();
   if (['--version', '-v'].includes(cmd)) return console.log(pkg.version);
-  if (process.platform !== 'darwin') fail('claude-notch läuft nur auf macOS.');
+  if (process.platform !== 'darwin') fail('claude-notch only runs on macOS.');
 
   switch (cmd) {
     case 'start':
       await ensureApp();
       if (!hooksInstalled()) installHooks();
       await start();
-      console.log(dim('  Tipp: `npx claude-notch demo` zeigt alle Animationen, `npx claude-notch autostart` startet es beim Login.'));
+      console.log(dim('  Tip: `npx claude-notch demo` plays every animation, `npx claude-notch autostart` starts it at login.'));
       break;
     case 'stop':
       await stop();
@@ -424,7 +424,7 @@ async function main() {
       removeHooks();
       if (fs.existsSync(LAUNCH_AGENT)) autostart(false);
       fs.rmSync(DATA_DIR, { recursive: true, force: true });
-      ok('Claude Notch komplett entfernt.');
+      ok('Claude Notch completely removed.');
       break;
     default:
       help();
