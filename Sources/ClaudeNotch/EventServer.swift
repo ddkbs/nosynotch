@@ -28,7 +28,7 @@ final class EventServer {
         params.requiredInterfaceType = .loopback
 
         guard let nwPort = NWEndpoint.Port(rawValue: port) else {
-            throw NSError(domain: "ClaudeNotch", code: 1, userInfo: [NSLocalizedDescriptionKey: "Ungültiger Port \(port)"])
+            throw NSError(domain: "ClaudeNotch", code: 1, userInfo: [NSLocalizedDescriptionKey: "Invalid port \(port)"])
         }
         let listener = try NWListener(using: params, on: nwPort)
         listener.newConnectionHandler = { [weak self] connection in

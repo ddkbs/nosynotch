@@ -21,7 +21,7 @@
     <key>LSUIElement</key>
     <true/>
     <key>NSAppleEventsUsageDescription</key>
-    <string>Damit du Spotify und Musik direkt aus der Notch steuern kannst (Play/Pause, Weiter, Zurück).</string>
+    <string>Lets you control Spotify and Music right from the notch (play/pause, next, previous).</string>
     <key>NSHighResolutionCapable</key>
     <true/>
 </dict>

@@ -39,7 +39,7 @@ final class Recorder {
 
     func start() {
         if queue.isEmpty {
-            FileHandle.standardError.write(Data("✗ Unbekannte Szene. Verfügbar: \(Self.scenes.map(\.name).joined(separator: ", "))\n".utf8))
+            FileHandle.standardError.write(Data("✗ Unknown scene. Available: \(Self.scenes.map(\.name).joined(separator: ", "))\n".utf8))
             exit(1)
         }
         next()
@@ -207,7 +207,7 @@ final class Recorder {
                 (0.3, prompt),
                 (0.9, ev("PreToolUse", tool: "Edit", input: ["file_path": "\(cwd)/Sources/NotchView.swift"])),
                 (1.7, ev("PostToolUse", tool: "Edit")),
-                (2.2, ev("Stop", last: "Parser refactored – alle 42 Tests grün.")),
+                (2.2, ev("Stop", last: "Parser refactored – all 42 tests pass.")),
             ]),
             Scene(name: "compacting", duration: 4.5, stillAt: 3.0, steps: [
                 (0.0, ev("SessionStart")),
@@ -227,14 +227,14 @@ final class Recorder {
                 (0.0, ev("PreToolUse", "c", cwd: "/Users/you/Projects/website", tool: "Bash",
                          input: ["command": "npm run build", "description": "npm run build"])),
                 (0.0, ev("PostToolUse", "c", cwd: "/Users/you/Projects/website", tool: "Bash")),
-                (0.0, ev("Stop", "c", cwd: "/Users/you/Projects/website", last: "Build ist durch.")),
+                (0.0, ev("Stop", "c", cwd: "/Users/you/Projects/website", last: "Build succeeded.")),
             ]),
             Scene(name: "media", duration: 7, height: 170, hoverAt: 2.6, stillAt: 5.0, musicAt: 0.5, steps: []),
             Scene(name: "handoff", duration: 9, dismissFlashAt: 6.6, musicAt: 0.0, steps: [
                 (1.4, prompt),
                 (2.6, ev("PreToolUse", tool: "Edit", input: ["file_path": "\(cwd)/Sources/NotchView.swift"])),
                 (3.4, ev("PostToolUse", tool: "Edit")),
-                (3.8, ev("Stop", last: "Media-Player eingebaut – Notch zeigt jetzt Spotify, wenn Claude Pause macht.")),
+                (3.8, ev("Stop", last: "Media player added – the notch now shows Spotify while Claude takes a break.")),
             ]),
             Scene(name: "demo", duration: 17, steps: [
                 (0.0, ev("SessionStart")),
@@ -246,7 +246,7 @@ final class Recorder {
                 (6.2, ev("PermissionRequest", tool: "Bash", input: ["command": "swift test", "description": "swift test"])),
                 (9.4, ev("PreToolUse", tool: "Bash", input: ["command": "swift test", "description": "Run tests"])),
                 (11.2, ev("PostToolUse", tool: "Bash")),
-                (11.8, ev("Stop", last: "Parser refactored – alle 42 Tests grün.")),
+                (11.8, ev("Stop", last: "Parser refactored – all 42 tests pass.")),
             ]),
         ]
     }
@@ -275,7 +275,7 @@ private struct RecordingStage: View {
             Spacer()
             Image(systemName: "sparkle").font(.system(size: 11, weight: .semibold))
             Image(systemName: "wifi").font(.system(size: 11, weight: .semibold))
-            Text("Do 5. Nov. 09:41").font(.system(size: 12))
+            Text("Thu Nov 5  9:41 AM").font(.system(size: 12))
         }
         .foregroundStyle(.white.opacity(0.92))
         .shadow(color: .black.opacity(0.25), radius: 1, y: 0.5)

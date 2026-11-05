@@ -43,16 +43,16 @@ struct ToolActivity: Equatable {
 
     var verb: String {
         switch name {
-        case "Bash", "BashOutput": return "Führt aus"
-        case "Edit", "MultiEdit", "NotebookEdit": return "Bearbeitet"
-        case "Write": return "Schreibt"
-        case "Read": return "Liest"
-        case "Grep", "Glob", "LS": return "Sucht"
-        case "WebFetch": return "Lädt"
-        case "WebSearch": return "Recherchiert"
-        case "Task", "Agent": return "Delegiert"
-        case "TodoWrite": return "Plant"
-        default: return "Nutzt \(displayName)"
+        case "Bash", "BashOutput": return "Running"
+        case "Edit", "MultiEdit", "NotebookEdit": return "Editing"
+        case "Write": return "Writing"
+        case "Read": return "Reading"
+        case "Grep", "Glob", "LS": return "Searching"
+        case "WebFetch": return "Fetching"
+        case "WebSearch": return "Researching"
+        case "Task", "Agent": return "Delegating"
+        case "TodoWrite": return "Planning"
+        default: return "Using \(displayName)"
         }
     }
 
@@ -120,13 +120,13 @@ struct Session: Identifiable, Equatable {
 
     var statusTitle: String {
         switch state {
-        case .idle: return "Bereit"
-        case .thinking: return "Denkt nach"
+        case .idle: return "Ready"
+        case .thinking: return "Thinking"
         case .tool(let t): return t.verb
-        case .waiting: return "Wartet auf dich"
-        case .compacting: return "Komprimiert Kontext"
-        case .done: return "Fertig"
-        case .error: return "Fehler"
+        case .waiting: return "Waiting for you"
+        case .compacting: return "Compacting context"
+        case .done: return "Done"
+        case .error: return "Error"
         }
     }
 
@@ -179,19 +179,19 @@ enum APIErrorText {
     /// Human-readable text for the `error` field of a `StopFailure` hook.
     static func describe(code: String?, details: String?, message: String?) -> String {
         let known: [String: String] = [
-            "rate_limit": "Rate-Limit erreicht",
-            "overloaded": "API ist überlastet",
-            "authentication_failed": "Anmeldung fehlgeschlagen",
-            "oauth_org_not_allowed": "Organisation nicht freigegeben",
-            "account_on_hold": "Account gesperrt",
-            "billing_error": "Problem mit der Abrechnung",
-            "invalid_request": "Ungültige Anfrage",
-            "model_not_found": "Modell nicht gefunden",
-            "server_error": "Serverfehler bei der API",
-            "max_output_tokens": "Antwort hat das Token-Limit erreicht",
-            "cloud_credential_error": "Cloud-Zugangsdaten ungültig",
+            "rate_limit": "Rate limit reached",
+            "overloaded": "API is overloaded",
+            "authentication_failed": "Authentication failed",
+            "oauth_org_not_allowed": "Organization not allowed",
+            "account_on_hold": "Account on hold",
+            "billing_error": "Billing problem",
+            "invalid_request": "Invalid request",
+            "model_not_found": "Model not found",
+            "server_error": "API server error",
+            "max_output_tokens": "Response hit the token limit",
+            "cloud_credential_error": "Cloud credentials invalid",
         ]
-        let title = code.flatMap { known[$0] } ?? "API-Fehler"
+        let title = code.flatMap { known[$0] } ?? "API error"
         let extra = [details, message].compactMap { $0?.trimmingCharacters(in: .whitespacesAndNewlines) }
             .first { !$0.isEmpty }
         guard let extra else { return title }
@@ -202,7 +202,7 @@ enum APIErrorText {
 
 enum Format {
     static func toolCalls(_ n: Int) -> String {
-        n == 1 ? "1 Tool-Aufruf" : "\(n) Tool-Aufrufe"
+        n == 1 ? "1 tool call" : "\(n) tool calls"
     }
 
     static func duration(_ t: TimeInterval) -> String {

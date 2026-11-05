@@ -9,7 +9,7 @@ enum Demo {
 
         let steps: [(TimeInterval, HookEvent)] = [
             (0.0, HookEvent(name: "SessionStart", sessionID: id, cwd: cwd)),
-            (0.4, HookEvent(name: "UserPromptSubmit", sessionID: id, cwd: cwd, prompt: "Bau mir eine Notch-App")),
+            (0.4, HookEvent(name: "UserPromptSubmit", sessionID: id, cwd: cwd, prompt: "Build me a notch app")),
             (3.0, HookEvent(name: "PreToolUse", sessionID: id, cwd: cwd, toolName: "Glob", toolInput: ["pattern": "**/*.swift"])),
             (4.2, HookEvent(name: "PostToolUse", sessionID: id, cwd: cwd, toolName: "Glob")),
             (5.0, HookEvent(name: "PreToolUse", sessionID: id, cwd: cwd, toolName: "Read", toolInput: ["file_path": "\(cwd)/Sources/NotchView.swift"])),
@@ -20,7 +20,7 @@ enum Demo {
             (13.0, HookEvent(name: "PreToolUse", sessionID: id, cwd: cwd, toolName: "Bash", toolInput: ["command": "swift build -c release", "description": "Build release"])),
             (16.0, HookEvent(name: "PostToolUse", sessionID: id, cwd: cwd, toolName: "Bash")),
             (18.0, HookEvent(name: "Stop", sessionID: id, cwd: cwd,
-                             lastAssistantMessage: "Die Notch-App ist fertig: Hooks installiert, Animationen für Denken, Tools, Rückfragen und Fertig-Status eingebaut.")),
+                             lastAssistantMessage: "The notch app is done: hooks installed, animations for thinking, tools, questions and done.")),
             (40.0, HookEvent(name: "SessionEnd", sessionID: id, cwd: cwd)),
         ]
 

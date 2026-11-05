@@ -10,7 +10,7 @@ CWD="$PWD"
 send() {
   curl -s -m 2 -X POST -H 'Content-Type: application/json' -H 'Expect:' \
     -H "X-Term-Program: ${TERM_PROGRAM:-}" -H "X-Bundle-Id: ${__CFBundleIdentifier:-}" \
-    --data-binary "$1" "$URL" >/dev/null || { echo "App läuft nicht auf Port $PORT?"; exit 1; }
+    --data-binary "$1" "$URL" >/dev/null || { echo "Is the app running on port $PORT?"; exit 1; }
 }
 ev() { # ev <event> [extra json]
   send "{\"hook_event_name\":\"$1\",\"session_id\":\"$SID\",\"cwd\":\"$CWD\"${2:+,$2}}"
@@ -25,7 +25,7 @@ ev PostToolUse '"tool_name":"Edit"'; sleep 0.5
 ev Notification '"message":"Claude needs your permission to use Bash","notification_type":"permission_prompt"'; sleep 3
 ev PreToolUse '"tool_name":"Bash","tool_input":{"command":"swift test","description":"Run tests"}'; sleep 2.5
 ev PostToolUse '"tool_name":"Bash"'; sleep 1.5
-ev Stop '"last_assistant_message":"Parser refactored, alle 42 Tests grün."'
+ev Stop '"last_assistant_message":"Parser refactored, all 42 tests pass."'
 sleep 8
 ev SessionEnd
 echo "✓ Demo fertig"

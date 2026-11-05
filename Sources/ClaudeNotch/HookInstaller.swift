@@ -139,7 +139,7 @@ enum HookInstaller {
         if data.isEmpty { return [:] }
         guard let object = try JSONSerialization.jsonObject(with: data) as? [String: Any] else {
             throw NSError(domain: "ClaudeNotch", code: 2, userInfo: [
-                NSLocalizedDescriptionKey: "\(url.path) ist kein JSON-Objekt – bitte manuell prüfen.",
+                NSLocalizedDescriptionKey: "\(url.path) is not a JSON object – please check it manually.",
             ])
         }
         return object

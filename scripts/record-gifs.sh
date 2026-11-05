@@ -12,7 +12,7 @@ cd "$(dirname "$0")/.."
 WIDTH="${WIDTH:-840}"   # output width in px (frames are rendered at 2x = 1120 px)
 FPS="${FPS:-25}"
 
-command -v ffmpeg >/dev/null || { echo "✗ ffmpeg fehlt: brew install ffmpeg" >&2; exit 1; }
+command -v ffmpeg >/dev/null || { echo "✗ ffmpeg is missing: brew install ffmpeg" >&2; exit 1; }
 
 swift build -c release
 BIN="$(swift build -c release --show-bin-path)/ClaudeNotch"

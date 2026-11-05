@@ -72,7 +72,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         } else if let error = server?.lastError {
             status = "⚠︎ Server: \(error)"
         } else {
-            status = "Lauscht auf 127.0.0.1:\(Preferences.port) · \(store.sessions.count) Session(s)"
+            status = "Listening on 127.0.0.1:\(Preferences.port) · \(store.sessions.count) Session(s)"
         }
         let statusLine = NSMenuItem(title: status, action: nil, keyEquivalent: "")
         statusLine.isEnabled = false
@@ -83,11 +83,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         menu.addItem(item(installed ? "Claude-Code-Hooks entfernen" : "Claude-Code-Hooks installieren…",
                           #selector(toggleHooks)))
 
-        let sound = item("Sound bei Fertig / Rückfrage", #selector(toggleSound))
+        let sound = item("Sounds for done / needs you / error", #selector(toggleSound))
         sound.state = Preferences.soundEnabled ? .on : .off
         menu.addItem(sound)
 
-        let media = item("Media-Player in der Notch (Spotify / Musik)", #selector(toggleMedia))
+        let media = item("Media player in the notch (Spotify / Music)", #selector(toggleMedia))
         media.state = Preferences.mediaEnabled ? .on : .off
         menu.addItem(media)
 
@@ -96,10 +96,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         menu.addItem(notifications)
 
         menu.addItem(.separator())
-        menu.addItem(item("Demo abspielen", #selector(playDemo), key: "d"))
-        menu.addItem(item("Settings-Datei zeigen", #selector(revealSettings)))
+        menu.addItem(item("Play demo", #selector(playDemo), key: "d"))
+        menu.addItem(item("Show settings file", #selector(revealSettings)))
         menu.addItem(.separator())
-        menu.addItem(item("Beenden", #selector(quit), key: "q"))
+        menu.addItem(item("Quit", #selector(quit), key: "q"))
     }
 
     private func item(_ title: String, _ action: Selector, key: String = "") -> NSMenuItem {
@@ -112,14 +112,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         do {
             if HookInstaller.isInstalled {
                 try HookInstaller.uninstall()
-                alert("Hooks entfernt", "Die claude-notch-Hooks wurden entfernt aus: \(HookInstaller.settingsSummary)")
+                alert("Hooks removed", "The hooks were removed from: \(HookInstaller.settingsSummary)")
             } else {
                 try HookInstaller.install(port: Preferences.port)
-                alert("Hooks installiert 🎉",
-                      "Die Hooks stehen jetzt in: \(HookInstaller.settingsSummary) (jeweils settings.json, Backup: settings.json.claude-notch.bak).\n\nLaufende Claude-Code-Sessions übernehmen die Hooks erst nach einem Neustart.")
+                alert("Hooks installed 🎉",
+                      "The hooks are now in: \(HookInstaller.settingsSummary) (settings.json each, backup: settings.json.claude-notch.bak).\n\nClaude Code sessions that are already running pick up the hooks after a restart.")
             }
         } catch {
-            alert("Fehler", error.localizedDescription)
+            alert("Error", error.localizedDescription)
         }
     }
 

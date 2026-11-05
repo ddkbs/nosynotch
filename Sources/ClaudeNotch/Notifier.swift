@@ -18,16 +18,16 @@ enum Notifier {
         switch transition {
         case .finished(let s):
             play("Glass")
-            post(title: "\(s.projectName) – fertig",
-                 body: s.lastSummary ?? s.statusDetail ?? "Claude ist fertig.")
+            post(title: "\(s.projectName) – done",
+                 body: s.lastSummary ?? s.statusDetail ?? "Claude is done.")
         case .needsAttention(let s):
             play("Funk")
-            post(title: "\(s.projectName) – Claude braucht dich",
-                 body: { if case .waiting(let m) = s.state { return m }; return "Bitte schau ins Terminal." }())
+            post(title: "\(s.projectName) – Claude needs you",
+                 body: { if case .waiting(let m) = s.state { return m }; return "Please check your terminal." }())
         case .failed(let s):
             play("Basso")
-            post(title: "\(s.projectName) – Fehler",
-                 body: { if case .error(let m) = s.state { return m }; return "Der Turn wurde abgebrochen." }())
+            post(title: "\(s.projectName) – error",
+                 body: { if case .error(let m) = s.state { return m }; return "The turn was aborted." }())
         case .started:
             break
         }

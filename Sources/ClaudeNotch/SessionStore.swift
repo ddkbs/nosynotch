@@ -79,11 +79,11 @@ final class SessionStore: ObservableObject {
             let tool = ToolActivity(name: event.toolName ?? "Tool", input: event.toolInput)
             let target = tool.detail.map { ": \($0)" } ?? ""
             let alreadyWaiting: Bool = { if case .waiting = s.state { return true }; return false }()
-            s.state = .waiting(message: "Darf ich \(tool.displayName) nutzen\(target)?")
+            s.state = .waiting(message: "May I use \(tool.displayName)\(target)?")
             if !alreadyWaiting { transition = .needsAttention(s) }
 
         case "Notification":
-            let message = event.message ?? "Claude braucht deine Aufmerksamkeit"
+            let message = event.message ?? "Claude needs your attention"
             // The "waiting for your input" reminder fires ~60s after a turn ended; that's not news.
             let isIdleReminder = event.notificationType == "idle_prompt"
                 || message.localizedCaseInsensitiveContains("waiting for your input")

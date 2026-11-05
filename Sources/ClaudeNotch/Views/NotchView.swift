@@ -191,7 +191,7 @@ struct SessionList: View {
         let sessions = Array(store.ordered.prefix(NotchViewModel.maxRows))
         VStack(spacing: 0) {
             if sessions.isEmpty {
-                Text("Keine aktiven Claude-Code-Sessions")
+                Text("No active Claude Code sessions")
                     .font(.system(size: 12))
                     .foregroundStyle(.white.opacity(0.5))
                     .frame(height: NotchViewModel.rowHeight)
@@ -293,7 +293,7 @@ struct CelebrationView: View {
 
             VStack(alignment: .leading, spacing: 3) {
                 HStack(spacing: 6) {
-                    Text("Fertig")
+                    Text("Done")
                         .font(.system(size: 17, weight: .semibold, design: .rounded))
                         .foregroundStyle(.white)
                     Text(session.projectName)
@@ -335,7 +335,7 @@ struct CelebrationView: View {
     }
 
     private func summaryFallback(_ s: Session) -> String {
-        s.toolCount > 0 ? "\(Format.toolCalls(s.toolCount)) – Claude wartet auf deine nächste Nachricht." : "Claude wartet auf deine nächste Nachricht."
+        s.toolCount > 0 ? "\(Format.toolCalls(s.toolCount)) – Claude is waiting for your next message." : "Claude is waiting for your next message."
     }
 }
 
@@ -366,7 +366,7 @@ struct FailureView: View {
 
             VStack(alignment: .leading, spacing: 3) {
                 HStack(spacing: 6) {
-                    Text("Claude ist gestolpert")
+                    Text("Claude hit a snag")
                         .font(.system(size: 15, weight: .semibold, design: .rounded))
                         .foregroundStyle(.white)
                     Text(session.projectName)
@@ -419,7 +419,7 @@ struct AttentionView: View {
 
             VStack(alignment: .leading, spacing: 3) {
                 HStack(spacing: 6) {
-                    Text("Claude braucht dich")
+                    Text("Claude needs you")
                         .font(.system(size: 15, weight: .semibold, design: .rounded))
                         .foregroundStyle(.white)
                     Text(session.projectName)
