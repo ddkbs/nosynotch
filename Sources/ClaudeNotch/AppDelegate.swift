@@ -107,11 +107,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         do {
             if HookInstaller.isInstalled {
                 try HookInstaller.uninstall()
-                alert("Hooks entfernt", "Die claude-notch-Hooks wurden aus \(HookInstaller.settingsURL.path) entfernt.")
+                alert("Hooks entfernt", "Die claude-notch-Hooks wurden entfernt aus: \(HookInstaller.settingsSummary)")
             } else {
                 try HookInstaller.install(port: Preferences.port)
                 alert("Hooks installiert 🎉",
-                      "Die Hooks stehen jetzt in \(HookInstaller.settingsURL.path) (Backup: settings.json.claude-notch.bak).\n\nLaufende Claude-Code-Sessions übernehmen die Hooks erst nach einem Neustart.")
+                      "Die Hooks stehen jetzt in: \(HookInstaller.settingsSummary) (jeweils settings.json, Backup: settings.json.claude-notch.bak).\n\nLaufende Claude-Code-Sessions übernehmen die Hooks erst nach einem Neustart.")
             }
         } catch {
             alert("Fehler", error.localizedDescription)

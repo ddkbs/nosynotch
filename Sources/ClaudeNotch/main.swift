@@ -7,10 +7,10 @@ if arguments.contains("--install-hooks") || arguments.contains("--uninstall-hook
     do {
         if arguments.contains("--install-hooks") {
             try HookInstaller.install(port: Preferences.port)
-            print("✓ Hooks in \(HookInstaller.settingsURL.path) installiert.")
+            print("✓ Hooks installiert in: \(HookInstaller.settingsSummary)")
         } else {
             try HookInstaller.uninstall()
-            print("✓ Hooks aus \(HookInstaller.settingsURL.path) entfernt.")
+            print("✓ Hooks entfernt aus: \(HookInstaller.settingsSummary)")
         }
         exit(0)
     } catch {

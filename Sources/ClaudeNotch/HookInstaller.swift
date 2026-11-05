@@ -1,6 +1,8 @@
 import Foundation
 
-/// Adds / removes the claude-notch hooks in `~/.claude/settings.json`.
+/// Adds / removes the claude-notch hooks in `settings.json` of every Claude Code config directory:
+/// `~/.claude`, `$CLAUDE_CONFIG_DIR` and any `~/.claude-*` folder that looks like one (people who run
+/// several accounts side by side point `CLAUDE_CONFIG_DIR` at e.g. `~/.claude-work`).
 ///
 /// Every hook is a one-line `curl` that forwards the hook's stdin JSON to the app. If the app isn't
 /// running, curl fails instantly and `|| true` keeps Claude Code happy – hooks never block Claude.
@@ -36,21 +38,65 @@ enum HookInstaller {
         ].joined(separator: " ")
     }
 
-    static var settingsURL: URL {
-        FileManager.default.homeDirectoryForCurrentUser
-            .appendingPathComponent(".claude", isDirectory: true)
-            .appendingPathComponent("settings.json")
+    /// All Claude Code config directories on this Mac, `~/.claude` first.
+    static var configDirectories: [URL] {
+        let fm = FileManager.default
+        let home = fm.homeDirectoryForCurrentUser
+        var dirs = [home.appendingPathComponent(".claude", isDirectory: true)]
+
+        if let env = ProcessInfo.processInfo.environment["CLAUDE_CONFIG_DIR"], !env.isEmpty {
+            dirs.append(URL(fileURLWithPath: (env as NSString).expandingTildeInPath, isDirectory: true))
+        }
+        let names = (try? fm.contentsOfDirectory(atPath: home.path)) ?? []
+        for name in names.sorted() where name.hasPrefix(".claude-") || name.hasPrefix(".claude_") {
+            guard name != ".claude-notch" else { continue }
+            let dir = home.appendingPathComponent(name, isDirectory: true)
+            let looksLikeConfig = ["settings.json", "projects", ".credentials.json"].contains {
+                fm.fileExists(atPath: dir.appendingPathComponent($0).path)
+            }
+            if looksLikeConfig { dirs.append(dir) }
+        }
+
+        var seen = Set<String>()
+        return dirs.filter { seen.insert($0.standardizedFileURL.resolvingSymlinksInPath().path).inserted }
+    }
+
+    static var settingsURLs: [URL] {
+        configDirectories.map { $0.appendingPathComponent("settings.json") }
+    }
+
+    /// The primary settings file (`~/.claude/settings.json`).
+    static var settingsURL: URL { settingsURLs[0] }
+
+    /// Human-readable list of the settings files we touch, e.g. "~/.claude, ~/.claude-work".
+    static var settingsSummary: String {
+        let home = FileManager.default.homeDirectoryForCurrentUser.path
+        return settingsURLs
+            .map { $0.deletingLastPathComponent().path.replacingOccurrences(of: home, with: "~") }
+            .joined(separator: ", ")
     }
 
     static var isInstalled: Bool {
-        guard let settings = try? load(), let hooks = settings["hooks"] as? [String: Any] else { return false }
+        settingsURLs.allSatisfy { isInstalled(at: $0) }
+    }
+
+    static func isInstalled(at url: URL) -> Bool {
+        guard let settings = try? load(url), let hooks = settings["hooks"] as? [String: Any] else { return false }
         return events.allSatisfy { event in
             ((hooks[event.name] as? [[String: Any]]) ?? []).contains(where: isOurs)
         }
     }
 
     static func install(port: UInt16 = EventServer.defaultPort) throws {
-        var settings = try load()
+        for url in settingsURLs { try install(port: port, at: url) }
+    }
+
+    static func uninstall() throws {
+        for url in settingsURLs where FileManager.default.fileExists(atPath: url.path) { try uninstall(at: url) }
+    }
+
+    private static func install(port: UInt16, at url: URL) throws {
+        var settings = try load(url)
         var hooks = (settings["hooks"] as? [String: Any]) ?? [:]
 
         for event in events {
@@ -64,11 +110,11 @@ enum HookInstaller {
         }
 
         settings["hooks"] = hooks
-        try save(settings)
+        try save(settings, to: url)
     }
 
-    static func uninstall() throws {
-        var settings = try load()
+    private static func uninstall(at url: URL) throws {
+        var settings = try load(url)
         guard var hooks = settings["hooks"] as? [String: Any] else { return }
 
         for (name, value) in hooks {
@@ -77,7 +123,7 @@ enum HookInstaller {
             hooks[name] = remaining.isEmpty ? nil : remaining
         }
         settings["hooks"] = hooks.isEmpty ? nil : hooks
-        try save(settings)
+        try save(settings, to: url)
     }
 
     // MARK: - Helpers
@@ -87,8 +133,7 @@ enum HookInstaller {
         return hooks.contains { (($0["command"] as? String) ?? "").contains(marker) }
     }
 
-    private static func load() throws -> [String: Any] {
-        let url = settingsURL
+    private static func load(_ url: URL) throws -> [String: Any] {
         guard FileManager.default.fileExists(atPath: url.path) else { return [:] }
         let data = try Data(contentsOf: url)
         if data.isEmpty { return [:] }
@@ -100,9 +145,8 @@ enum HookInstaller {
         return object
     }
 
-    private static func save(_ settings: [String: Any]) throws {
+    private static func save(_ settings: [String: Any], to url: URL) throws {
         let fm = FileManager.default
-        let url = settingsURL
         try fm.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
 
         // Keep a backup of whatever was there before we touched it.

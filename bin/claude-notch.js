@@ -20,7 +20,6 @@ const DATA_DIR = path.join(HOME, '.claude-notch');
 const APP = path.join(DATA_DIR, 'Claude Notch.app');
 const BINARY = path.join(APP, 'Contents', 'MacOS', 'ClaudeNotch');
 const VERSION_FILE = path.join(DATA_DIR, 'version');
-const SETTINGS = path.join(HOME, '.claude', 'settings.json');
 const LAUNCH_AGENT = path.join(HOME, 'Library', 'LaunchAgents', `${LABEL}.plist`);
 
 const HOOK_EVENTS = [
@@ -189,33 +188,69 @@ function assembleApp(binary) {
 
 // ───────────────────────────── hooks ─────────────────────────────
 
-function readSettings() {
-  if (!fs.existsSync(SETTINGS)) return {};
-  const text = fs.readFileSync(SETTINGS, 'utf8');
+/**
+ * Every Claude Code config directory: ~/.claude, $CLAUDE_CONFIG_DIR and ~/.claude-* folders that look
+ * like one (people with several accounts point CLAUDE_CONFIG_DIR at e.g. ~/.claude-work).
+ * Must stay in sync with HookInstaller.configDirectories in the Swift app.
+ */
+function configDirs() {
+  const dirs = [path.join(HOME, '.claude')];
+  const env = process.env.CLAUDE_CONFIG_DIR;
+  if (env) dirs.push(path.resolve(env.replace(/^~(?=$|\/)/, HOME)));
+  for (const name of fs.readdirSync(HOME).sort()) {
+    if (!/^\.claude[-_]/.test(name) || name === '.claude-notch') continue;
+    const dir = path.join(HOME, name);
+    if (['settings.json', 'projects', '.credentials.json'].some((f) => fs.existsSync(path.join(dir, f)))) dirs.push(dir);
+  }
+  const seen = new Set();
+  return dirs.filter((d) => {
+    let real = d;
+    try {
+      real = fs.realpathSync(d);
+    } catch {}
+    if (seen.has(real)) return false;
+    seen.add(real);
+    return true;
+  });
+}
+
+const settingsFiles = () => configDirs().map((d) => path.join(d, 'settings.json'));
+const pretty = (p) => p.replace(HOME, '~');
+
+function readSettings(file) {
+  if (!fs.existsSync(file)) return {};
+  const text = fs.readFileSync(file, 'utf8');
   if (!text.trim()) return {};
   try {
     return JSON.parse(text);
   } catch (e) {
-    fail(`${SETTINGS} ist kein gültiges JSON (${e.message}). Bitte manuell prüfen.`);
+    fail(`${file} ist kein gültiges JSON (${e.message}). Bitte manuell prüfen.`);
   }
 }
 
-function writeSettings(settings) {
-  fs.mkdirSync(path.dirname(SETTINGS), { recursive: true });
-  if (fs.existsSync(SETTINGS)) fs.copyFileSync(SETTINGS, `${SETTINGS}.claude-notch.bak`);
-  fs.writeFileSync(SETTINGS, JSON.stringify(settings, null, 2) + '\n');
+function writeSettings(file, settings) {
+  fs.mkdirSync(path.dirname(file), { recursive: true });
+  if (fs.existsSync(file)) fs.copyFileSync(file, `${file}.claude-notch.bak`);
+  fs.writeFileSync(file, JSON.stringify(settings, null, 2) + '\n');
 }
 
 const isOurs = (group) =>
   Array.isArray(group?.hooks) && group.hooks.some((h) => typeof h?.command === 'string' && h.command.includes(MARKER));
 
-function hooksInstalled() {
-  const hooks = readSettings().hooks || {};
+function hooksInstalledIn(file) {
+  const hooks = readSettings(file).hooks || {};
   return HOOK_EVENTS.every(([name]) => (hooks[name] || []).some(isOurs));
 }
 
+const hooksInstalled = () => settingsFiles().every(hooksInstalledIn);
+
 function installHooks() {
-  const settings = readSettings();
+  for (const file of settingsFiles()) installHooksIn(file);
+  console.log(dim('  Bereits laufende Claude-Code-Sessions einmal neu starten, damit sie die Hooks laden.'));
+}
+
+function installHooksIn(file) {
+  const settings = readSettings(file);
   const hooks = settings.hooks || {};
   for (const [name, matcher] of HOOK_EVENTS) {
     const groups = (hooks[name] || []).filter((g) => !isOurs(g));
@@ -225,14 +260,17 @@ function installHooks() {
     hooks[name] = groups;
   }
   settings.hooks = hooks;
-  writeSettings(settings);
-  ok(`Hooks in ${SETTINGS.replace(HOME, '~')} eingetragen ${dim('(Backup: settings.json.claude-notch.bak)')}`);
-  console.log(dim('  Bereits laufende Claude-Code-Sessions einmal neu starten, damit sie die Hooks laden.'));
+  writeSettings(file, settings);
+  ok(`Hooks in ${pretty(file)} eingetragen ${dim('(Backup: settings.json.claude-notch.bak)')}`);
 }
 
 function removeHooks() {
-  if (!fs.existsSync(SETTINGS)) return;
-  const settings = readSettings();
+  for (const file of settingsFiles()) removeHooksIn(file);
+}
+
+function removeHooksIn(file) {
+  if (!fs.existsSync(file)) return;
+  const settings = readSettings(file);
   if (!settings.hooks) return;
   for (const name of Object.keys(settings.hooks)) {
     const groups = Array.isArray(settings.hooks[name]) ? settings.hooks[name].filter((g) => !isOurs(g)) : settings.hooks[name];
@@ -240,8 +278,8 @@ function removeHooks() {
     else settings.hooks[name] = groups;
   }
   if (Object.keys(settings.hooks).length === 0) delete settings.hooks;
-  writeSettings(settings);
-  ok('Hooks entfernt.');
+  writeSettings(file, settings);
+  ok(`Hooks aus ${pretty(file)} entfernt.`);
 }
 
 // ───────────────────────────── autostart (LaunchAgent) ─────────────────────────────
@@ -313,7 +351,11 @@ async function status() {
   const running = await isRunning();
   console.log(`${bold('Claude Notch')} ${dim(pkg.version)}`);
   console.log(`  App:        ${running ? green('läuft') : dim('gestoppt')}  ${dim(installedVersion() ? APP : 'nicht installiert')}`);
-  console.log(`  Hooks:      ${hooksInstalled() ? green('installiert') : dim('nicht installiert')}`);
+  const files = settingsFiles();
+  files.forEach((file, i) => {
+    const label = i === 0 ? '  Hooks:      ' : '              ';
+    console.log(`${label}${hooksInstalledIn(file) ? green('✓') : dim('–')} ${pretty(path.dirname(file))}`);
+  });
   console.log(`  Autostart:  ${fs.existsSync(LAUNCH_AGENT) ? green('an') : dim('aus')}`);
 }
 
