@@ -176,10 +176,13 @@ struct SettingsView: View {
                     Toggle("Show Spotify / Apple Music in the notch", isOn: $mediaEnabled)
                     Toggle("Keep showing while paused", isOn: $mediaShowWhenPaused)
                         .disabled(!mediaEnabled)
+                    Toggle("Live equalizer (bigger, moves with the music)", isOn: $liveEqualizer)
+                        .disabled(!mediaEnabled)
+                        .onChange(of: liveEqualizer) { _, _ in actions.settingsChanged() }
                 } header: {
                     Text("Music")
                 } footer: {
-                    FooterText("Shown while Claude is idle. The first time you press play, macOS asks whether Nosy Notch may control your player.")
+                    FooterText("Shown while Claude is idle. The first time you press play, macOS asks whether Nosy Notch may control your player. The live equalizer listens to Spotify / Music only (macOS asks once for \"System Audio Recording\"); nothing is recorded or stored.")
                 }
             }
             .formStyle(.grouped)

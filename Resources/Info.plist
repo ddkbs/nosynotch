@@ -20,6 +20,8 @@
     <string>14.0</string>
     <key>LSUIElement</key>
     <true/>
+    <key>NSAudioCaptureUsageDescription</key>
+    <string>Only if you turn on the live equalizer: lets the bars in the notch move with the music from Spotify or Music. Nothing is recorded or stored.</string>
     <key>NSAppleEventsUsageDescription</key>
     <string>Lets you control Spotify and Music right from the notch (play/pause, next, previous).</string>
     <key>NSHighResolutionCapable</key>

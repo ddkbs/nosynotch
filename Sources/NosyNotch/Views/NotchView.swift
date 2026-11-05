@@ -126,7 +126,8 @@ struct NotchView: View {
                 .frame(width: Self.wingContent, alignment: .center)
                 .onTapGesture { media.openPlayer() }
             Spacer(minLength: model.notchSize.width)
-            EqualizerBars(color: media.accent, playing: media.isPlaying)
+            EqualizerBars(color: media.accent, playing: media.isPlaying,
+                          live: Preferences.liveEqualizer, spectrum: model.spectrum)
                 .frame(width: Self.wingContent, alignment: .center)
                 .transition(.scale(scale: 0.2).combined(with: .opacity))
         }

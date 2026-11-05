@@ -35,6 +35,8 @@ final class NotchViewModel: ObservableObject {
     let media: NowPlaying
     let approvals: ApprovalCenter
     let usage: UsageStore
+    /// Live band levels of the playing music (only with the live equalizer turned on).
+    let spectrum = AudioSpectrum()
 
     static let usageRowHeight: CGFloat = 24
 
@@ -219,7 +221,16 @@ final class NotchViewModel: ObservableObject {
         endFlash()
     }
 
+    /// Tap the player's audio only while it plays and the live equalizer is on (and we run as an .app –
+    /// the audio permission needs a bundle).
+    private func updateSpectrum() {
+        let canTap = Bundle.main.bundleURL.pathExtension == "app"
+        let follow = canTap && Preferences.liveEqualizer && Preferences.mediaEnabled && media.isPlaying
+        spectrum.follow(bundleID: follow ? media.track?.source.bundleID : nil)
+    }
+
     func recompute() {
+        updateSpectrum()
         // Attention is over as soon as that session moves on (e.g. permission granted).
         if let a = attention {
             var stillWaiting = false

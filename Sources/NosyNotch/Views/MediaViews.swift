@@ -26,15 +26,46 @@ struct MediaArtwork: View {
     }
 }
 
-/// Four bars dancing while music plays, resting flat when paused.
+/// Four bars dancing while music plays, resting flat when paused. "Live": five bigger bars that follow the
+/// actual music (via `AudioSpectrum`), with a livelier made-up dance until real audio arrives.
 struct EqualizerBars: View {
     var color: Color
     var playing: Bool
+    var live = false
+    var spectrum: AudioSpectrum?
 
     private static let speeds: [Double] = [7.1, 9.3, 6.2, 8.4]
     private static let offsets: [Double] = [0, 1.7, 3.1, 0.9]
 
     var body: some View {
+        if live { liveBars } else { classicBars }
+    }
+
+    private var liveBars: some View {
+        TimelineView(.animation(minimumInterval: 1.0 / 60.0, paused: !playing)) { timeline in
+            let t = timeline.date.timeIntervalSinceReferenceDate
+            let levels = playing ? spectrum?.levels : nil
+            HStack(alignment: .center, spacing: 2.5) {
+                ForEach(0..<AudioSpectrum.bandCount, id: \.self) { i in
+                    let level: Double = {
+                        if let levels { return Double(levels[i]) }
+                        // No audio (yet): a bouncier fallback with a shared "beat".
+                        let beat = pow(0.5 + 0.5 * sin(t * 7.8), 3)
+                        let wobble = 0.5 + 0.5 * sin(t * (5.3 + Double(i) * 1.7) + Double(i) * 1.3)
+                        return 0.25 + 0.45 * wobble + 0.3 * beat * (i == 0 || i == 1 ? 1 : 0.6)
+                    }()
+                    Capsule()
+                        .fill(color)
+                        .frame(width: 3, height: playing ? 3 + 17 * CGFloat(min(1, max(0, level))) : 3)
+                        .shadow(color: color.opacity(playing ? 0.6 : 0), radius: 3)
+                }
+            }
+            .frame(height: 20)
+        }
+        .animation(.easeOut(duration: 0.25), value: playing)
+    }
+
+    private var classicBars: some View {
         TimelineView(.animation(minimumInterval: 1.0 / 30.0, paused: !playing)) { timeline in
             let t = timeline.date.timeIntervalSinceReferenceDate
             HStack(alignment: .center, spacing: 2) {
