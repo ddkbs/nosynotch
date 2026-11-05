@@ -74,6 +74,12 @@ final class Recorder {
                                        week: UsageWindow(usedPercent: 71, resetsAt: now + 3 * 86_400)), for: .claude)
             model.usage.set(AgentUsage(fiveHour: UsageWindow(usedPercent: 12, resetsAt: now + 4 * 3600),
                                        week: UsageWindow(usedPercent: 90, resetsAt: now + 86_400)), for: .codex)
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                MainActor.assumeIsolated {
+                    store.setContext("a", percent: 64)
+                    store.setContext("cx", percent: 88)
+                }
+            }
         }
 
         let size = CGSize(width: Self.width, height: scene.height)
