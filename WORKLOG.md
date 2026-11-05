@@ -1,5 +1,10 @@
 # WORKLOG
 
+## 2026-11-05 (13)
+- **Limit-Reset-Benachrichtigung**: Erreicht ein 5h- oder Wochenlimit, das bei ≥ 80 % stand, seine Reset-Zeit → Notch-Karte „Claude/Codex is ready again“ (Ring läuft leer, Pfeil dreht sich), Sound „Hero“, optional Banner. Arbeitet mit den zuletzt bekannten Werten (Timer alle 20 s, vor jedem Update geprüft), feuert auch nach App-Start einmal, wenn der Reset bis zu 12 h her ist; bereits gemeldete Resets in UserDefaults. Settings → Usage, standardmäßig an. GIF `limit-reset.gif`.
+- Reddit-Launch-Seite (Artifact) mit Posts für 23 Subreddits erstellt; vor dem Posten: Repo public, `NPM_TOKEN` + Tag, LICENSE.
+- Monetarisierung besprochen: GitHub Sponsors über Konto eines Elternteils (Stripe verlangt Volljährigkeit), später Pro-Version über Merchant of Record. Keine Rechtsberatung.
+
 ## 2026-11-05 (14)
 - **Website** in `website/` (Vite + React 19 + Tailwind 4, gleiches Gerüst/Design wie sketchy-Website). Lokal: `npm --prefix website run dev` (Port 5179 via `.claude/launch.json`).
   - **Version A** (`/`): eigener Nachbau des React-Bits-Pro-Hintergrunds „Spectral Drape“ (Code ist Paywall → selbst geschrieben, nach Davids Bildschirmaufnahme abgestimmt: frontales Punkteraster, Stoff-Falten, Flattern, Brush, Click-Ripples, Parallax). Punktfarben laufen langsam durch die Agentenpalette (`NOSY_PALETTE`). Cursor = Notch-Pille, die sich um Buttons legt.
