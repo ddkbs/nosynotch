@@ -1,10 +1,10 @@
 # Every animation
 
-Each animation with the Claude Code hook that triggers it. All GIFs are real recordings of the app
+Each animation with the Claude Code hook that triggers it (Codex sends the same hooks, see [Codex](#codex)). All GIFs are real recordings of the app
 (`./scripts/record-gifs.sh`); only the desktop behind it is staged.
 
 [Thinking](#thinking) · [Working](#working) · [Needs you](#needs-you) · [Done](#done) · [Error](#error) ·
-[Compacting](#compacting) · [All sessions](#all-sessions-hover) · [Music](#music) · [Back to music](#back-to-music) ·
+[Compacting](#compacting) · [All sessions](#all-sessions-hover) · [Codex](#codex) · [Music](#music) · [Back to music](#back-to-music) ·
 [Full run](#full-run)
 
 ## Thinking
@@ -87,6 +87,17 @@ A purple spark that turns backwards and contracts.
 Move the pointer over the notch: a list of every session with status, current tool and timer. Click brings the right
 terminal to the front, ✕ removes a session. With several sessions the compact notch always shows the most important one
 (needs you / error > working > done > ready).
+
+## Codex
+
+<img src="gifs/codex.gif" alt="Codex" width="560">
+
+**Trigger:** the same hooks, sent by the Codex CLI or the Codex mode of the ChatGPT app (`~/.codex/hooks.json`).
+
+Codex sessions get every animation above, with a blue spark and a small *Codex* badge. Codex tools have their own icons:
+`apply_patch` shows a pencil and the files it changes, `update_plan` a checklist, `web_search` a compass. When you stop a
+Codex turn with Esc, its `Interrupt` hook puts the session straight back to *Ready*. Codex has no `StopFailure` hook,
+so the error animation is Claude-only for now.
 
 ## Music
 

@@ -1,7 +1,7 @@
 <h1 align="center">Nosy Notch</h1>
 
 <p align="center">
-  <b>Your MacBook notch keeps an eye on Claude Code – and plays your music while Claude takes a break.</b>
+  <b>Your MacBook notch keeps an eye on Claude Code and Codex – and plays your music while they take a break.</b>
 </p>
 
 <p align="center">
@@ -29,6 +29,10 @@
     <td align="center"><img src="docs/gifs/error.gif" alt="Error"><br><b>Error</b><br><sub>Rate limit, overload, auth problems …</sub></td>
     <td align="center"><img src="docs/gifs/hover.gif" alt="All sessions"><br><b>All sessions</b><br><sub>Hover to see every running session</sub></td>
   </tr>
+  <tr>
+    <td align="center"><img src="docs/gifs/codex.gif" alt="Codex"><br><b>Codex too</b><br><sub>Codex CLI and the ChatGPT app's Codex mode, side by side with Claude</sub></td>
+    <td align="center"><img src="docs/gifs/compacting.gif" alt="Compacting"><br><b>Compacting</b><br><sub>Purple spark while the context is compacted</sub></td>
+  </tr>
 </table>
 
 <p align="center"><a href="docs/animations.md"><b>→ Every animation explained</b></a></p>
@@ -44,10 +48,14 @@ npx nosynotch
 That's it. Needs macOS 14+ and [Node.js](https://nodejs.org) 18+ (for `npx`; `brew install node` works too). The command
 
 1. downloads the app to `~/.nosynotch/` (or builds it locally with Swift if there is no release yet),
-2. adds the hooks to your Claude Code settings (a backup `settings.json.nosynotch.bak` is created),
+2. adds the hooks to your Claude Code settings – and to Codex (`~/.codex/hooks.json`) if you use it. A backup
+   (`*.nosynotch.bak`) is created,
 3. starts Nosy Notch in the background – no Dock icon, just a ✦ in the menu bar.
 
 Restart Claude Code sessions that are already running once so they load the hooks. New sessions work right away.
+
+**Codex:** Codex only runs hooks you trust. Trust the Nosy Notch hooks once – in the ChatGPT app under
+**Codex → Settings → Hooks** (or **Review hooks** in the composer), in the CLI with `/hooks`.
 
 ```bash
 npx nosynotch demo        # play every animation
@@ -71,7 +79,8 @@ npx nosynotch uninstall   # removes app, hooks and autostart
 | **Music** | When Claude is idle: album cover left, equalizer in the cover's colour right. Hover for the player |
 | **Hover** | List of all sessions with status, current tool and timer. Click jumps to the right terminal |
 
-Works with several sessions at once. Macs without a notch get a virtual one in the middle of the menu bar.
+Works with several sessions at once – Claude Code and Codex mixed. Each session shows a small *Claude* / *Codex*
+badge, Codex sessions spin in blue. Macs without a notch get a virtual one in the middle of the menu bar.
 
 ## How it works
 
@@ -88,6 +97,10 @@ Every hook is a one-line `curl` that posts the hook's JSON to the app. If the ap
 
 There is nothing to pair or log into: once the hooks are in `settings.json`, **every** Claude Code session – terminal, VS Code,
 the desktop app – reports to the notch.
+
+**Codex** (the CLI and the Codex mode of the ChatGPT desktop app) has the same kind of hooks. Nosy Notch adds the same
+one-line `curl` to `~/.codex/hooks.json` (or `$CODEX_HOME/hooks.json`) with `&agent=codex` in the URL. Codex skips new hooks
+until you trust them once (see [Install](#install)). Bonus: Codex reports when you interrupt a turn, so its status never gets stuck.
 
 **Several accounts / `CLAUDE_CONFIG_DIR`:** each config directory has its own `settings.json`. Nosy Notch installs the hooks into
 `~/.claude`, `$CLAUDE_CONFIG_DIR` and every `~/.claude-*` folder that looks like a config directory. `npx nosynotch status`
@@ -108,6 +121,7 @@ wins: as soon as a session works or needs you, the notch switches over, and the 
 Click the ✦ in the menu bar → **Settings…** (or run `npx nosynotch settings`):
 
 - **Claude Code** – which config directories are connected, one button to connect or disconnect, play the demo
+- **Codex** – connect or disconnect `~/.codex/hooks.json`
 - **Launch at login**
 - **Notifications** – sound for done / needs you / error, how long notifications stay open, optional macOS banners
 - **Music** – show Spotify / Apple Music in the notch, keep showing it while paused
@@ -171,7 +185,7 @@ Sources/NosyNotch/
 ├── Session.swift                    states, tool icons/labels, colours, error texts
 ├── NowPlaying.swift                 Spotify / Apple Music: track, cover, controls
 ├── Transcript.swift                 reads the last answer from the transcript (for "Done")
-├── HookInstaller.swift              patches settings.json in every Claude config directory
+├── HookInstaller.swift              patches settings.json in every Claude config directory and ~/.codex/hooks.json
 ├── Preferences.swift / LoginItem.swift  settings, launch at login
 ├── Notifier.swift                   sounds, notifications, bringing the terminal to the front
 ├── NotchViewModel.swift             presentation (hidden/compact/expanded/…/media) and sizes
@@ -183,4 +197,4 @@ Sources/NosyNotch/
 If you interrupt a turn with Esc / Ctrl-C, Claude Code sends no `Stop` event. The session then falls back to "Ready" after a
 timeout (10 min thinking / 30 min tool), at the latest with your next prompt. You can also remove it from the hover list with ✕.
 
-Not affiliated with Anthropic. Claude is a trademark of Anthropic.
+Not affiliated with Anthropic or OpenAI. Claude is a trademark of Anthropic, Codex and ChatGPT are trademarks of OpenAI.
