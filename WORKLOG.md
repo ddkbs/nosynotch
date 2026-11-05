@@ -1,5 +1,15 @@
 # WORKLOG
 
+## 2026-11-05 (10)
+- Projektordner heißt jetzt `~/Desktop/Projects/nosynotch` (von David umbenannt).
+- **Grüner Punkt für ungesehene Ergebnisse** (Notch-Flügel, Cover-Badge, Session-Zeile) bis App-Wechsel/Hover/Klick/✕; **Erinnerung nach 5 min** für ungesehenes „Fertig“ und unbeantwortetes „Braucht dich“ (leiserer Sound). **Stumm** 1 h / 8 h / ∞ im Menü und in Settings (nur Ton + Banner, Animationen laufen weiter).
+- **Kontext-Ring** pro Session (Claude: Statusline `context_window.used_percentage`, Codex: letztes `token_count` / `model_context_window`), **Usage-Auswahl** Beide/Claude/Codex.
+- **Cursor** (`~/.cursor/hooks.json`, camelCase-Events gemappt, Session = `conversation_id`, Hook gibt `{}` bzw. `{"continue":true}` aus). Nur Status, kein Genehmigen (Cursor hat kein passendes Approval-Event). Mit simulierten Hooks geprüft, nicht mit echtem Cursor-Agenten. Achtung: Hooks liegen schon in Davids echter `~/.cursor/hooks.json`.
+- **Kopfnicken mit AirPods** (CMHeadphoneMotionManager, standardmäßig aus): Nicken = Allow, Kopfschütteln = Deny, nur solange eine Anfrage offen ist. Nicht mit echten AirPods getestet (keine verbunden).
+- **Settings komplett neu** im Notch-Stil: schwarze Sidebar mit Live-Mini-Notch, Seiten Agents/Alerts/Permissions/Usage/Music/General, Karten + eigene Pill-Toggles in Agentenfarben, „Star it on GitHub“-Karte unten links (Stern dreht/funkelt beim Hover).
+- Alle GIFs neu (+ `unseen`, `settings`), GIF-Skript flacht Frames auf RGB (sonst wurde Schwarz transparent). README neu geschrieben (Tabelle „Works with“, Fließtext-Abschnitte, Privacy). Version 0.2.0.
+- Offen: Kopfnicken + Cursor real testen, Release v0.2.0 taggen, Repo public, `NPM_TOKEN`.
+
 ## 2026-11-05 (9)
 - **Usage-Balken** im Hover (Settings → Usage, standardmäßig an): 5h- und Wochenlimit für Claude und Codex, grün/gelb/rot, Hover auf Balken = Zeit bis Reset. Claude: Limits gibt es nur im Statusline-JSON → stille Statusline (`curl … /usage`) wird installiert, **nur wenn keine eigene existiert**; Ausschalten entfernt sie. Codex: letzter `rate_limits`-Eintrag aus `~/.codex/sessions/**/rollout-*.jsonl` (bei SessionStart/Prompt/Stop + App-Start). Echte Werte kamen an. Neues GIF `usage.gif`.
 - **Live-Equalizer** (Settings → Music, standardmäßig aus): 5 größere, leuchtende Balken, per Core-Audio-Process-Tap (macOS 14.2+) auf die Audio-Prozesse von Spotify/Music + FFT, automatische Verstärkung pro Band (sonst waren die Balken fast immer voll). Live mit Spotify geprüft. `NSAudioCaptureUsageDescription` in Info.plist. Tap läuft nur, wenn Musik spielt und die Option an ist.
