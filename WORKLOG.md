@@ -1,5 +1,13 @@
 # WORKLOG
 
+## 2026-11-05 (4)
+- **Media-Player als Ruhe-Notch**: Spielt Spotify/Apple Music und Claude ist idle → Cover links, EQ in Cover-Farbe rechts; Hover → Player (Titel, Fortschritt mit Spulen, Zurück/Play/Weiter). Claude hat immer Vorrang.
+- **✕ an allen Benachrichtigungen** (Fertig / Braucht dich / Fehler) → zurück zur Ruhe-Notch (Musik).
+- Entscheidungen: Track-Infos über Distributed Notifications der Player (keine Berechtigung), Steuerung per AppleScript (einmal Automation-Prompt), Cover über Spotify oEmbed / iTunes Search. MediaRemote ist seit macOS 15.4 für Dritt-Apps zu → Browser/YouTube gehen (noch) nicht.
+- Fallstricke: Distributed Notifications brauchen `suspensionBehavior: .deliverImmediately` (sonst hält macOS sie bei Hintergrund-Apps zurück); `AEDeterminePermissionToAutomateTarget` blockiert auf dem Main-Thread für immer → läuft auf eigener Queue.
+- Neue GIFs `media`, `handoff`, Screenshot `media.png`; alle GIFs neu (✕ sichtbar).
+- Offen: Produktname (Vorschlag „Brow“, npm frei; „Claude“ wegen Markenrecht nicht im Namen eines Bezahlprodukts), echter Test mit Spotify-Steuerung auf dem MacBook (Automation-Prompt), evtl. MediaRemote-Adapter für alle Quellen, Release taggen.
+
 ## 2026-11-05 (3)
 - Aufnahmen mit neuem, farbigem macOS-artigem Hintergrund (Radialverläufe statt `.blur()`, weil `cacheDisplay` keine Blur-Filter rendert).
 - Pro Szene zusätzlich ein Standbild mit ausgeklappter Notch → `docs/screenshots/*.png` (2×). README zeigt oben die ausgeklappte Hover-Liste, `docs/animations.md` hat einen Screenshot-Abschnitt.
