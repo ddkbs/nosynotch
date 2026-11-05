@@ -267,11 +267,11 @@ final class Recorder {
                 (0.0, ev("UserPromptSubmit", "a")),
                 (0.0, ev("PreToolUse", "a", tool: "Edit", input: ["file_path": "\(cwd)/Sources/NotchView.swift"])),
                 (0.0, ev("UserPromptSubmit", "b", cwd: "/Users/you/Projects/api-server")),
-                (0.0, ev("UserPromptSubmit", "c", cwd: "/Users/you/Projects/website")),
-                (0.0, ev("PreToolUse", "c", cwd: "/Users/you/Projects/website", tool: "Bash",
-                         input: ["command": "npm run build", "description": "npm run build"])),
-                (0.0, ev("PostToolUse", "c", cwd: "/Users/you/Projects/website", tool: "Bash")),
-                (0.0, ev("Stop", "c", cwd: "/Users/you/Projects/website", last: "Build succeeded.")),
+                (0.0, ev("UserPromptSubmit", "c", agent: .cursor, cwd: "/Users/you/Projects/website")),
+                (0.0, ev("PreToolUse", "c", agent: .cursor, cwd: "/Users/you/Projects/website", tool: "Shell",
+                         input: ["command": "npm run build"])),
+                (0.0, ev("PostToolUse", "c", agent: .cursor, cwd: "/Users/you/Projects/website", tool: "Shell")),
+                (0.0, ev("Stop", "c", agent: .cursor, cwd: "/Users/you/Projects/website", last: "Build succeeded.")),
             ]),
             Scene(name: "codex", duration: 10, height: 200, hoverAt: 6.6, dismissFlashAt: 6.5, stillAt: 8.8, steps: [
                 (0.0, ev("UserPromptSubmit", "claude", cwd: "/Users/you/Projects/website")),
@@ -386,5 +386,45 @@ private struct Wallpaper: View {
             )
         }
         .clipped()
+    }
+}
+
+// MARK: - Settings window
+
+/// `NosyNotch --record-settings <dir>`: frames of the settings window flipping through its pages (for the README).
+@MainActor
+enum SettingsRecorder {
+    static func run(output: URL) {
+        let actions = SettingsWindowController.Actions(statusLine: { "Listening on 127.0.0.1:7823 · 3 sessions" },
+                                                       playDemo: {}, settingsChanged: {}, muteChanged: {})
+        let pages: [SettingsPage] = [.agents, .alerts, .permissions, .usage, .music]
+        let dir = output.appendingPathComponent("settings", isDirectory: true)
+        try? FileManager.default.removeItem(at: dir)
+        try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+
+        let window = NSWindow(contentRect: CGRect(origin: .zero, size: SettingsView.size), styleMask: [.borderless],
+                              backing: .buffered, defer: false)
+        if let screen = NSScreen.main {
+            window.setFrameOrigin(CGPoint(x: screen.visibleFrame.minX + 20, y: screen.visibleFrame.minY + 20))
+        }
+        window.orderFrontRegardless()
+        print("● settings …")
+
+        var frame = 0
+        for page in pages {
+            let host = NSHostingView(rootView: SettingsView(actions: actions, page: page))
+            host.frame = CGRect(origin: .zero, size: SettingsView.size)
+            window.contentView = host
+            // A fixed number of frames per page (≈ 1.8 s at 15 fps), however long rendering takes.
+            for _ in 0..<27 {
+                RunLoop.main.run(until: Date().addingTimeInterval(1 / 15))
+                guard let rep = host.bitmapImageRepForCachingDisplay(in: host.bounds) else { continue }
+                host.cacheDisplay(in: host.bounds, to: rep)
+                let url = dir.appendingPathComponent(String(format: "frame_%04d.png", frame))
+                try? rep.representation(using: .png, properties: [:])?.write(to: url)
+                frame += 1
+            }
+        }
+        window.orderOut(nil)
     }
 }

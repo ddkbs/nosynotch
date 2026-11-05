@@ -29,6 +29,17 @@ if arguments.contains("--install-hooks") || arguments.contains("--uninstall-hook
     }
 }
 
+// `NosyNotch --record-settings <out-dir>`: the settings window, page by page.
+if let index = arguments.firstIndex(of: "--record-settings") {
+    let output = URL(fileURLWithPath: arguments.dropFirst(index + 1).first ?? "docs/frames", isDirectory: true)
+    MainActor.assumeIsolated {
+        NSApplication.shared.setActivationPolicy(.accessory)
+        Preferences.register()
+        SettingsRecorder.run(output: output)
+    }
+    exit(0)
+}
+
 // `NosyNotch --record <out-dir> [scene …]`: render every animation to PNG frames (see scripts/record-gifs.sh).
 if let index = arguments.firstIndex(of: "--record") {
     let rest = Array(arguments.dropFirst(index + 1))
