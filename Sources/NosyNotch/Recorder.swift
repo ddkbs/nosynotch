@@ -22,6 +22,8 @@ final class Recorder {
         var musicAt: TimeInterval?
         /// Seconds after which "Allow" is clicked on the open permission request.
         var allowAt: TimeInterval?
+        /// Pretend the session's app is in front: "Done" stays small.
+        var focused = false
         let steps: [(TimeInterval, HookEvent)]
     }
 
@@ -63,7 +65,7 @@ final class Recorder {
         model.notchSize = CGSize(width: 185, height: 32)
         model.hasPhysicalNotch = true
         store.onChange = { model.recompute() }
-        store.onTransition = { model.handle($0) }
+        store.onTransition = { scene.focused ? model.showQuietly($0) : model.handle($0) }
 
         let size = CGSize(width: Self.width, height: scene.height)
         let host = NSHostingView(rootView: RecordingStage(model: model, store: store))
@@ -218,6 +220,13 @@ final class Recorder {
                 (6.4, ev("PostToolUse", tool: "Bash", input: ["command": "npm publish", "description": "npm publish"])),
             ]),
             Scene(name: "done", duration: 7.5, stillAt: 3.9, steps: [
+                (0.0, ev("SessionStart")),
+                (0.3, prompt),
+                (0.9, ev("PreToolUse", tool: "Edit", input: ["file_path": "\(cwd)/Sources/NotchView.swift"])),
+                (1.7, ev("PostToolUse", tool: "Edit")),
+                (2.2, ev("Stop", last: "Parser refactored – all 42 tests pass.")),
+            ]),
+            Scene(name: "quiet-done", duration: 6, focused: true, steps: [
                 (0.0, ev("SessionStart")),
                 (0.3, prompt),
                 (0.9, ev("PreToolUse", tool: "Edit", input: ["file_path": "\(cwd)/Sources/NotchView.swift"])),
