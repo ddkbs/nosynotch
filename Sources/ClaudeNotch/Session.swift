@@ -137,7 +137,7 @@ struct Session: Identifiable, Equatable {
         case .done:
             var parts: [String] = []
             if toolCount > 0 { parts.append(Format.toolCalls(toolCount)) }
-            if let d = lastTurnDuration { parts.append(Format.duration(d)) }
+            if let d = lastTurnDuration, d >= 1 { parts.append(Format.duration(d)) }
             return parts.isEmpty ? nil : parts.joined(separator: " · ")
         default: return nil
         }
