@@ -2,7 +2,7 @@ import { Analytics } from "@vercel/analytics/react";
 import { motion } from "motion/react";
 import { useEffect, useState, type ReactNode } from "react";
 import SpectralDrape from "./backgrounds/SpectralDrape";
-import { INSTALL_COMMAND, openInstall, REPO_URL, up, useRepoInfo } from "./lib";
+import { INSTALL_COMMAND, openInstall, REPO_URL, up } from "./lib";
 import { LogoMark } from "./Logo";
 import { SiteMenuBar } from "./MenuBar";
 import { Agents } from "./sections/Agents";
@@ -92,7 +92,6 @@ function LookUp() {
 }
 
 function Hero() {
-  const { version } = useRepoInfo();
   return (
     <section id="top" className="relative isolate min-h-[100svh] overflow-hidden">
       <div className="absolute inset-0 -z-10">
@@ -103,19 +102,6 @@ function Hero() {
       <LookUp />
 
       <div className="mx-auto flex min-h-[100svh] max-w-[1100px] flex-col items-center justify-center px-5 pb-20 pt-28 text-center">
-        <motion.a
-          {...up(0.05)}
-          href={version ? `${REPO_URL}/releases/tag/v${version}` : `${REPO_URL}/releases`}
-          target="_blank"
-          rel="noreferrer"
-          className="cursor-target group mb-7 inline-flex items-center gap-2 rounded-full border border-white/10 bg-black/45 py-1 pl-1.5 pr-3 text-[12.5px] text-white/70 backdrop-blur-md transition-colors hover:border-white/25 hover:text-white"
-        >
-          <span className="rounded-full bg-white/10 px-2 py-0.5 font-mono text-[11px] text-white transition-colors group-hover:bg-white group-hover:text-black">
-            v{version ?? "0.2.0"}
-          </span>
-          free · open source · for Claude Code, Codex and Cursor
-          <span className="text-white/35 transition-transform duration-300 group-hover:translate-x-0.5 group-hover:text-white/80">→</span>
-        </motion.a>
         <motion.h1 {...up(0.12)} className="text-[clamp(50px,9vw,120px)] font-semibold leading-[0.9] tracking-[-0.06em]">
           Agents work.
           <br />
