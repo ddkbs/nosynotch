@@ -16,6 +16,8 @@ final class Recorder {
         var hoverAt: TimeInterval?
         /// Seconds after which a celebration / alert flash is dismissed (used to set up the hover list).
         var dismissFlashAt: TimeInterval?
+        /// Moment (seconds) that is also saved as a still PNG – the notch fully expanded.
+        var stillAt: TimeInterval?
         let steps: [(TimeInterval, HookEvent)]
     }
 
@@ -107,11 +109,19 @@ final class Recorder {
                 let due = min(total, Int(Date().timeIntervalSince(start) * Self.fps) + 1)
                 guard frame < due, let rep = host.bitmapImageRepForCachingDisplay(in: host.bounds) else { return }
                 host.cacheDisplay(in: host.bounds, to: rep)
+                let image = rep
                 while frame < due {
-                    let url = dir.appendingPathComponent(String(format: "frame_%04d.png", frame))
-                    let image = rep
+                    var urls = [dir.appendingPathComponent(String(format: "frame_%04d.png", frame))]
+                    if let still = scene.stillAt, frame == Int(still * Self.fps) {
+                        urls.append(self.outputDirectory.appendingPathComponent("stills/\(scene.name).png"))
+                    }
                     self.writer.async {
-                        try? image.representation(using: .png, properties: [:])?.write(to: url)
+                        guard let png = image.representation(using: .png, properties: [:]) else { return }
+                        for url in urls {
+                            try? FileManager.default.createDirectory(at: url.deletingLastPathComponent(),
+                                                                     withIntermediateDirectories: true)
+                            try? png.write(to: url)
+                        }
                     }
                     frame += 1
                 }
@@ -138,11 +148,11 @@ final class Recorder {
         let prompt = ev("UserPromptSubmit")
 
         return [
-            Scene(name: "thinking", duration: 4.5, steps: [
+            Scene(name: "thinking", duration: 4.5, stillAt: 3.0, steps: [
                 (0.0, ev("SessionStart")),
                 (0.6, prompt),
             ]),
-            Scene(name: "tools", duration: 9, steps: [
+            Scene(name: "tools", duration: 9, stillAt: 6.3, steps: [
                 (0.0, ev("SessionStart")),
                 (0.3, prompt),
                 (1.2, ev("PreToolUse", tool: "Grep", input: ["pattern": "func parse"])),
@@ -155,29 +165,29 @@ final class Recorder {
                 (6.9, ev("PostToolUse", tool: "Bash")),
                 (7.2, ev("PreToolUse", tool: "WebSearch", input: ["query": "SwiftUI Canvas"])),
             ]),
-            Scene(name: "attention", duration: 6.5, steps: [
+            Scene(name: "attention", duration: 6.5, stillAt: 3.2, steps: [
                 (0.0, ev("SessionStart")),
                 (0.3, prompt),
                 (1.5, ev("PermissionRequest", tool: "Bash", input: ["command": "npm publish", "description": "npm publish"])),
             ]),
-            Scene(name: "done", duration: 7.5, steps: [
+            Scene(name: "done", duration: 7.5, stillAt: 3.9, steps: [
                 (0.0, ev("SessionStart")),
                 (0.3, prompt),
                 (0.9, ev("PreToolUse", tool: "Edit", input: ["file_path": "\(cwd)/Sources/NotchView.swift"])),
                 (1.7, ev("PostToolUse", tool: "Edit")),
                 (2.2, ev("Stop", last: "Parser refactored – alle 42 Tests grün.")),
             ]),
-            Scene(name: "compacting", duration: 4.5, steps: [
+            Scene(name: "compacting", duration: 4.5, stillAt: 3.0, steps: [
                 (0.0, ev("SessionStart")),
                 (0.3, prompt),
                 (1.2, ev("PreCompact")),
             ]),
-            Scene(name: "error", duration: 7, steps: [
+            Scene(name: "error", duration: 7, stillAt: 3.2, steps: [
                 (0.0, ev("SessionStart")),
                 (0.3, prompt),
                 (1.6, ev("StopFailure", error: "rate_limit", details: "429 Too Many Requests")),
             ]),
-            Scene(name: "hover", duration: 6, height: 240, hoverAt: 1.2, dismissFlashAt: 0.1, steps: [
+            Scene(name: "hover", duration: 6, height: 240, hoverAt: 1.2, dismissFlashAt: 0.1, stillAt: 4.5, steps: [
                 (0.0, ev("UserPromptSubmit", "a")),
                 (0.0, ev("PreToolUse", "a", tool: "Edit", input: ["file_path": "\(cwd)/Sources/NotchView.swift"])),
                 (0.0, ev("UserPromptSubmit", "b", cwd: "/Users/you/Projects/api-server")),
@@ -210,8 +220,7 @@ private struct RecordingStage: View {
 
     var body: some View {
         ZStack(alignment: .top) {
-            LinearGradient(colors: [Color(red: 0.16, green: 0.13, blue: 0.24), Color(red: 0.07, green: 0.06, blue: 0.11)],
-                           startPoint: .top, endPoint: .bottom)
+            Wallpaper()
             menuBar
             NotchView(model: model, store: store)
         }
@@ -229,9 +238,51 @@ private struct RecordingStage: View {
             Image(systemName: "wifi").font(.system(size: 11, weight: .semibold))
             Text("Do 5. Nov. 09:41").font(.system(size: 12))
         }
-        .foregroundStyle(.white.opacity(0.85))
+        .foregroundStyle(.white.opacity(0.92))
+        .shadow(color: .black.opacity(0.25), radius: 1, y: 0.5)
         .padding(.horizontal, 14)
         .frame(height: 32)
-        .background(Color.black.opacity(0.25))
+        .background(Color.white.opacity(0.08))
+    }
+}
+
+/// An abstract, macOS-style wallpaper: soft colour blobs over deep blue. Static, so GIFs stay small.
+private struct Wallpaper: View {
+    private struct Blob {
+        let color: Color
+        let x: CGFloat, y: CGFloat, w: CGFloat, h: CGFloat, angle: Double
+    }
+
+    private static let blobs: [Blob] = [
+        Blob(color: Color(red: 0.16, green: 0.36, blue: 1.00), x: 0.10, y: 0.25, w: 0.75, h: 0.90, angle: -18),
+        Blob(color: Color(red: 0.55, green: 0.24, blue: 0.98), x: 0.45, y: 0.10, w: 0.70, h: 0.80, angle: 12),
+        Blob(color: Color(red: 1.00, green: 0.30, blue: 0.55), x: 0.80, y: 0.55, w: 0.60, h: 0.90, angle: -25),
+        Blob(color: Color(red: 1.00, green: 0.58, blue: 0.24), x: 1.02, y: 1.05, w: 0.55, h: 0.70, angle: 20),
+        Blob(color: Color(red: 0.05, green: 0.80, blue: 0.95), x: -0.05, y: 1.10, w: 0.55, h: 0.60, angle: 0),
+    ]
+
+    var body: some View {
+        GeometryReader { geo in
+            let size = geo.size
+            ZStack {
+                Color(red: 0.10, green: 0.12, blue: 0.36)
+                ForEach(Array(Self.blobs.enumerated()), id: \.offset) { _, blob in
+                    // Radial gradients instead of .blur(): snapshots don't render blur filters.
+                    let w = size.width * blob.w * 1.5
+                    Circle()
+                        .fill(RadialGradient(colors: [blob.color, blob.color.opacity(0.75), blob.color.opacity(0)],
+                                             center: .center, startRadius: 0, endRadius: w / 2))
+                        .frame(width: w, height: w)
+                        .scaleEffect(x: 1, y: blob.h / blob.w * 0.6)
+                        .rotationEffect(.degrees(blob.angle))
+                        .position(x: size.width * blob.x, y: size.height * blob.y)
+                }
+            }
+            .overlay(
+                // Gentle vignette at the top so the menu bar reads well.
+                LinearGradient(colors: [.black.opacity(0.25), .clear], startPoint: .top, endPoint: .center)
+            )
+        }
+        .clipped()
     }
 }
