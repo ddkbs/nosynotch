@@ -18,7 +18,6 @@ type Stage =
   | "star"
   | "thanks"
   | "denied"
-  | "welcome"
   | "sleep"
   | "wake"
   | "peek";
@@ -227,12 +226,6 @@ function Tile({
   );
 }
 
-function formatAway(ms: number) {
-  const s = Math.round(ms / 1000);
-  if (s < 60) return `${s}s`;
-  const m = Math.floor(s / 60);
-  return m < 60 ? `${m}m ${s % 60}s` : `${Math.floor(m / 60)}h ${m % 60}m`;
-}
 
 
 /** The strip at notch height: something on the left wing, something on the right, like `claudeHeader`. */
@@ -283,16 +276,15 @@ function Pill({ children, onClick, href, kind = "quiet" }: { children: ReactNode
 /**
  * The site's own notch, behaving like the app: compact at rest, open the moment the pointer is
  * over it (its rect plus 6 pt), closed the moment it leaves, on the app's spring, with the app's
- * transitions. Opened from a button it stays until closed. It also asks for a star, says welcome
- * back, falls asleep when you idle and gets curious when you select text.
+ * transitions. Opened from a button it stays until closed. It also asks for a star, falls asleep
+ * when you idle and gets curious when you select text.
  */
 export function TopNotch() {
   const [stage, setStage] = useState<Stage>("idle");
   const [pinned, setPinned] = useState(false);
   const [shake, setShake] = useState(0);
   const [burst, setBurst] = useState(0);
-  const [away, setAway] = useState(0);
-  const [line, setLine] = useState(SELECTION_LINES[0]);
+    const [line, setLine] = useState(SELECTION_LINES[0]);
   const [copiedSel, setCopiedSel] = useState(false);
   const [vw, setVw] = useState(() => window.innerWidth);
   const stageRef = useRef(stage);
@@ -309,7 +301,9 @@ export function TopNotch() {
     return () => window.removeEventListener("resize", on);
   }, []);
 
-  const calm = () => ["idle", "sleep", "welcome", "peek", "wake"].includes(stageRef.current);
+  const calm = () => ["idle", "sleep", "peek", "wake"].includes(stageRef.current);
+  // Hover opens the install card only from rest, never over a message (so its buttons stay clickable).
+  const restful = () => ["idle", "sleep", "wake"].includes(stageRef.current);
 
   const open = (pin: boolean) => {
     setStage("open");
@@ -346,20 +340,6 @@ export function TopNotch() {
       setShake((s) => s + 1);
     }, STAR_AFTER_MS);
     return () => clearTimeout(id);
-  }, []);
-
-  // Welcome back after switching tabs.
-  useEffect(() => {
-    let left = 0;
-    const on = () => {
-      if (document.hidden) left = Date.now();
-      else if (left && Date.now() - left > 4000 && calm()) {
-        setAway(Date.now() - left);
-        setStage("welcome");
-      }
-    };
-    document.addEventListener("visibilitychange", on);
-    return () => document.removeEventListener("visibilitychange", on);
   }, []);
 
   // Fall asleep when nothing happens; wake up on any activity.
@@ -411,7 +391,6 @@ export function TopNotch() {
   useEffect(() => {
     const after: Partial<Record<Stage, [number, Stage]>> = {
       denied: [2600, "idle"],
-      welcome: [3600, "idle"],
       wake: [1500, "idle"],
       thanks: [3200, "idle"],
       copied: [3200, "star"],
@@ -471,7 +450,6 @@ export function TopNotch() {
     star: { w: wide, h: H + 88 + 40, t: 14, b: 26, glow: "#FFD45A", o: 0.55 },
     thanks: { w: wide, h: H + 88, t: 14, b: 26, glow: "#FFD45A", o: 0.55 },
     denied: { w: wide, h: H + 88, t: 14, b: 26, glow: "#F87171", o: 0.55 },
-    welcome: { w: wide, h: H + 88, t: 14, b: 26, glow: "#4ADE80", o: 0.55 },
     peek: { w: wide, h: H + 88, t: 14, b: 26, glow: "#A78BFA", o: 0.55 },
   };
   const size = S[stage];
@@ -487,7 +465,6 @@ export function TopNotch() {
     star: [<StarIcon key="star" className="size-[15px] text-[#FFD45A]" />, null],
     thanks: [<StarIcon key="star" className="size-[15px] text-[#FFD45A]" />, null],
     denied: [<Spark key="s-err" mode="error" color="#F87171" />, null],
-    welcome: [<Spark key="s-idle" mode="idle" color="#A78BFA" />, <span key="dot" className="size-[7px] rounded-full bg-success shadow-[0_0_8px_#4ADE80]" />],
     peek: [<Spark key="s-think" mode="thinking" color="#A78BFA" />, null],
   };
 
@@ -501,7 +478,7 @@ export function TopNotch() {
     // Hover area: the notch plus 6 pt around it, like NotchWindow.updateHover().
     <div
       className="-m-1.5 p-1.5"
-      onMouseEnter={() => calm() && open(false)}
+      onMouseEnter={() => restful() && open(false)}
       onMouseLeave={() => {
         if (stageRef.current === "open" && !pinnedRef.current) setStage("idle");
       }}
@@ -652,22 +629,6 @@ export function TopNotch() {
                 </div>,
               )}
 
-            {stage === "welcome" &&
-              card(
-                "welcome",
-                <div className="flex items-center gap-3.5 pt-1.5">
-                  <span className="relative grid size-11 place-items-center rounded-full bg-success/15">
-                    <span className="absolute size-5 rounded-full bg-success/30" style={{ animation: "breathe 2s ease-in-out infinite" }} />
-                    <span className="size-2.5 rounded-full bg-success shadow-[0_0_10px_#4ADE80]" />
-                  </span>
-                  <span>
-                    <span className="block text-[15px] font-semibold">Welcome back</span>
-                    <span className="block text-[12px] text-white/70">
-                      You were gone <span className="font-mono text-success">{formatAway(away)}</span>. I kept watching.
-                    </span>
-                  </span>
-                </div>,
-              )}
 
             {stage === "peek" &&
               card(
@@ -675,6 +636,8 @@ export function TopNotch() {
                 <div className="flex items-center gap-3.5 pt-1.5">
                   <Eyes mood="read" size={0.9} />
                   <span className="min-w-0 flex-1 truncate text-[13.5px] text-white/85">{copiedSel ? "copied. our little secret." : line}</span>
+                  {/* Keep the selection alive while clicking, or the card would vanish first. */}
+                  <span onMouseDown={(e) => e.preventDefault()}>
                   <Pill
                     onClick={async () => {
                       try {
@@ -687,6 +650,7 @@ export function TopNotch() {
                   >
                     {copiedSel ? "✓" : "Copy"}
                   </Pill>
+                  </span>
                 </div>,
               )}
           </AnimatePresence>

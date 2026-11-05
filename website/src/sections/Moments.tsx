@@ -20,8 +20,10 @@ const MOMENTS: { id: MomentId; title: string; color: string; ms: number }[] = [
  */
 export function Moments() {
   const [index, setIndex] = useState(0);
-  const [auto, setAuto] = useState(true);
-  const [elapsed, setElapsed] = useState(0);
+  const [round, setRound] = useState(0);
+  const [progress, setProgress] = useState(0);
+  // When the current moment ends; an answer in "Needs you" shortens it to a short look at the result.
+  const span = useRef({ start: 0, end: 0 });
   const [onScreen, setOnScreen] = useState(false);
   const box = useRef<HTMLDivElement>(null);
   const m = MOMENTS[index];
@@ -32,22 +34,24 @@ export function Moments() {
     return () => io.disconnect();
   }, []);
 
-  // Progress through the current moment; move on when it is over (only while on screen).
+  // Always move on after the moment's time, also after picking one (only while on screen).
   useEffect(() => {
-    setElapsed(0);
-    if (!auto || !onScreen) return;
+    setProgress(0);
+    if (!onScreen) return;
     const start = performance.now();
+    span.current = { start, end: start + m.ms };
     const id = setInterval(() => {
-      const e = performance.now() - start;
-      setElapsed(e);
-      if (e >= m.ms) setIndex((i) => (i + 1) % MOMENTS.length);
+      const now = performance.now();
+      const { start: s0, end } = span.current;
+      setProgress(Math.min(1, (now - s0) / (end - s0)));
+      if (now >= end) setIndex((i) => (i + 1) % MOMENTS.length);
     }, 50);
     return () => clearInterval(id);
-  }, [index, auto, onScreen, m.ms]);
+  }, [index, round, onScreen, m.ms]);
 
   const pick = (i: number) => {
     setIndex(i);
-    setAuto(false);
+    setRound((r) => r + 1);
   };
 
   return (
@@ -61,12 +65,9 @@ export function Moments() {
                 key={m.id}
                 moment={m.id}
                 onSettled={() => {
-                  // After an answer, give it a moment, then carry on.
-                  setAuto(false);
-                  setTimeout(() => {
-                    setAuto(true);
-                    setIndex((i) => (i + 1) % MOMENTS.length);
-                  }, 2600);
+                  // After an answer, show the result for a moment, then carry on.
+                  const now = performance.now();
+                  span.current = { start: span.current.start, end: Math.min(span.current.end, now + 2800) };
                 }}
               />
           </div>
@@ -107,9 +108,9 @@ export function Moments() {
                 <span className="size-1.5 rounded-full" style={{ background: active ? x.color : "rgb(255 255 255 / 0.25)", boxShadow: active ? `0 0 10px ${x.color}` : "none" }} />
                 {x.title}
               </span>
-              {active && auto && (
+              {active && (
                 <span className="absolute inset-x-3 bottom-0 h-px">
-                  <span className="block h-full" style={{ width: `${Math.min(100, (elapsed / x.ms) * 100)}%`, background: x.color }} />
+                  <span className="block h-full" style={{ width: `${progress * 100}%`, background: x.color }} />
                 </span>
               )}
             </button>

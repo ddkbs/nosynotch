@@ -202,7 +202,7 @@ export default function App() {
       <main className="mx-auto max-w-[1100px] px-4 sm:px-5">
         <section id="moments" className="scroll-mt-20 pt-10">
           <SectionHead
-            kicker="Live, in your browser"
+            kicker="Interactive demo"
             color="#A78BFA"
             title={
               <>
