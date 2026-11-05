@@ -147,7 +147,8 @@ struct NotchView: View {
         HStack(spacing: 0) {
             ZStack {
                 if visible, let primary {
-                    ClaudeSpark(mode: model.presentation == .celebrating ? .done : SparkMode(primary.state),
+                    AgentGlyph(agent: primary.agent,
+                               mode: model.presentation == .celebrating ? .done : SparkMode(primary.state),
                                 color: model.presentation == .celebrating ? Theme.success : primary.accent)
                         .frame(width: 18, height: 18)
                         .transition(.scale(scale: 0.2).combined(with: .opacity))
@@ -233,7 +234,7 @@ struct SessionRow: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            ClaudeSpark(mode: SparkMode(session.state), color: session.accent)
+            AgentGlyph(agent: session.agent, mode: SparkMode(session.state), color: session.accent)
                 .frame(width: 22, height: 22)
                 .overlay(alignment: .topTrailing) {
                     if session.isUnseen { UnseenDot(size: 7).offset(x: 3, y: -2) }

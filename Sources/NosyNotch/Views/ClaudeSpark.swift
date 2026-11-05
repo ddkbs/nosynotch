@@ -93,89 +93,137 @@ struct ClaudeSpark: View {
     }
 }
 
-/// Each agent's own little animated mark: Claude's spark, a spinning hexagon with a blinking prompt for Codex,
-/// a pointer with click ripples for Cursor.
+/// Each agent's own animated mark, reacting to what the session does: Claude's spark, Codex's hexagon with a
+/// blinking prompt, Cursor's turning cube.
 struct AgentGlyph: View {
     let agent: Agent
-    var active = true
+    var mode: SparkMode = .thinking
+    var color: Color? = nil
 
     var body: some View {
+        let tint = color ?? agent.color
         switch agent {
-        case .claude: ClaudeSpark(mode: active ? .thinking : .idle, color: agent.color)
-        case .codex: CodexGlyph(color: agent.color, active: active)
-        case .cursor: CursorGlyph(color: agent.color, active: active)
+        case .claude: ClaudeSpark(mode: mode, color: tint)
+        case .codex: CodexGlyph(color: tint, mode: mode)
+        case .cursor: CursorGlyph(color: tint, mode: mode)
         }
     }
+}
+
+extension SparkMode {
+    /// How fast the agent marks move: 0 = still, negative = backwards (compacting).
+    var speed: Double {
+        switch self {
+        case .idle, .done: return 0
+        case .thinking: return 1
+        case .working: return 2.2
+        case .compacting: return -1
+        case .waiting, .error: return 0.4
+        }
+    }
+
+    var animates: Bool { self != .idle && self != .done }
 }
 
 /// A hexagon whose edges light up one after another around a blinking `>_`.
 struct CodexGlyph: View {
     var color: Color
-    var active = true
+    var mode: SparkMode = .thinking
 
     var body: some View {
-        TimelineView(.animation(minimumInterval: 1.0 / 60.0, paused: !active)) { timeline in
+        TimelineView(.animation(minimumInterval: 1.0 / 60.0, paused: !mode.animates)) { timeline in
             let t = timeline.date.timeIntervalSinceReferenceDate
+            let pulse = 0.5 + 0.5 * sin(t * 6)
+            let flicker = mode == .error ? (sin(t * 23) * sin(t * 7.3) > 0.2 ? 0.35 : 1) : 1
             Canvas { context, size in
                 let r = min(size.width, size.height) / 2 - 1
                 let center = CGPoint(x: size.width / 2, y: size.height / 2)
-                let spin = active ? t * 0.6 : 0
-                let head = active ? (t * 5).truncatingRemainder(dividingBy: 6) : -10
+                let spin = t * 0.6 * mode.speed
+                let head = (t * 5 * abs(mode.speed)).truncatingRemainder(dividingBy: 6)
                 for i in 0..<6 {
-                    let a0 = spin + Double(i) / 6 * 2 * .pi - .pi / 2
-                    let a1 = spin + Double(i + 1) / 6 * 2 * .pi - .pi / 2
+                    let k = mode.speed < 0 ? 5 - i : i
+                    let a0 = spin + Double(k) / 6 * 2 * .pi - .pi / 2
+                    let a1 = spin + Double(k + 1) / 6 * 2 * .pi - .pi / 2
                     var edge = Path()
                     edge.move(to: CGPoint(x: center.x + r * cos(a0), y: center.y + r * sin(a0)))
                     edge.addLine(to: CGPoint(x: center.x + r * cos(a1), y: center.y + r * sin(a1)))
-                    // Distance behind the moving "head": the lit edge and a short fading tail.
-                    let behind = (head - Double(i) + 6).truncatingRemainder(dividingBy: 6)
-                    let light = active ? max(0.25, 1 - behind / 3) : 0.45
-                    context.stroke(edge, with: .color(color.opacity(light)),
-                                   style: StrokeStyle(lineWidth: max(1.2, r * 0.16), lineCap: .round))
+                    let light: Double
+                    switch mode {
+                    case .idle: light = 0.5
+                    case .done: light = 1
+                    case .waiting: light = 0.45 + 0.55 * pulse
+                    default:
+                        // The lit edge runs around, with a short fading tail.
+                        let behind = (head - Double(i) + 6).truncatingRemainder(dividingBy: 6)
+                        light = max(0.25, 1 - behind / 3)
+                    }
+                    context.stroke(edge, with: .color(color.opacity(light * flicker)),
+                                   style: StrokeStyle(lineWidth: max(1.2, r * 0.17), lineCap: .round))
                 }
             }
             .overlay {
                 HStack(spacing: 0.5) {
                     Text(">")
-                    Text("_").opacity(!active || (t * 2).truncatingRemainder(dividingBy: 2) < 1 ? 1 : 0)
+                    Text("_").opacity(!mode.animates || (t * 2).truncatingRemainder(dividingBy: 2) < 1 ? 1 : 0)
                 }
-                .font(.system(size: 7.5, weight: .heavy, design: .monospaced))
-                .foregroundStyle(color)
+                .font(.system(size: 8, weight: .heavy, design: .monospaced))
+                .minimumScaleFactor(0.5)
+                .foregroundStyle(color.opacity(flicker))
             }
-            .shadow(color: color.opacity(active ? 0.6 : 0.2), radius: 3)
+            .shadow(color: color.opacity(mode == .idle ? 0.2 : 0.6), radius: 3)
         }
     }
 }
 
-/// A pointer that taps, sending out a ripple each time.
+/// An isometric cube that turns while the agent works – lit top, shaded sides.
 struct CursorGlyph: View {
     var color: Color
-    var active = true
+    var mode: SparkMode = .thinking
 
     var body: some View {
-        TimelineView(.animation(minimumInterval: 1.0 / 60.0, paused: !active)) { timeline in
+        TimelineView(.animation(minimumInterval: 1.0 / 60.0, paused: !mode.animates)) { timeline in
             let t = timeline.date.timeIntervalSinceReferenceDate
-            let cycle = active ? t.truncatingRemainder(dividingBy: 1.8) / 1.8 : 0.9
-            let press = cycle < 0.12 ? sin(cycle / 0.12 * .pi) : 0
-            GeometryReader { geo in
-                let s = min(geo.size.width, geo.size.height)
-                ZStack {
-                    ForEach(0..<2, id: \.self) { k in
-                        let p = (cycle + Double(k) * 0.5).truncatingRemainder(dividingBy: 1)
-                        Circle()
-                            .stroke(color.opacity(active ? (1 - p) * 0.7 : 0), lineWidth: 1.2)
-                            .frame(width: s * (0.2 + 0.8 * p), height: s * (0.2 + 0.8 * p))
-                            .offset(x: -s * 0.12, y: -s * 0.12)
-                    }
-                    Image(systemName: "cursorarrow")
-                        .font(.system(size: s * 0.7, weight: .semibold))
-                        .foregroundStyle(color)
-                        .scaleEffect(1 - 0.12 * press)
-                        .offset(x: s * 0.08, y: s * 0.06 + (active ? sin(t * 2.2) * s * 0.03 : 0))
+            let pulse = 0.5 + 0.5 * sin(t * 6)
+            let flicker = mode == .error ? (sin(t * 23) * sin(t * 7.3) > 0.2 ? 0.4 : 1) : 1
+            Canvas { context, size in
+                let s = min(size.width, size.height)
+                let center = CGPoint(x: size.width / 2, y: size.height / 2 + s * 0.02)
+                let yaw = .pi / 4 + t * 1.1 * mode.speed
+                let tilt = 0.6155          // isometric: atan(1/√2)
+                let half = s * 0.3
+
+                func project(_ p: (Double, Double, Double)) -> CGPoint {
+                    // Rotate around the vertical axis, then tilt towards the viewer.
+                    let x = p.0 * cos(yaw) - p.2 * sin(yaw)
+                    let z = p.0 * sin(yaw) + p.2 * cos(yaw)
+                    let y = p.1 * cos(tilt) - z * sin(tilt)
+                    return CGPoint(x: center.x + x * half, y: center.y - y * half)
                 }
-                .frame(width: geo.size.width, height: geo.size.height)
+                let v: [(Double, Double, Double)] = [(-1, -1, -1), (1, -1, -1), (1, -1, 1), (-1, -1, 1),
+                                                     (-1, 1, -1), (1, 1, -1), (1, 1, 1), (-1, 1, 1)]
+                // Faces with outward normals (x, z) for the sides; top is always visible from above.
+                let sides: [([Int], (Double, Double))] = [([0, 1, 5, 4], (0, -1)), ([1, 2, 6, 5], (1, 0)),
+                                                          ([2, 3, 7, 6], (0, 1)), ([3, 0, 4, 7], (-1, 0))]
+                let glow = mode == .waiting ? 0.7 + 0.3 * pulse : 1
+                for (idx, normal) in sides {
+                    // Deeper z is drawn lower, so the viewer sits on the +z side, above the cube.
+                    let nz = normal.0 * sin(yaw) + normal.1 * cos(yaw)
+                    guard nz > 0 else { continue }
+                    var face = Path()
+                    face.addLines(idx.map { project(v[$0]) })
+                    face.closeSubpath()
+                    let nx = normal.0 * cos(yaw) - normal.1 * sin(yaw)
+                    let shade = 0.28 + 0.3 * (1 - abs(nx))
+                    context.fill(face, with: .color(color.opacity(shade * glow * flicker)))
+                    context.stroke(face, with: .color(color.opacity(0.9 * flicker)), lineWidth: max(0.8, s * 0.04))
+                }
+                var top = Path()
+                top.addLines([4, 5, 6, 7].map { project(v[$0]) })
+                top.closeSubpath()
+                context.fill(top, with: .color(color.opacity(0.85 * glow * flicker)))
+                context.stroke(top, with: .color(color.opacity(flicker)), lineWidth: max(0.8, s * 0.04))
             }
-            .shadow(color: color.opacity(active ? 0.5 : 0.15), radius: 3)
+            .shadow(color: color.opacity(mode == .idle ? 0.2 : 0.55), radius: 3)
         }
     }
 }

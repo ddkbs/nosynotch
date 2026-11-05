@@ -656,7 +656,7 @@ private struct AgentCard: View {
         HStack(alignment: .top, spacing: 14) {
             ZStack {
                 Circle().fill(agent.color.opacity(0.12))
-                AgentGlyph(agent: agent, active: status == .connected)
+                AgentGlyph(agent: agent, mode: status == .connected ? .thinking : .idle)
                     .frame(width: 22, height: 22)
             }
             .frame(width: 42, height: 42)
