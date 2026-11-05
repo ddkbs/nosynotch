@@ -1,5 +1,11 @@
 # WORKLOG
 
+## 2026-11-06 (16)
+- Website: nur noch TargetCursor (wie sketchy/davidkubus), Umschalter + „How it works“-Pipeline entfernt, Momente ohne Textzeile und ohne Live/Aufnahme-Schalter, Versions-Pill verlinkt das Release.
+- Top-Notch: öffnet schon beim Hover die neu gestaltete Install-Karte (App-Icon, tippende Terminalzeile, Kacheln Copy & install / Download / Star mit Zähler, Aurora + Punkteraster, „nah, not today“ → beleidigte Augen). Stern-Bitte nach Copy/Download und nach 45 s (1× pro Besuch, sessionStorage). Extras: „Welcome back“ nach Tab-Wechsel, Einschlafen nach 20 s (zzz) + „oh! hi.“, beim Markieren lustige Sprüche + Copy.
+- Nod: läuft komplett über Motion-Springs (kein Re-Render pro Mausbewegung), AirPods mit Stiel, Fortschrittspunkte, Puls bei erkannter Geste.
+- `website/public/demo/*.mp4` wird von der Seite nicht mehr genutzt (Recorder-Session schreibt evtl. dorthin) → entscheiden, ob löschen.
+
 ## 2026-11-05 (15)
 - **Website neu** (Version A gewählt; B und Docs entfernt, kein sketchy-Layout mehr): macOS-Menüleiste mit eigener Notch oben am Fenster (Hover „psst… get me“, Ring = Scrollfortschritt, öffnet die Install-Anfrage Deny / Download / Allow; Deny = „Fine. I'll just keep watching.“ bleibt). Hero mit Pfeil „psst, that's me“.
 - **Momente live statt GIF**: Notch in React nach den SwiftUI-Views nachgebaut (`website/src/notch/`: Maße 185×32, Flügel 46, 460 breit, Funke mit 10 Strahlen, Codex-Sechseck, Cursor-Würfel, Done/Needs-you/Sessions+Usage/Musik). „Needs you“ ist klickbar. Schalter zeigt alternativ die echte Aufnahme (`public/demo/*.mp4`).
