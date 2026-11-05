@@ -11,6 +11,7 @@ enum Preferences {
         static let mediaEnabled = "mediaEnabled"
         static let mediaShowWhenPaused = "mediaShowWhenPaused"
         static let approvalsInNotch = "approvalsInNotch"
+        static let quietWhenFocused = "quietWhenFocused"
         static let port = "port"
     }
 
@@ -30,6 +31,7 @@ enum Preferences {
             Key.mediaEnabled: true,
             Key.mediaShowWhenPaused: false,
             Key.approvalsInNotch: true,
+            Key.quietWhenFocused: true,
             Key.port: Int(EventServer.defaultPort),
         ])
     }
@@ -60,6 +62,9 @@ enum Preferences {
 
     /// Show Allow / Deny buttons in the notch for permission requests.
     static var approvalsInNotch: Bool { defaults.object(forKey: Key.approvalsInNotch) as? Bool ?? true }
+
+    /// "Done" while you're already looking at that app: small check in the notch, no sound, no banner.
+    static var quietWhenFocused: Bool { defaults.object(forKey: Key.quietWhenFocused) as? Bool ?? true }
 
     static var port: UInt16 {
         UInt16(clamping: defaults.integer(forKey: Key.port))

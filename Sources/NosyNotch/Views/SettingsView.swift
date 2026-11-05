@@ -45,6 +45,7 @@ struct SettingsView: View {
     @AppStorage(Preferences.Key.mediaEnabled) private var mediaEnabled = true
     @AppStorage(Preferences.Key.mediaShowWhenPaused) private var mediaShowWhenPaused = false
     @AppStorage(Preferences.Key.approvalsInNotch) private var approvalsInNotch = true
+    @AppStorage(Preferences.Key.quietWhenFocused) private var quietWhenFocused = true
 
     @State private var launchAtLogin = LoginItem.isEnabled
     @State private var hooks: [(path: String, installed: Bool)] = []
@@ -145,12 +146,13 @@ struct SettingsView: View {
                                 .frame(width: 34, alignment: .trailing)
                         }
                     }
+                    Toggle("Keep \"Done\" small when I'm already in that app", isOn: $quietWhenFocused)
                     Toggle("Also send macOS notifications", isOn: $systemNotifications)
                         .onChange(of: systemNotifications) { _, _ in Notifier.requestAuthorizationIfNeeded() }
                 } header: {
                     Text("Notifications")
                 } footer: {
-                    FooterText("The notch itself is the notification – macOS banners are optional.")
+                    FooterText("The notch itself is the notification – macOS banners are optional. While the app a session runs in is in front (Claude, your terminal, VS Code, ChatGPT …), \"Done\" is just a small check in the notch, without sound.")
                 }
 
                 Section {

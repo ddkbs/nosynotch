@@ -21,6 +21,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
         store.onChange = { [weak self] in self?.model.recompute() }
         store.onTransition = { [weak self] transition in
+            // Done while you're looking at that very app (Claude, terminal, Codex …): small check, no sound.
+            if case .finished(let session) = transition, Preferences.quietWhenFocused,
+               TerminalActivator.isFrontmost(session) {
+                self?.model.showQuietly(transition)
+                return
+            }
             self?.model.handle(transition)
             Notifier.notify(transition)
         }

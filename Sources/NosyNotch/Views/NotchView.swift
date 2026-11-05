@@ -39,7 +39,7 @@ struct NotchView: View {
         case .failed: return Theme.danger
         case .media: return media.accent
         case .celebrating: return Theme.success
-        default: return store.primary?.accent ?? .clear
+        default: return model.compactSession?.accent ?? .clear
         }
     }
 
@@ -130,7 +130,7 @@ struct NotchView: View {
 
     @ViewBuilder
     private var claudeHeader: some View {
-        let primary = store.primary
+        let primary = model.compactSession
         let visible = model.presentation != .hidden
         HStack(spacing: 0) {
             ZStack {

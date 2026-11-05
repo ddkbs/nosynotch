@@ -62,10 +62,21 @@ enum TerminalActivator {
         "tmux": "com.apple.Terminal",
     ]
 
-    static func activate(_ session: Session) {
+    private static func candidates(for session: Session) -> [String] {
         var candidates: [String] = []
         if let b = session.hostBundleID { candidates.append(b) }
         if let t = session.termProgram, let b = termProgramBundles[t] { candidates.append(b) }
+        return candidates
+    }
+
+    /// The app the session runs in (Claude desktop app, terminal, VS Code, ChatGPT …) is the frontmost app.
+    static func isFrontmost(_ session: Session) -> Bool {
+        guard let front = NSWorkspace.shared.frontmostApplication?.bundleIdentifier else { return false }
+        return candidates(for: session).contains(front)
+    }
+
+    static func activate(_ session: Session) {
+        let candidates = candidates(for: session)
 
         for bundleID in candidates {
             if let app = NSRunningApplication.runningApplications(withBundleIdentifier: bundleID).first {

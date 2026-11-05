@@ -44,6 +44,8 @@ final class NotchViewModel: ObservableObject {
     @Published private(set) var celebration: Celebration?
     @Published private(set) var attention: Session?
     @Published private(set) var failure: Session?
+    /// A turn finished while its app was in front: only a small check in the compact notch.
+    @Published private(set) var quietDone: Session?
     /// Incremented to trigger the shake animation.
     @Published private(set) var shakes: CGFloat = 0
     @Published var isHovering = false {
@@ -51,6 +53,7 @@ final class NotchViewModel: ObservableObject {
     }
 
     private var flashWork: DispatchWorkItem?
+    private var quietWork: DispatchWorkItem?
 
     init(store: SessionStore, media: NowPlaying, approvals: ApprovalCenter? = nil) {
         self.store = store
@@ -153,11 +156,36 @@ final class NotchViewModel: ObservableObject {
             shakes += 1
             flash(for: Preferences.notificationSeconds + 2)
         case .started(let session):
+            if quietDone?.id == session.id { quietDone = nil }
             if celebration?.session.id == session.id { endFlash() }
             if attention?.id == session.id { endFlash() }
             if failure?.id == session.id { endFlash() }
         }
         recompute()
+    }
+
+    /// "Done" without the big celebration – you're already looking at that app.
+    func showQuietly(_ transition: Transition) {
+        guard case .finished(let session) = transition else { return handle(transition) }
+        if celebration?.session.id == session.id { celebration = nil }
+        if attention?.id == session.id { attention = nil }
+        if failure?.id == session.id { failure = nil }
+        quietDone = session
+        quietWork?.cancel()
+        let work = DispatchWorkItem { [weak self] in
+            MainActor.assumeIsolated {
+                self?.quietDone = nil
+                self?.recompute()
+            }
+        }
+        quietWork = work
+        DispatchQueue.main.asyncAfter(deadline: .now() + 3, execute: work)
+        recompute()
+    }
+
+    /// The session the compact notch is about (the quiet "done" wins for its few seconds).
+    var compactSession: Session? {
+        quietDone.flatMap { store.sessions[$0.id] ?? $0 } ?? store.primary
     }
 
     func dismissFlash() {
@@ -194,7 +222,7 @@ final class NotchViewModel: ObservableObject {
             next = .failed
         } else if isHovering && (!store.sessions.isEmpty || hasMedia) {
             next = .expanded
-        } else if store.hasActivity || store.hasWaiting {
+        } else if store.hasActivity || store.hasWaiting || quietDone != nil {
             next = .compact
         } else if hasMedia && (media.isPlaying || Preferences.mediaShowWhenPaused) {
             next = .media
