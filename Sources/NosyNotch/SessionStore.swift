@@ -140,6 +140,14 @@ final class SessionStore: ObservableObject {
         }
     }
 
+    /// The user answered a permission request in the notch – don't keep showing "Waiting for you".
+    func resume(_ id: String, allowed: Bool, tool: ToolActivity) {
+        guard var s = sessions[id], case .waiting = s.state else { return }
+        s.state = allowed ? .tool(tool) : .thinking
+        s.lastUpdate = Date()
+        sessions[id] = s
+    }
+
     func dismiss(_ id: String) {
         sessions[id] = nil
     }

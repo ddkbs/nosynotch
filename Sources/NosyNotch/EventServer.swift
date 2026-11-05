@@ -4,10 +4,13 @@ import Network
 /// Tiny HTTP server bound to the loopback interface. Claude Code hooks `curl` their JSON payload here.
 ///
 ///   POST /event   – body: hook stdin JSON
+///   POST /permission – body: PermissionRequest hook JSON; the response (the hook's stdout) is held back
+///                    until the user decides in the notch
 ///   GET  /health  – returns "ok"
 ///   POST /quit    – terminates the app (used by `npx nosynotch stop`)
 ///   POST /settings – opens the settings window (used by `npx nosynotch settings`)
-final class EventServer {
+/// State is only touched on `queue` (and set up before `start()`), hence `@unchecked Sendable`.
+final class EventServer: @unchecked Sendable {
     static let defaultPort: UInt16 = 7823
 
     let port: UInt16
@@ -16,6 +19,8 @@ final class EventServer {
     private let onEvent: @Sendable (HookEvent) -> Void
     var onQuit: (@Sendable () -> Void)?
     var onSettings: (@Sendable () -> Void)?
+    /// A permission hook waits for an answer. Call `reply` exactly once with the hook's stdout (nil = no decision).
+    var onPermission: (@Sendable (HookEvent, @escaping @Sendable (String?) -> Void) -> Void)?
 
     private(set) var lastError: String?
     private var stopped = false
@@ -94,6 +99,18 @@ final class EventServer {
     }
 
     private func respond(to request: HTTPRequest, on connection: NWConnection) {
+        if request.method == "POST", request.path == "/permission" {
+            guard let event = HookEvent(data: request.body, headers: request.headers, query: request.query) else {
+                return send("400 Bad Request", body: "400 Bad Request", on: connection)
+            }
+            onEvent(event)
+            guard let onPermission else { return send("200 OK", body: "", on: connection) }
+            onPermission(event) { [weak self] output in
+                self?.queue.async { self?.send("200 OK", body: output ?? "", on: connection) }
+            }
+            return
+        }
+
         let status: String
         switch (request.method, request.path) {
         case ("POST", "/event"):
@@ -114,7 +131,10 @@ final class EventServer {
         default:
             status = "404 Not Found"
         }
-        let body = status.hasPrefix("200") ? "ok" : status
+        send(status, body: status.hasPrefix("200") ? "ok" : status, on: connection)
+    }
+
+    private func send(_ status: String, body: String, on connection: NWConnection) {
         let response = "HTTP/1.1 \(status)\r\nContent-Type: text/plain\r\nContent-Length: \(body.utf8.count)\r\nConnection: close\r\n\r\n\(body)"
         connection.send(content: Data(response.utf8), completion: .contentProcessed { _ in
             connection.cancel()

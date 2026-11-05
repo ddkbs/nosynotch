@@ -83,7 +83,10 @@ struct NotchView: View {
                 }
             case .attention:
                 if let session = model.attention {
-                    AttentionView(session: store.sessions[session.id] ?? session, onDismiss: { model.dismissFlash() })
+                    AttentionView(session: store.sessions[session.id] ?? session,
+                                  approval: model.attentionApproval,
+                                  onDecide: { approval, decision in model.decide(approval, decision) },
+                                  onDismiss: { model.dismissFlash() })
                         .transition(.blurFade.combined(with: .scale(scale: 0.85, anchor: .top)))
                 }
             case .failed:
@@ -415,9 +418,27 @@ struct FailureView: View {
 
 struct AttentionView: View {
     let session: Session
+    var approval: PendingApproval?
+    var onDecide: (PendingApproval, ApprovalDecision) -> Void = { _, _ in }
     var onDismiss: () -> Void
 
     var body: some View {
+        VStack(spacing: 0) {
+            header
+            if let approval {
+                ApprovalButtons(approval: approval, onDecide: onDecide)
+                    .padding(.horizontal, 22)
+                    .padding(.top, 10)
+                    .transition(.opacity.combined(with: .move(edge: .top)))
+            }
+        }
+        .animation(.spring(response: 0.35, dampingFraction: 0.8), value: approval?.id)
+        .overlay(alignment: .topTrailing) {
+            DismissButton(action: onDismiss).padding(.top, 8).padding(.trailing, 14)
+        }
+    }
+
+    private var header: some View {
         HStack(spacing: 14) {
             ZStack {
                 Circle()
@@ -458,8 +479,53 @@ struct AttentionView: View {
         .padding(.top, 12)
         .contentShape(Rectangle())
         .onTapGesture { TerminalActivator.activate(session) }
-        .overlay(alignment: .topTrailing) {
-            DismissButton(action: onDismiss).padding(.top, 8).padding(.trailing, 14)
+    }
+}
+
+/// Deny · (Always) · Allow for a permission request.
+struct ApprovalButtons: View {
+    let approval: PendingApproval
+    var onDecide: (PendingApproval, ApprovalDecision) -> Void
+
+    var body: some View {
+        HStack(spacing: 8) {
+            Text(approval.agent == .codex ? "or answer in Codex" : "or answer in the terminal")
+                .font(.system(size: 11))
+                .foregroundStyle(.white.opacity(0.35))
+            Spacer(minLength: 8)
+            NotchButton(title: "Deny", style: .quiet) { onDecide(approval, .deny) }
+            if approval.canAlwaysAllow {
+                NotchButton(title: "Always allow", style: .quiet) { onDecide(approval, .alwaysAllow) }
+            }
+            NotchButton(title: "Allow", style: .prominent) { onDecide(approval, .allow) }
         }
+    }
+}
+
+struct NotchButton: View {
+    enum Style { case quiet, prominent }
+
+    let title: String
+    var style: Style = .quiet
+    let action: () -> Void
+    @State private var hovering = false
+
+    var body: some View {
+        Button(action: action) {
+            Text(title)
+                .font(.system(size: 12, weight: .semibold, design: .rounded))
+                .foregroundStyle(style == .prominent ? Color.black : .white.opacity(0.9))
+                .padding(.horizontal, 14)
+                .frame(height: 26)
+                .background(
+                    Capsule().fill(style == .prominent
+                                   ? Theme.amber.opacity(hovering ? 1 : 0.9)
+                                   : Color.white.opacity(hovering ? 0.2 : 0.11))
+                )
+                .contentShape(Capsule())
+        }
+        .buttonStyle(.plain)
+        .onHover { hovering = $0 }
+        .animation(.easeOut(duration: 0.12), value: hovering)
     }
 }

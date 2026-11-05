@@ -6,6 +6,9 @@ import Foundation
 ///
 /// Every hook is a one-line `curl` that forwards the hook's stdin JSON to the app. If the app isn't
 /// running, curl fails instantly and `|| true` keeps Claude Code happy – hooks never block Claude.
+///
+/// The `PermissionRequest` hook is the exception: it waits for the answer from the notch (Allow / Deny) and
+/// prints it, but only if the answer starts with the shared `ApprovalToken`. No answer = the normal prompt.
 enum HookInstaller {
     static let marker = "nosynotch"
     /// Marker used before the rename – such hooks are replaced on install and removed on uninstall.
@@ -28,6 +31,32 @@ enum HookInstaller {
     ]
 
     /// `agent` is added to the URL for every agent but Claude (whose hook command stays unchanged since 0.1.0).
+    /// The command for one event: the waiting permission hook for `PermissionRequest`, the plain one otherwise.
+    static func command(for event: String, port: UInt16, agent: Agent = .claude) -> String {
+        event == "PermissionRequest" ? permissionCommand(port: port, agent: agent) : command(port: port, agent: agent)
+    }
+
+    /// Hook timeout for an event (seconds). The permission hook may wait for the user.
+    static func timeout(for event: String, default value: Int = 5) -> Int {
+        event == "PermissionRequest" ? 600 : value
+    }
+
+    static func permissionCommand(port: UInt16, agent: Agent = .claude) -> String {
+        let query = agent == .claude ? "src=\(marker)" : "src=\(marker)&agent=\(agent.rawValue)"
+        let token = ApprovalToken.value
+        return [
+            "r=$(curl -s -m 590 -X POST",
+            "-H 'Content-Type: application/json'",
+            "-H 'Expect:'",
+            "-H \"X-Term-Program: ${TERM_PROGRAM:-}\"",
+            "-H \"X-Bundle-Id: ${__CFBundleIdentifier:-}\"",
+            "--data-binary @-",
+            "'http://127.0.0.1:\(port)/permission?\(query)'",
+            "2>/dev/null);",
+            "case \"$r\" in \"\(token) \"*) printf '%s' \"${r#\(token) }\";; esac; true",
+        ].joined(separator: " ")
+    }
+
     static func command(port: UInt16, agent: Agent = .claude) -> String {
         let query = agent == .claude ? "src=\(marker)" : "src=\(marker)&agent=\(agent.rawValue)"
         return [
@@ -87,9 +116,9 @@ enum HookInstaller {
     static func isInstalled(at url: URL) -> Bool {
         guard let settings = try? load(url), let hooks = settings["hooks"] as? [String: Any] else { return false }
         // Only the current command counts – hooks from an older version get replaced on install.
-        let current = command(port: Preferences.port)
         return events.allSatisfy { event in
-            ((hooks[event.name] as? [[String: Any]]) ?? []).contains { group in
+            let current = command(for: event.name, port: Preferences.port)
+            return ((hooks[event.name] as? [[String: Any]]) ?? []).contains { group in
                 ((group["hooks"] as? [[String: Any]]) ?? []).contains { ($0["command"] as? String) == current }
             }
         }
@@ -110,7 +139,8 @@ enum HookInstaller {
         for event in events {
             var groups = ((hooks[event.name] as? [[String: Any]]) ?? []).filter { !isOurs($0) }
             var group: [String: Any] = [
-                "hooks": [["type": "command", "command": command(port: port), "timeout": 5]],
+                "hooks": [["type": "command", "command": command(for: event.name, port: port),
+                           "timeout": timeout(for: event.name)]],
             ]
             if let matcher = event.matcher { group["matcher"] = matcher }
             groups.append(group)
@@ -210,9 +240,9 @@ extension HookInstaller {
 
         static var isInstalled: Bool {
             guard let file = try? load(hooksURL), let hooks = file["hooks"] as? [String: Any] else { return false }
-            let current = command(port: Preferences.port, agent: .codex)
             return events.allSatisfy { event in
-                ((hooks[event.name] as? [[String: Any]]) ?? []).contains { group in
+                let current = command(for: event.name, port: Preferences.port, agent: .codex)
+                return ((hooks[event.name] as? [[String: Any]]) ?? []).contains { group in
                     ((group["hooks"] as? [[String: Any]]) ?? []).contains { ($0["command"] as? String) == current }
                 }
             }
@@ -224,7 +254,8 @@ extension HookInstaller {
             for event in events {
                 var groups = ((hooks[event.name] as? [[String: Any]]) ?? []).filter { !isOurs($0) }
                 var group: [String: Any] = [
-                    "hooks": [["type": "command", "command": command(port: port, agent: .codex), "timeout": event.timeout]],
+                    "hooks": [["type": "command", "command": command(for: event.name, port: port, agent: .codex),
+                               "timeout": timeout(for: event.name, default: event.timeout)]],
                 ]
                 if let matcher = event.matcher { group["matcher"] = matcher }
                 groups.append(group)

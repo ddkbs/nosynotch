@@ -10,6 +10,7 @@ enum Preferences {
         static let notificationSeconds = "notificationSeconds"
         static let mediaEnabled = "mediaEnabled"
         static let mediaShowWhenPaused = "mediaShowWhenPaused"
+        static let approvalsInNotch = "approvalsInNotch"
         static let port = "port"
     }
 
@@ -28,6 +29,7 @@ enum Preferences {
             Key.notificationSeconds: 6.0,
             Key.mediaEnabled: true,
             Key.mediaShowWhenPaused: false,
+            Key.approvalsInNotch: true,
             Key.port: Int(EventServer.defaultPort),
         ])
     }
@@ -55,6 +57,9 @@ enum Preferences {
 
     /// Keep the cover in the notch while the music is paused.
     static var mediaShowWhenPaused: Bool { defaults.bool(forKey: Key.mediaShowWhenPaused) }
+
+    /// Show Allow / Deny buttons in the notch for permission requests.
+    static var approvalsInNotch: Bool { defaults.object(forKey: Key.approvalsInNotch) as? Bool ?? true }
 
     static var port: UInt16 {
         UInt16(clamping: defaults.integer(forKey: Key.port))

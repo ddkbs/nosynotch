@@ -44,6 +44,7 @@ struct SettingsView: View {
     @AppStorage(Preferences.Key.notificationSeconds) private var notificationSeconds = 6.0
     @AppStorage(Preferences.Key.mediaEnabled) private var mediaEnabled = true
     @AppStorage(Preferences.Key.mediaShowWhenPaused) private var mediaShowWhenPaused = false
+    @AppStorage(Preferences.Key.approvalsInNotch) private var approvalsInNotch = true
 
     @State private var launchAtLogin = LoginItem.isEnabled
     @State private var hooks: [(path: String, installed: Bool)] = []
@@ -114,6 +115,14 @@ struct SettingsView: View {
                     FooterText(codexConnected
                          ? "One more step: Codex only runs hooks you trust. In the ChatGPT app open Codex → Settings → Hooks (or type /hooks in the Codex CLI) and trust the Nosy Notch hooks."
                          : "Works with the Codex CLI and the Codex mode of the ChatGPT app. Adds the same tiny hook to ~/.codex/hooks.json.")
+                }
+
+                Section {
+                    Toggle("Allow or deny permission requests in the notch", isOn: $approvalsInNotch)
+                } header: {
+                    Text("Permissions")
+                } footer: {
+                    FooterText("Claude Code keeps its own dialog open meanwhile – answer wherever you like. Codex shows its prompt once you click ✕ or after 45 s. Your deny rules always win.")
                 }
 
                 Section("General") {

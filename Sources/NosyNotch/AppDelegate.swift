@@ -4,7 +4,8 @@ import AppKit
 final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private lazy var store = SessionStore()
     private lazy var nowPlaying = NowPlaying()
-    private lazy var model = NotchViewModel(store: store, media: nowPlaying)
+    private lazy var approvals = ApprovalCenter()
+    private lazy var model = NotchViewModel(store: store, media: nowPlaying, approvals: approvals)
     private var windowController: NotchWindowController?
     private var server: EventServer?
     private var statusItem: NSStatusItem?
@@ -44,7 +45,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
     private func startServer() {
         let server = EventServer(port: Preferences.port) { [weak self] event in
-            Task { @MainActor in self?.store.handle(event) }
+            Task { @MainActor in
+                self?.store.handle(event)
+                self?.approvals.observe(event)
+            }
+        }
+        server.onPermission = { [weak self] event, reply in
+            Task { @MainActor in
+                guard let self else { return reply(nil) }
+                self.approvals.add(event, reply: reply)
+            }
         }
         server.onQuit = {
             Task { @MainActor in NSApp.terminate(nil) }

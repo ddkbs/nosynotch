@@ -33,6 +33,10 @@ final class NotchViewModel: ObservableObject {
 
     let store: SessionStore
     let media: NowPlaying
+    let approvals: ApprovalCenter
+
+    /// Extra height for the Allow / Deny row.
+    static let approvalRowHeight: CGFloat = 40
 
     @Published var notchSize = CGSize(width: 185, height: 32)
     @Published var hasPhysicalNotch = true
@@ -48,10 +52,28 @@ final class NotchViewModel: ObservableObject {
 
     private var flashWork: DispatchWorkItem?
 
-    init(store: SessionStore, media: NowPlaying) {
+    init(store: SessionStore, media: NowPlaying, approvals: ApprovalCenter? = nil) {
         self.store = store
         self.media = media
+        let approvals = approvals ?? ApprovalCenter()
+        self.approvals = approvals
         media.onChange = { [weak self] in self?.recompute() }
+        approvals.onChange = { [weak self] in
+            guard let self else { return }
+            self.objectWillChange.send()   // size depends on whether buttons are shown
+            // A request for a session that was already "waiting" brings no new transition – show it anyway.
+            if self.attention == nil, let approval = approvals.pending.last,
+               let session = self.store.sessions[approval.sessionID] {
+                self.handle(.needsAttention(session))
+            } else {
+                self.recompute()
+            }
+        }
+    }
+
+    /// The permission request shown with Allow / Deny buttons, if any.
+    var attentionApproval: PendingApproval? {
+        attention.flatMap { approvals.pending(for: $0.id) }
     }
 
     /// A track is loaded in Spotify / Music and the media player is enabled.
@@ -80,7 +102,9 @@ final class NotchViewModel: ObservableObject {
             return CGSize(width: wide, height: height)
         case .celebrating:
             return CGSize(width: wide, height: notchSize.height + 104)
-        case .attention, .failed:
+        case .attention:
+            return CGSize(width: wide, height: notchSize.height + 88 + (attentionApproval != nil ? Self.approvalRowHeight : 0))
+        case .failed:
             return CGSize(width: wide, height: notchSize.height + 88)
         }
     }
@@ -137,6 +161,14 @@ final class NotchViewModel: ObservableObject {
     }
 
     func dismissFlash() {
+        // ✕ on a permission request: hand it back to the terminal / Codex prompt right away.
+        if let approval = attentionApproval { approvals.release(approval.id) }
+        endFlash()
+    }
+
+    func decide(_ approval: PendingApproval, _ decision: ApprovalDecision) {
+        approvals.decide(approval.id, decision)
+        store.resume(approval.sessionID, allowed: decision != .deny, tool: approval.tool)
         endFlash()
     }
 
@@ -175,7 +207,12 @@ final class NotchViewModel: ObservableObject {
     private func flash(for seconds: TimeInterval) {
         flashWork?.cancel()
         let work = DispatchWorkItem { [weak self] in
-            MainActor.assumeIsolated { self?.endFlash() }
+            MainActor.assumeIsolated {
+                guard let self else { return }
+                // Keep Allow / Deny on screen while the request is open.
+                if self.attentionApproval != nil { return self.flash(for: 2) }
+                self.endFlash()
+            }
         }
         flashWork = work
         DispatchQueue.main.asyncAfter(deadline: .now() + seconds, execute: work)

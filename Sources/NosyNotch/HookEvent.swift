@@ -20,6 +20,8 @@ struct HookEvent {
     /// `StopFailure`: error code (rate_limit, overloaded, …) and optional details.
     let error: String?
     let errorDetails: String?
+    /// `PermissionRequest` (Claude Code): the "always allow" options the terminal dialog offers.
+    let permissionSuggestions: [[String: Any]]
 
     /// Value of `$TERM_PROGRAM` in the shell that ran the hook (e.g. "iTerm.app", "Apple_Terminal", "vscode").
     let termProgram: String?
@@ -45,6 +47,7 @@ struct HookEvent {
         self.lastAssistantMessage = json["last_assistant_message"] as? String
         self.error = json["error"] as? String
         self.errorDetails = json["error_details"] as? String
+        self.permissionSuggestions = (json["permission_suggestions"] as? [[String: Any]]) ?? []
         self.termProgram = headers["x-term-program"].flatMap { $0.isEmpty ? nil : $0 }
         self.hostBundleID = headers["x-bundle-id"].flatMap { $0.isEmpty ? nil : $0 }
     }
@@ -66,6 +69,7 @@ struct HookEvent {
         self.lastAssistantMessage = lastAssistantMessage
         self.error = error
         self.errorDetails = errorDetails
+        self.permissionSuggestions = []
         self.termProgram = nil
         self.hostBundleID = nil
     }
