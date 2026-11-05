@@ -66,8 +66,37 @@ const hookCommand = (agent = 'claude') =>
     `'http://127.0.0.1:${PORT}/event?src=${MARKER}${agent === 'claude' ? '' : `&agent=${agent}`}'`,
     '>/dev/null 2>&1 || true',
   ].join(' ');
-const HOOK_COMMAND = hookCommand();
-const CODEX_COMMAND = hookCommand('codex');
+
+// Shared secret with the app (see Approvals.swift): the permission hook only prints answers that start with it.
+const TOKEN_FILE = path.join(DATA_DIR, 'approval-token');
+function approvalToken() {
+  try {
+    const existing = fs.readFileSync(TOKEN_FILE, 'utf8').trim();
+    if (/^[0-9a-f]{16,}$/i.test(existing)) return existing;
+  } catch {}
+  const token = require('crypto').randomBytes(16).toString('hex');
+  fs.mkdirSync(DATA_DIR, { recursive: true });
+  fs.writeFileSync(TOKEN_FILE, token, { mode: 0o600 });
+  return token;
+}
+
+// The PermissionRequest hook waits for Allow / Deny from the notch. Must match HookInstaller.permissionCommand.
+const permissionCommand = (agent = 'claude') => {
+  const token = approvalToken();
+  return [
+    'r=$(curl -s -m 590 -X POST',
+    "-H 'Content-Type: application/json'",
+    "-H 'Expect:'",
+    '-H "X-Term-Program: ${TERM_PROGRAM:-}"',
+    '-H "X-Bundle-Id: ${__CFBundleIdentifier:-}"',
+    '--data-binary @-',
+    `'http://127.0.0.1:${PORT}/permission?src=${MARKER}${agent === 'claude' ? '' : `&agent=${agent}`}'`,
+    '2>/dev/null);',
+    `case "$r" in "${token} "*) printf '%s' "\${r#${token} }";; esac; true`,
+  ].join(' ');
+};
+const commandFor = (event, agent) => (event === 'PermissionRequest' ? permissionCommand(agent) : hookCommand(agent));
+const timeoutFor = (event, fallback = 5) => (event === 'PermissionRequest' ? 600 : fallback);
 
 // ───────────────────────────── output helpers ─────────────────────────────
 
@@ -267,9 +296,9 @@ const isOurs = (group) =>
 // Only the current command counts – hooks from an older version get replaced.
 const isCurrent = (command) => (group) => Array.isArray(group?.hooks) && group.hooks.some((h) => h?.command === command);
 
-function hooksInstalledIn(file, events = HOOK_EVENTS, command = HOOK_COMMAND) {
+function hooksInstalledIn(file, events = HOOK_EVENTS, agent = 'claude') {
   const hooks = readSettings(file).hooks || {};
-  return events.every(([name]) => (hooks[name] || []).some(isCurrent(command)));
+  return events.every(([name]) => (hooks[name] || []).some(isCurrent(commandFor(name, agent))));
 }
 
 const codexHome = () => {
@@ -278,7 +307,7 @@ const codexHome = () => {
 };
 const codexAvailable = () => fs.existsSync(codexHome());
 const codexHooksFile = () => path.join(codexHome(), 'hooks.json');
-const codexHooksInstalled = () => hooksInstalledIn(codexHooksFile(), CODEX_EVENTS, CODEX_COMMAND);
+const codexHooksInstalled = () => hooksInstalledIn(codexHooksFile(), CODEX_EVENTS, 'codex');
 
 const hooksInstalled = () => settingsFiles().every((f) => hooksInstalledIn(f)) && (!codexAvailable() || codexHooksInstalled());
 
@@ -286,18 +315,18 @@ function installHooks() {
   for (const file of settingsFiles()) installHooksIn(file);
   console.log(dim('  Restart Claude Code sessions that are already running so they pick up the hooks.'));
   if (codexAvailable()) {
-    installHooksIn(codexHooksFile(), CODEX_EVENTS, CODEX_COMMAND);
+    installHooksIn(codexHooksFile(), CODEX_EVENTS, 'codex');
     console.log(dim('  Codex runs new hooks only after you trust them once:'));
     console.log(dim('  ChatGPT app → Codex → Settings → Hooks, or type /hooks in the Codex CLI.'));
   }
 }
 
-function installHooksIn(file, events = HOOK_EVENTS, command = HOOK_COMMAND) {
+function installHooksIn(file, events = HOOK_EVENTS, agent = 'claude') {
   const settings = readSettings(file);
   const hooks = settings.hooks || {};
   for (const [name, matcher, timeout = 5] of events) {
     const groups = (hooks[name] || []).filter((g) => !isOurs(g));
-    const group = { hooks: [{ type: 'command', command, timeout }] };
+    const group = { hooks: [{ type: 'command', command: commandFor(name, agent), timeout: timeoutFor(name, timeout) }] };
     if (matcher) group.matcher = matcher;
     groups.push(group);
     hooks[name] = groups;
