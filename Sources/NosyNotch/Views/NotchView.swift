@@ -37,6 +37,7 @@ struct NotchView: View {
         switch model.presentation {
         case .attention: return Theme.amber
         case .failed: return Theme.danger
+        case .limitReset: return model.limitReset?.agent.color ?? Theme.success
         case .media: return media.accent
         case .celebrating: return Theme.success
         default: return model.compactSession?.accent ?? .clear
@@ -45,7 +46,7 @@ struct NotchView: View {
 
     private var glowOpacity: Double {
         switch model.presentation {
-        case .attention, .celebrating, .failed: return 0.55
+        case .attention, .celebrating, .failed, .limitReset: return 0.55
         case .compact: return store.hasWaiting ? 0.45 : 0.18
         case .media: return 0.22
         default: return 0
@@ -98,6 +99,12 @@ struct NotchView: View {
             case .failed:
                 if let session = model.failure {
                     FailureView(session: store.sessions[session.id] ?? session, onDismiss: { model.dismissFlash() })
+                        .transition(.blurFade.combined(with: .scale(scale: 0.85, anchor: .top)))
+                }
+            case .limitReset:
+                if let reset = model.limitReset {
+                    LimitResetView(reset: reset, onDismiss: { model.dismissFlash() })
+                        .id(reset.id)
                         .transition(.blurFade.combined(with: .scale(scale: 0.85, anchor: .top)))
                 }
             case .hidden, .compact, .media:
@@ -462,6 +469,55 @@ struct FailureView: View {
         .onTapGesture { TerminalActivator.activate(session) }
         .overlay(alignment: .topTrailing) {
             DismissButton(action: onDismiss).padding(.top, 8).padding(.trailing, 14)
+        }
+    }
+}
+
+// MARK: - Limit reset
+
+/// "Claude is ready again" – a full gauge drains back to empty while an arrow turns once.
+struct LimitResetView: View {
+    let reset: NotchViewModel.LimitReset
+    var onDismiss: () -> Void
+
+    @State private var drained = false
+    @State private var turns = 0.0
+
+    var body: some View {
+        let color = reset.agent.color
+        HStack(spacing: 14) {
+            ZStack {
+                Circle().stroke(.white.opacity(0.1), lineWidth: 4)
+                Circle()
+                    .trim(from: 0, to: drained ? 0.02 : 0.9)
+                    .stroke(color, style: StrokeStyle(lineWidth: 4, lineCap: .round))
+                    .rotationEffect(.degrees(-90))
+                Image(systemName: "arrow.counterclockwise")
+                    .font(.system(size: 16, weight: .bold))
+                    .foregroundStyle(color)
+                    .rotationEffect(.degrees(turns))
+            }
+            .frame(width: 42, height: 42)
+            .shadow(color: color.opacity(0.6), radius: 6)
+
+            VStack(alignment: .leading, spacing: 3) {
+                Text("\(reset.agent.name) is ready again")
+                    .font(.system(size: 15, weight: .semibold, design: .rounded))
+                    .foregroundStyle(.white)
+                Text("Your \(reset.window) limit just reset – back to 0 %.")
+                    .font(.system(size: 12))
+                    .foregroundStyle(.white.opacity(0.7))
+            }
+            Spacer(minLength: 0)
+        }
+        .padding(.horizontal, 22)
+        .padding(.top, 12)
+        .overlay(alignment: .topTrailing) {
+            DismissButton(action: onDismiss).padding(.top, 8).padding(.trailing, 14)
+        }
+        .onAppear {
+            withAnimation(.easeInOut(duration: 1.1).delay(0.3)) { drained = true }
+            withAnimation(.spring(response: 0.9, dampingFraction: 0.7).delay(0.3)) { turns = -360 }
         }
     }
 }

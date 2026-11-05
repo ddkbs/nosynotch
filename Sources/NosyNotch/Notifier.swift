@@ -33,6 +33,12 @@ enum Notifier {
         }
     }
 
+    /// A usage limit that was nearly used up has reset.
+    static func limitReset(agent: Agent, window: String) {
+        play("Hero", if: Preferences.soundDone, volume: 0.6)
+        post(title: "\(agent.name) is ready again", body: "Your \(window) limit just reset.")
+    }
+
     /// The 5-minute reminder: a softer sound, same banner.
     static func remind(_ transition: Transition) {
         switch transition {

@@ -32,11 +32,45 @@ final class UsageStore: ObservableObject {
     private static let defaultsKey = "usage"
     private let reader = DispatchQueue(label: "dev.davidkubus.nosynotch.usage", qos: .utility)
 
+    /// A limit that was nearly used up has reset: (agent, "5-hour" / "weekly").
+    var onReset: ((Agent, String) -> Void)?
+    private var resetTimer: Timer?
+    private static let notifiedKey = "notifiedLimitResets"
+
     init(load: Bool = true) {
-        guard load, let data = UserDefaults.standard.data(forKey: Self.defaultsKey),
-              let saved = try? JSONDecoder().decode([String: AgentUsage].self, from: data) else { return }
-        claude = saved["claude"]
-        codex = saved["codex"]
+        guard load else { return }
+        if let data = UserDefaults.standard.data(forKey: Self.defaultsKey),
+           let saved = try? JSONDecoder().decode([String: AgentUsage].self, from: data) {
+            claude = saved["claude"]
+            codex = saved["codex"]
+        }
+        resetTimer = Timer.scheduledTimer(withTimeInterval: 20, repeats: true) { [weak self] _ in
+            MainActor.assumeIsolated { self?.checkResets() }
+        }
+    }
+
+    /// A window whose reset time has passed while it was at ≥ 80 % fires `onReset` once. Works with the last
+    /// known numbers, so it also fires when the agent isn't running – and once after launch if it reset meanwhile
+    /// (up to 12 hours late).
+    func checkResets(now: Date = Date()) {
+        guard Preferences.notifyLimitReset else { return }
+        var notified = Set(UserDefaults.standard.stringArray(forKey: Self.notifiedKey) ?? [])
+        let before = notified.count
+        for (agent, usage) in [(Agent.claude, claude), (.codex, codex)] {
+            guard let usage else { continue }
+            for (label, window) in [("5-hour", usage.fiveHour), ("weekly", usage.week)] {
+                guard let window, let resetsAt = window.resetsAt, resetsAt <= now,
+                      now.timeIntervalSince(resetsAt) < 12 * 3600,
+                      window.usedPercent >= Preferences.limitResetThreshold else { continue }
+                let key = "\(agent.rawValue)-\(label)-\(Int(resetsAt.timeIntervalSince1970))"
+                guard notified.insert(key).inserted else { continue }
+                onReset?(agent, label)
+            }
+        }
+        if notified.count != before {
+            // Keep the list short – old keys can never match again.
+            UserDefaults.standard.set(Array(notified.sorted().suffix(40)), forKey: Self.notifiedKey)
+        }
     }
 
     /// Agents with data, Claude first.
@@ -48,6 +82,8 @@ final class UsageStore: ObservableObject {
     }
 
     func set(_ usage: AgentUsage?, for agent: Agent) {
+        // Judge the old window before fresh numbers (new reset time, low usage) replace it.
+        checkResets()
         switch agent {
         case .claude: if claude != usage { claude = usage } else { return }
         case .codex: if codex != usage { codex = usage } else { return }

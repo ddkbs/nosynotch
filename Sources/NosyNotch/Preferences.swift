@@ -17,6 +17,7 @@ enum Preferences {
         static let usageAgents = "usageAgents"
         static let contextEnabled = "contextEnabled"
         static let headGestures = "headGestures"
+        static let notifyLimitReset = "notifyLimitReset"
         static let mutedUntil = "mutedUntil"
         static let liveEqualizer = "liveEqualizer"
         static let port = "port"
@@ -44,6 +45,7 @@ enum Preferences {
             Key.usageAgents: "all",
             Key.contextEnabled: true,
             Key.headGestures: false,
+            Key.notifyLimitReset: true,
             Key.liveEqualizer: false,
             Key.port: Int(EventServer.defaultPort),
         ])
@@ -103,6 +105,10 @@ enum Preferences {
 
     /// Nod (AirPods) to allow, shake to deny. Off unless you turn it on.
     static var headGestures: Bool { defaults.bool(forKey: Key.headGestures) }
+
+    /// Tell me when a usage limit resets – only if it was at least `limitResetThreshold` % used.
+    static var notifyLimitReset: Bool { defaults.object(forKey: Key.notifyLimitReset) as? Bool ?? true }
+    static let limitResetThreshold: Double = 80
 
     /// Context-window fill ring per session in the hover list.
     static var contextEnabled: Bool { defaults.object(forKey: Key.contextEnabled) as? Bool ?? true }

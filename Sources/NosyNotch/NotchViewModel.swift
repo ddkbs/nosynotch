@@ -16,6 +16,8 @@ final class NotchViewModel: ObservableObject {
         case attention
         /// The turn ended with an API error.
         case failed
+        /// A usage limit that was nearly used up has reset.
+        case limitReset
         /// Nothing from Claude – music is playing: cover on the left, equalizer on the right.
         case media
     }
@@ -53,6 +55,14 @@ final class NotchViewModel: ObservableObject {
     @Published private(set) var celebration: Celebration?
     @Published private(set) var attention: Session?
     @Published private(set) var failure: Session?
+    /// "Claude is ready again – 5-hour limit reset".
+    @Published private(set) var limitReset: LimitReset?
+
+    struct LimitReset: Equatable {
+        let id = UUID()
+        let agent: Agent
+        let window: String
+    }
     /// A turn finished while its app was in front: only a small check in the compact notch.
     @Published private(set) var quietDone: Session?
     /// Incremented to trigger the shake animation.
@@ -145,7 +155,7 @@ final class NotchViewModel: ObservableObject {
             return CGSize(width: wide, height: notchSize.height + 104)
         case .attention:
             return CGSize(width: wide, height: notchSize.height + 88 + (attentionApproval != nil ? Self.approvalRowHeight : 0))
-        case .failed:
+        case .failed, .limitReset:
             return CGSize(width: wide, height: notchSize.height + 88)
         }
     }
@@ -240,6 +250,14 @@ final class NotchViewModel: ObservableObject {
         quietDone == nil && !store.hasActivity && !store.hasWaiting && !store.unseen.isEmpty
     }
 
+    func showLimitReset(agent: Agent, window: String) {
+        // Agents' own news wins; the reset can wait for the next quiet moment.
+        guard celebration == nil, attention == nil, failure == nil else { return }
+        limitReset = LimitReset(agent: agent, window: window)
+        flash(for: Preferences.notificationSeconds)
+        recompute()
+    }
+
     func dismissFlash() {
         if let celebration { store.markSeen(celebration.session.id) }
         // ✕ on a permission request: hand it back to the terminal / Codex prompt right away.
@@ -293,6 +311,8 @@ final class NotchViewModel: ObservableObject {
             next = .attention
         } else if failure != nil {
             next = .failed
+        } else if limitReset != nil {
+            next = .limitReset
         } else if isHovering && (!store.sessions.isEmpty || hasMedia) {
             next = .expanded
         } else if store.hasActivity || store.hasWaiting || quietDone != nil {
@@ -332,6 +352,7 @@ final class NotchViewModel: ObservableObject {
         celebration = nil
         attention = nil
         failure = nil
+        limitReset = nil
         recompute()
     }
 }

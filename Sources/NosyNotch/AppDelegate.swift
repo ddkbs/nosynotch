@@ -61,6 +61,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         setUpStatusItem()
         Notifier.requestAuthorizationIfNeeded()
         usage.onContext = { [weak self] id, percent in self?.store.setContext(id, percent: percent) }
+        usage.onReset = { [weak self] agent, window in
+            self?.model.showLimitReset(agent: agent, window: window)
+            Notifier.limitReset(agent: agent, window: window)
+        }
+        usage.checkResets()
         if HookInstaller.Codex.isAvailable { usage.refreshCodex() }
 
         // First launch: open the settings so the one button that matters ("Connect Claude Code") is right there.

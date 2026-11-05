@@ -841,6 +841,7 @@ private struct UsagePage: View {
     @AppStorage(Preferences.Key.usageEnabled) private var usageEnabled = true
     @AppStorage(Preferences.Key.usageAgents) private var usageAgents = "all"
     @AppStorage(Preferences.Key.contextEnabled) private var contextEnabled = true
+    @AppStorage(Preferences.Key.notifyLimitReset) private var notifyLimitReset = true
     @State private var problem: String?
 
     var body: some View {
@@ -848,6 +849,9 @@ private struct UsagePage: View {
             Card(title: "Limits", footer: "5-hour and weekly limits as bars when you hover the notch. Claude (Pro / Max) only shares them with its status line, so Nosy Notch adds a silent one – unless you already have your own. Codex: read from its session files.") {
                 Row(title: "Show usage limits") {
                     NotchToggle(isOn: Binding(get: { usageEnabled }, set: setUsage), tint: Theme.codex)
+                }
+                Row(title: "Tell me when a limit resets", subtitle: "Only if it was at least 80 % used") {
+                    NotchToggle(isOn: $notifyLimitReset, tint: Theme.codex)
                 }
                 Row(title: "Show", divider: false) {
                     Segments(options: [("all", "Both"), ("claude", "Claude"), ("codex", "Codex")],
