@@ -1,0 +1,61 @@
+import Foundation
+
+/// A single event forwarded by a Claude Code hook (the hook's stdin JSON, posted to our local server).
+///
+/// See https://docs.claude.com/en/docs/claude-code/hooks for the payload shape. We decode leniently
+/// with `JSONSerialization` because fields differ per event and new ones get added over time.
+struct HookEvent {
+    let name: String
+    let sessionID: String
+    let cwd: String?
+    let transcriptPath: String?
+    let toolName: String?
+    let toolInput: [String: Any]
+    let message: String?
+    let notificationType: String?
+    let prompt: String?
+    let lastAssistantMessage: String?
+
+    /// Value of `$TERM_PROGRAM` in the shell that ran the hook (e.g. "iTerm.app", "Apple_Terminal", "vscode").
+    let termProgram: String?
+    /// Value of `$__CFBundleIdentifier` — the bundle id of the app Claude Code runs in, if macOS set it.
+    let hostBundleID: String?
+
+    init?(data: Data, headers: [String: String] = [:]) {
+        guard let object = try? JSONSerialization.jsonObject(with: data),
+              let json = object as? [String: Any],
+              let name = json["hook_event_name"] as? String
+        else { return nil }
+
+        self.name = name
+        self.sessionID = (json["session_id"] as? String) ?? "default"
+        self.cwd = json["cwd"] as? String
+        self.transcriptPath = json["transcript_path"] as? String
+        self.toolName = json["tool_name"] as? String
+        self.toolInput = (json["tool_input"] as? [String: Any]) ?? [:]
+        self.message = json["message"] as? String
+        self.notificationType = json["notification_type"] as? String
+        self.prompt = json["prompt"] as? String
+        self.lastAssistantMessage = json["last_assistant_message"] as? String
+        self.termProgram = headers["x-term-program"].flatMap { $0.isEmpty ? nil : $0 }
+        self.hostBundleID = headers["x-bundle-id"].flatMap { $0.isEmpty ? nil : $0 }
+    }
+
+    /// Memberwise initializer used by the built-in demo.
+    init(name: String, sessionID: String, cwd: String? = nil, toolName: String? = nil,
+         toolInput: [String: Any] = [:], message: String? = nil, prompt: String? = nil,
+         lastAssistantMessage: String? = nil) {
+        self.name = name
+        self.sessionID = sessionID
+        self.cwd = cwd
+        self.transcriptPath = nil
+        self.toolName = toolName
+        self.toolInput = toolInput
+        self.message = message
+        self.notificationType = nil
+        self.prompt = prompt
+        self.lastAssistantMessage = lastAssistantMessage
+        self.termProgram = nil
+        self.hostBundleID = nil
+    }
+}
