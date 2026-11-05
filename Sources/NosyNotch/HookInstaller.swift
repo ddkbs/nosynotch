@@ -1,13 +1,15 @@
 import Foundation
 
-/// Adds / removes the claude-notch hooks in `settings.json` of every Claude Code config directory:
+/// Adds / removes the Nosy Notch hooks in `settings.json` of every Claude Code config directory:
 /// `~/.claude`, `$CLAUDE_CONFIG_DIR` and any `~/.claude-*` folder that looks like one (people who run
 /// several accounts side by side point `CLAUDE_CONFIG_DIR` at e.g. `~/.claude-work`).
 ///
 /// Every hook is a one-line `curl` that forwards the hook's stdin JSON to the app. If the app isn't
 /// running, curl fails instantly and `|| true` keeps Claude Code happy – hooks never block Claude.
 enum HookInstaller {
-    static let marker = "claude-notch"
+    static let marker = "nosynotch"
+    /// Marker used before the rename – such hooks are replaced on install and removed on uninstall.
+    static let legacyMarkers = ["claude-notch"]
 
     /// Events we listen to. Tool events get the `*` matcher.
     static let events: [(name: String, matcher: String?)] = [
@@ -82,8 +84,12 @@ enum HookInstaller {
 
     static func isInstalled(at url: URL) -> Bool {
         guard let settings = try? load(url), let hooks = settings["hooks"] as? [String: Any] else { return false }
+        // Only the current command counts – hooks from an older version get replaced on install.
+        let current = command(port: Preferences.port)
         return events.allSatisfy { event in
-            ((hooks[event.name] as? [[String: Any]]) ?? []).contains(where: isOurs)
+            ((hooks[event.name] as? [[String: Any]]) ?? []).contains { group in
+                ((group["hooks"] as? [[String: Any]]) ?? []).contains { ($0["command"] as? String) == current }
+            }
         }
     }
 
@@ -130,7 +136,10 @@ enum HookInstaller {
 
     private static func isOurs(_ group: [String: Any]) -> Bool {
         let hooks = (group["hooks"] as? [[String: Any]]) ?? []
-        return hooks.contains { (($0["command"] as? String) ?? "").contains(marker) }
+        return hooks.contains { hook in
+            let command = (hook["command"] as? String) ?? ""
+            return ([marker] + legacyMarkers).contains { command.contains($0) }
+        }
     }
 
     private static func load(_ url: URL) throws -> [String: Any] {
@@ -138,7 +147,7 @@ enum HookInstaller {
         let data = try Data(contentsOf: url)
         if data.isEmpty { return [:] }
         guard let object = try JSONSerialization.jsonObject(with: data) as? [String: Any] else {
-            throw NSError(domain: "ClaudeNotch", code: 2, userInfo: [
+            throw NSError(domain: "NosyNotch", code: 2, userInfo: [
                 NSLocalizedDescriptionKey: "\(url.path) is not a JSON object – please check it manually.",
             ])
         }
@@ -151,7 +160,7 @@ enum HookInstaller {
 
         // Keep a backup of whatever was there before we touched it.
         if fm.fileExists(atPath: url.path) {
-            let backup = url.appendingPathExtension("claude-notch.bak")
+            let backup = url.appendingPathExtension("nosynotch.bak")
             try? fm.removeItem(at: backup)
             try fm.copyItem(at: url, to: backup)
         }

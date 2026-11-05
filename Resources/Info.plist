@@ -3,13 +3,13 @@
 <plist version="1.0">
 <dict>
     <key>CFBundleName</key>
-    <string>Claude Notch</string>
+    <string>Nosy Notch</string>
     <key>CFBundleDisplayName</key>
-    <string>Claude Notch</string>
+    <string>Nosy Notch</string>
     <key>CFBundleIdentifier</key>
-    <string>dev.davidkubus.claude-notch</string>
+    <string>dev.davidkubus.nosynotch</string>
     <key>CFBundleExecutable</key>
-    <string>ClaudeNotch</string>
+    <string>NosyNotch</string>
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>CFBundleShortVersionString</key>

@@ -5,7 +5,7 @@ import Foundation
 enum Demo {
     static func run(into store: SessionStore) {
         let id = "demo-\(Int(Date().timeIntervalSince1970))"
-        let cwd = "/Users/you/Projects/claude-notch"
+        let cwd = "/Users/you/Projects/nosynotch"
 
         let steps: [(TimeInterval, HookEvent)] = [
             (0.0, HookEvent(name: "SessionStart", sessionID: id, cwd: cwd)),

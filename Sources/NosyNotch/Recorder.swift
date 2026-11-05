@@ -4,7 +4,7 @@ import SwiftUI
 /// Renders every notch animation into PNG frames so `scripts/record-gifs.sh` can turn them into GIFs
 /// for the README and `docs/`.
 ///
-/// `ClaudeNotch --record <out-dir> [scene …]` plays scripted hook events into a fresh store per scene,
+/// `NosyNotch --record <out-dir> [scene …]` plays scripted hook events into a fresh store per scene,
 /// shows the real `NotchView` on a fake menu bar in a regular window and snapshots it at 30 fps.
 @MainActor
 final class Recorder {
@@ -29,7 +29,7 @@ final class Recorder {
     private let outputDirectory: URL
     private var queue: [Scene]
     private var window: NSWindow?
-    private let writer = DispatchQueue(label: "claude-notch.recorder", qos: .userInitiated)
+    private let writer = DispatchQueue(label: "nosynotch.recorder", qos: .userInitiated)
 
     init(outputDirectory: URL, only names: [String]) {
         self.outputDirectory = outputDirectory
@@ -171,7 +171,7 @@ final class Recorder {
     }
 
     static var scenes: [Scene] {
-        let cwd = "/Users/you/Projects/claude-notch"
+        let cwd = "/Users/you/Projects/nosynotch"
         func ev(_ name: String, _ id: String = "rec", cwd: String = cwd, tool: String? = nil, input: [String: Any] = [:],
                 message: String? = nil, last: String? = nil, error: String? = nil, details: String? = nil) -> HookEvent {
             HookEvent(name: name, sessionID: id, cwd: cwd, toolName: tool, toolInput: input, message: message,

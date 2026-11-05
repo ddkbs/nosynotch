@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # Sends fake Claude Code hook events to the running app – tests the full HTTP path.
-# (For a quick look without the terminal: menu bar ✦ → "Demo abspielen".)
+# (For a quick look without the terminal: menu bar ✦ → "Play demo".)
 set -euo pipefail
-PORT="${CLAUDE_NOTCH_PORT:-7823}"
+PORT="${NOSYNOTCH_PORT:-7823}"
 URL="http://127.0.0.1:$PORT/event"
 SID="demo-$$"
 CWD="$PWD"

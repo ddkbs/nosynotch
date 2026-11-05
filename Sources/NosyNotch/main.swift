@@ -1,6 +1,6 @@
 import AppKit
 
-// Command line helpers: `ClaudeNotch --install-hooks` / `--uninstall-hooks`.
+// Command line helpers: `NosyNotch --install-hooks` / `--uninstall-hooks`.
 let arguments = CommandLine.arguments
 if arguments.contains("--install-hooks") || arguments.contains("--uninstall-hooks") {
     Preferences.register()
@@ -19,7 +19,7 @@ if arguments.contains("--install-hooks") || arguments.contains("--uninstall-hook
     }
 }
 
-// `ClaudeNotch --record <out-dir> [scene …]`: render every animation to PNG frames (see scripts/record-gifs.sh).
+// `NosyNotch --record <out-dir> [scene …]`: render every animation to PNG frames (see scripts/record-gifs.sh).
 if let index = arguments.firstIndex(of: "--record") {
     let rest = Array(arguments.dropFirst(index + 1))
     let output = URL(fileURLWithPath: rest.first ?? "docs/frames", isDirectory: true)

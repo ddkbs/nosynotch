@@ -24,34 +24,34 @@ jobs:
       - name: Build universal binary (arm64 + x86_64)
         run: |
           swift build -c release --arch arm64 --arch x86_64
-          BIN="$(swift build -c release --arch arm64 --arch x86_64 --show-bin-path)/ClaudeNotch"
+          BIN="$(swift build -c release --arch arm64 --arch x86_64 --show-bin-path)/NosyNotch"
           lipo -info "$BIN"
           mkdir -p dist
-          cp "$BIN" dist/ClaudeNotch
-          codesign --force --sign - dist/ClaudeNotch
-          tar -czf dist/ClaudeNotch-macos.tar.gz -C dist ClaudeNotch
+          cp "$BIN" dist/NosyNotch
+          codesign --force --sign - dist/NosyNotch
+          tar -czf dist/NosyNotch-macos.tar.gz -C dist NosyNotch
 
       - name: Smoke test (server answers, quit works)
         run: |
-          ./dist/ClaudeNotch &
+          ./dist/NosyNotch &
           for i in $(seq 1 40); do curl -sf http://127.0.0.1:7823/health && break; sleep 0.25; done
           curl -sf -X POST -H 'Content-Type: application/json' \
             --data '{"hook_event_name":"UserPromptSubmit","session_id":"ci","cwd":"/tmp"}' \
             http://127.0.0.1:7823/event
           curl -sf -X POST http://127.0.0.1:7823/quit
           sleep 1
-          ! pgrep -x ClaudeNotch
+          ! pgrep -x NosyNotch
 
       - name: Check npm CLI
         run: |
-          node --check bin/claude-notch.js
-          node bin/claude-notch.js --version
+          node --check bin/nosynotch.js
+          node bin/nosynotch.js --version
           npm pack --dry-run
 
       - uses: actions/upload-artifact@v4
         with:
-          name: ClaudeNotch-macos
-          path: dist/ClaudeNotch-macos.tar.gz
+          name: NosyNotch-macos
+          path: dist/NosyNotch-macos.tar.gz
 
       - name: GitHub release
         if: startsWith(github.ref, 'refs/tags/v')
@@ -60,7 +60,7 @@ jobs:
         run: |
           TAG="${GITHUB_REF_NAME}"
           test "v$(node -p 'require("./package.json").version')" = "$TAG" || { echo "package.json version != $TAG"; exit 1; }
-          gh release create "$TAG" dist/ClaudeNotch-macos.tar.gz --title "$TAG" --generate-notes
+          gh release create "$TAG" dist/NosyNotch-macos.tar.gz --title "$TAG" --generate-notes
 
       - name: Publish to npm
         if: startsWith(github.ref, 'refs/tags/v') && env.NPM_TOKEN != ''

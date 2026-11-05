@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// claude-notch CLI – installs, starts and manages the notch helper. No dependencies.
+// nosynotch CLI – installs, starts and manages Nosy Notch. No dependencies.
 'use strict';
 
 const fs = require('fs');
@@ -9,16 +9,19 @@ const { spawn, spawnSync } = require('child_process');
 
 const pkg = require('../package.json');
 const PKG_ROOT = path.resolve(__dirname, '..');
+// GitHub repository that hosts the release binaries.
 const REPO = 'ddkbs/claude-notch';
 const PORT = 7823;
 const BASE = `http://127.0.0.1:${PORT}`;
-const LABEL = 'dev.davidkubus.claude-notch';
-const MARKER = 'claude-notch';
+const LABEL = 'dev.davidkubus.nosynotch';
+const MARKER = 'nosynotch';
+// Names used before the rename to Nosy Notch – cleaned up automatically.
+const LEGACY = { marker: 'claude-notch', label: 'dev.davidkubus.claude-notch', process: 'ClaudeNotch', dir: '.claude-notch' };
 
 const HOME = os.homedir();
-const DATA_DIR = path.join(HOME, '.claude-notch');
-const APP = path.join(DATA_DIR, 'Claude Notch.app');
-const BINARY = path.join(APP, 'Contents', 'MacOS', 'ClaudeNotch');
+const DATA_DIR = path.join(HOME, '.nosynotch');
+const APP = path.join(DATA_DIR, 'Nosy Notch.app');
+const BINARY = path.join(APP, 'Contents', 'MacOS', 'NosyNotch');
 const VERSION_FILE = path.join(DATA_DIR, 'version');
 const LAUNCH_AGENT = path.join(HOME, 'Library', 'LaunchAgents', `${LABEL}.plist`);
 
@@ -82,12 +85,12 @@ async function isRunning() {
 }
 
 async function start() {
-  if (await isRunning()) return ok('Claude Notch is already running.');
+  if (await isRunning()) return ok('Nosy Notch is already running.');
   const child = spawn(BINARY, [], { detached: true, stdio: 'ignore' });
   child.unref();
   for (let i = 0; i < 30; i++) {
     await sleep(150);
-    if (await isRunning()) return ok(`Claude Notch is running ${dim(`(${BASE})`)}`);
+    if (await isRunning()) return ok(`Nosy Notch is running ${dim(`(${BASE})`)}`);
   }
   fail(`The app did not respond. Is something else using port ${PORT}?\n  Try it directly: "${BINARY}"`);
 }
@@ -98,9 +101,9 @@ async function stop({ quiet = false } = {}) {
     const res = await fetch(`${BASE}/quit`, { method: 'POST', signal: AbortSignal.timeout(800) });
     stopped = res.ok;
   } catch {}
-  if (!stopped) stopped = run('/usr/bin/pkill', ['-x', 'ClaudeNotch']).status === 0;
+  if (!stopped) stopped = run('/usr/bin/pkill', ['-x', 'NosyNotch']).status === 0;
   if (stopped) await sleep(400);
-  if (!quiet) stopped ? ok('Claude Notch stopped.') : info('Claude Notch was not running.');
+  if (!quiet) stopped ? ok('Nosy Notch stopped.') : info('Nosy Notch was not running.');
 }
 
 // ───────────────────────────── installing the binary ─────────────────────────────
@@ -123,7 +126,7 @@ async function ensureApp({ force = false } = {}) {
     if (!binary) binary = buildFromSource(work);
     assembleApp(binary);
     fs.writeFileSync(VERSION_FILE, pkg.version);
-    ok(`Claude Notch ${pkg.version} installed ${dim(`→ ${APP}`)}`);
+    ok(`Nosy Notch ${pkg.version} installed ${dim(`→ ${APP}`)}`);
   } finally {
     fs.rmSync(work, { recursive: true, force: true });
   }
@@ -131,18 +134,18 @@ async function ensureApp({ force = false } = {}) {
 
 /** Fetch the prebuilt universal binary from GitHub Releases. Returns its path or null. */
 async function download(work) {
-  const url = `https://github.com/${REPO}/releases/download/v${pkg.version}/ClaudeNotch-macos.tar.gz`;
-  info(`Downloading Claude Notch ${pkg.version} …`);
+  const url = `https://github.com/${REPO}/releases/download/v${pkg.version}/NosyNotch-macos.tar.gz`;
+  info(`Downloading Nosy Notch ${pkg.version} …`);
   try {
     const res = await fetch(url, { redirect: 'follow', signal: AbortSignal.timeout(60_000) });
     if (!res.ok) {
       console.log(dim(`  No release found (${res.status}).`));
       return null;
     }
-    const archive = path.join(work, 'ClaudeNotch.tar.gz');
+    const archive = path.join(work, 'NosyNotch.tar.gz');
     fs.writeFileSync(archive, Buffer.from(await res.arrayBuffer()));
     if (run('/usr/bin/tar', ['-xzf', archive, '-C', work]).status !== 0) return null;
-    const binary = path.join(work, 'ClaudeNotch');
+    const binary = path.join(work, 'NosyNotch');
     return fs.existsSync(binary) ? binary : null;
   } catch (e) {
     console.log(dim(`  Download failed (${e.message}).`));
@@ -156,7 +159,7 @@ function buildFromSource(work) {
     fail(
       'No prebuilt release available and no Swift compiler found.\n' +
         `  Install the (free) Xcode Command Line Tools: ${bold('xcode-select --install')}\n` +
-        '  and run `npx claude-notch` again.'
+        '  and run `npx nosynotch` again.'
     );
   }
   info('Compiling from source (one-time, ~1 min) …');
@@ -169,7 +172,7 @@ function buildFromSource(work) {
   if (build.status !== 0) fail('Build failed (see output above).');
   const binPath = spawnSync('swift', ['build', '-c', 'release', '--show-bin-path'], { cwd: src, encoding: 'utf8' })
     .stdout.trim();
-  return path.join(binPath, 'ClaudeNotch');
+  return path.join(binPath, 'NosyNotch');
 }
 
 /** Wrap the binary in a minimal .app bundle (needed for macOS notifications) and ad-hoc sign it. */
@@ -230,16 +233,20 @@ function readSettings(file) {
 
 function writeSettings(file, settings) {
   fs.mkdirSync(path.dirname(file), { recursive: true });
-  if (fs.existsSync(file)) fs.copyFileSync(file, `${file}.claude-notch.bak`);
+  if (fs.existsSync(file)) fs.copyFileSync(file, `${file}.nosynotch.bak`);
   fs.writeFileSync(file, JSON.stringify(settings, null, 2) + '\n');
 }
 
 const isOurs = (group) =>
-  Array.isArray(group?.hooks) && group.hooks.some((h) => typeof h?.command === 'string' && h.command.includes(MARKER));
+  Array.isArray(group?.hooks) &&
+  group.hooks.some((h) => typeof h?.command === 'string' && [MARKER, LEGACY.marker].some((m) => h.command.includes(m)));
+
+// Only the current command counts – hooks from an older version get replaced.
+const isCurrent = (group) => Array.isArray(group?.hooks) && group.hooks.some((h) => h?.command === HOOK_COMMAND);
 
 function hooksInstalledIn(file) {
   const hooks = readSettings(file).hooks || {};
-  return HOOK_EVENTS.every(([name]) => (hooks[name] || []).some(isOurs));
+  return HOOK_EVENTS.every(([name]) => (hooks[name] || []).some(isCurrent));
 }
 
 const hooksInstalled = () => settingsFiles().every(hooksInstalledIn);
@@ -261,7 +268,7 @@ function installHooksIn(file) {
   }
   settings.hooks = hooks;
   writeSettings(file, settings);
-  ok(`Hooks added to ${pretty(file)} ${dim('(backup: settings.json.claude-notch.bak)')}`);
+  ok(`Hooks added to ${pretty(file)} ${dim('(backup: settings.json.nosynotch.bak)')}`);
 }
 
 function removeHooks() {
@@ -312,10 +319,31 @@ function autostart(on) {
   }
 }
 
+// ───────────────────────────── migration from claude-notch ─────────────────────────────
+
+/** Removes what the pre-rename version (claude-notch) left behind and keeps its autostart setting. */
+function migrateLegacy() {
+  const oldAgent = path.join(HOME, 'Library', 'LaunchAgents', `${LEGACY.label}.plist`);
+  const oldDir = path.join(HOME, LEGACY.dir);
+  const hadAutostart = fs.existsSync(oldAgent);
+  // An old app would keep port 7823 busy.
+  const killed = run('/usr/bin/pkill', ['-x', LEGACY.process]).status === 0;
+  if (!hadAutostart && !fs.existsSync(oldDir)) return false;
+
+  info('Migrating from claude-notch to Nosy Notch …');
+  if (killed) run('/bin/sleep', ['0.4']);
+  if (hadAutostart) {
+    run('/bin/launchctl', ['bootout', `gui/${process.getuid()}/${LEGACY.label}`]);
+    fs.rmSync(oldAgent, { force: true });
+  }
+  fs.rmSync(oldDir, { recursive: true, force: true });
+  return hadAutostart;
+}
+
 // ───────────────────────────── demo ─────────────────────────────
 
 async function demo() {
-  if (!(await isRunning())) fail('Claude Notch is not running – start it with `npx claude-notch`.');
+  if (!(await isRunning())) fail('Nosy Notch is not running – start it with `npx nosynotch`.');
   const sid = `demo-${process.pid}`;
   const cwd = process.cwd();
   const send = (name, extra = {}) =>
@@ -349,28 +377,28 @@ async function demo() {
 
 async function status() {
   const running = await isRunning();
-  console.log(`${bold('Claude Notch')} ${dim(pkg.version)}`);
+  console.log(`${bold('Nosy Notch')} ${dim(pkg.version)}`);
   console.log(`  App:        ${running ? green('running') : dim('stopped')}  ${dim(installedVersion() ? APP : 'not installed')}`);
   const files = settingsFiles();
   files.forEach((file, i) => {
     const label = i === 0 ? '  Hooks:      ' : '              ';
     console.log(`${label}${hooksInstalledIn(file) ? green('✓') : dim('–')} ${pretty(path.dirname(file))}`);
   });
-  console.log(`  Autostart:  ${fs.existsSync(LAUNCH_AGENT) ? green('an') : dim('aus')}`);
+  console.log(`  Autostart:  ${fs.existsSync(LAUNCH_AGENT) ? green('on') : dim('off')}`);
 }
 
 function help() {
-  console.log(`${orange('✦')} ${bold('claude-notch')} ${dim(pkg.version)} – Claude Code status in your MacBook notch
+  console.log(`${orange('✦')} ${bold('nosynotch')} ${dim(pkg.version)} – Claude Code status in your MacBook notch
 
-  ${bold('npx claude-notch')}              install (if needed), add hooks, start
-  ${bold('npx claude-notch stop')}         stop
-  ${bold('npx claude-notch restart')}      restart
-  ${bold('npx claude-notch status')}       show status
-  ${bold('npx claude-notch demo')}         play every animation
-  ${bold('npx claude-notch autostart')}    start at login      ${dim('(autostart off to disable)')}
-  ${bold('npx claude-notch hooks')}        only add the hooks  ${dim('(hooks off to remove)')}
-  ${bold('npx claude-notch update')}       download the latest binary
-  ${bold('npx claude-notch uninstall')}    remove everything (app, hooks, autostart)
+  ${bold('npx nosynotch')}              install (if needed), add hooks, start
+  ${bold('npx nosynotch stop')}         stop
+  ${bold('npx nosynotch restart')}      restart
+  ${bold('npx nosynotch status')}       show status
+  ${bold('npx nosynotch demo')}         play every animation
+  ${bold('npx nosynotch autostart')}    start at login      ${dim('(autostart off to disable)')}
+  ${bold('npx nosynotch hooks')}        only add the hooks  ${dim('(hooks off to remove)')}
+  ${bold('npx nosynotch update')}       download the latest binary
+  ${bold('npx nosynotch uninstall')}    remove everything (app, hooks, autostart)
 `);
 }
 
@@ -380,15 +408,18 @@ async function main() {
 
   if (['help', '--help', '-h'].includes(cmd)) return help();
   if (['--version', '-v'].includes(cmd)) return console.log(pkg.version);
-  if (process.platform !== 'darwin') fail('claude-notch only runs on macOS.');
+  if (process.platform !== 'darwin') fail('nosynotch only runs on macOS.');
 
   switch (cmd) {
-    case 'start':
+    case 'start': {
+      const hadAutostart = migrateLegacy();
       await ensureApp();
+      if (hadAutostart) autostart(true);
       if (!hooksInstalled()) installHooks();
       await start();
-      console.log(dim('  Tip: `npx claude-notch demo` plays every animation, `npx claude-notch autostart` starts it at login.'));
+      console.log(dim('  Tip: `npx nosynotch demo` plays every animation, `npx nosynotch autostart` starts it at login.'));
       break;
+    }
     case 'stop':
       await stop();
       break;
@@ -421,10 +452,11 @@ async function main() {
       break;
     case 'uninstall':
       await stop({ quiet: true });
+      migrateLegacy();
       removeHooks();
       if (fs.existsSync(LAUNCH_AGENT)) autostart(false);
       fs.rmSync(DATA_DIR, { recursive: true, force: true });
-      ok('Claude Notch completely removed.');
+      ok('Nosy Notch completely removed.');
       break;
     default:
       help();

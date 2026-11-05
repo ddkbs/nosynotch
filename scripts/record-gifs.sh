@@ -15,7 +15,7 @@ FPS="${FPS:-25}"
 command -v ffmpeg >/dev/null || { echo "✗ ffmpeg is missing: brew install ffmpeg" >&2; exit 1; }
 
 swift build -c release
-BIN="$(swift build -c release --show-bin-path)/ClaudeNotch"
+BIN="$(swift build -c release --show-bin-path)/NosyNotch"
 
 FRAMES="$(mktemp -d)"
 trap 'rm -rf "$FRAMES"' EXIT

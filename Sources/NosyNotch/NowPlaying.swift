@@ -55,11 +55,11 @@ final class NowPlaying: ObservableObject {
 
     private var observers: [NSObjectProtocol] = []
     private var distributed: [DistributedObserver] = []
-    private let log = Logger(subsystem: "dev.davidkubus.claude-notch", category: "media")
+    private let log = Logger(subsystem: "dev.davidkubus.nosynotch", category: "media")
     private var artworkTask: Task<Void, Never>?
-    private let scripts = DispatchQueue(label: "claude-notch.now-playing", qos: .userInitiated)
+    private let scripts = DispatchQueue(label: "nosynotch.now-playing", qos: .userInitiated)
     /// Separate queue for state reads so a slow permission check never delays play/pause.
-    private let permissions = DispatchQueue(label: "claude-notch.now-playing.read", qos: .utility)
+    private let permissions = DispatchQueue(label: "nosynotch.now-playing.read", qos: .utility)
 
     init(observeSystem: Bool = true) {
         guard observeSystem else { return }
@@ -251,7 +251,7 @@ final class NowPlaying: ObservableObject {
         scripts.async {
             var error: NSDictionary?
             NSAppleScript(source: script)?.executeAndReturnError(&error)
-            if let error { NSLog("ClaudeNotch: \(source.appName) script failed: \(error)") }
+            if let error { NSLog("NosyNotch: \(source.appName) script failed: \(error)") }
         }
     }
 

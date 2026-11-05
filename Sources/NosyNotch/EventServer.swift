@@ -5,13 +5,13 @@ import Network
 ///
 ///   POST /event   – body: hook stdin JSON
 ///   GET  /health  – returns "ok"
-///   POST /quit    – terminates the app (used by `npx claude-notch stop`)
+///   POST /quit    – terminates the app (used by `npx nosynotch stop`)
 final class EventServer {
     static let defaultPort: UInt16 = 7823
 
     let port: UInt16
     private var listener: NWListener?
-    private let queue = DispatchQueue(label: "dev.claude-notch.server")
+    private let queue = DispatchQueue(label: "dev.davidkubus.nosynotch.server")
     private let onEvent: @Sendable (HookEvent) -> Void
     var onQuit: (@Sendable () -> Void)?
 
@@ -28,7 +28,7 @@ final class EventServer {
         params.requiredInterfaceType = .loopback
 
         guard let nwPort = NWEndpoint.Port(rawValue: port) else {
-            throw NSError(domain: "ClaudeNotch", code: 1, userInfo: [NSLocalizedDescriptionKey: "Invalid port \(port)"])
+            throw NSError(domain: "NosyNotch", code: 1, userInfo: [NSLocalizedDescriptionKey: "Invalid port \(port)"])
         }
         let listener = try NWListener(using: params, on: nwPort)
         listener.newConnectionHandler = { [weak self] connection in
@@ -37,7 +37,7 @@ final class EventServer {
         listener.stateUpdateHandler = { [weak self] state in
             if case .failed(let error) = state {
                 self?.lastError = error.localizedDescription
-                NSLog("ClaudeNotch: server failed: \(error)")
+                NSLog("NosyNotch: server failed: \(error)")
             }
         }
         listener.start(queue: queue)

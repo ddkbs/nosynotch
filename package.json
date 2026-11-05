@@ -1,9 +1,9 @@
 {
-  "name": "claude-notch",
+  "name": "nosynotch",
   "version": "0.1.0",
-  "description": "Live, animated Claude Code status in your MacBook notch – powered by Claude Code hooks.",
+  "description": "Nosy Notch – your MacBook notch keeps an eye on Claude Code (live, animated status) and plays your music when Claude is idle.",
   "bin": {
-    "claude-notch": "bin/claude-notch.js"
+    "nosynotch": "bin/nosynotch.js"
   },
   "files": [
     "bin/",
@@ -23,7 +23,9 @@
     "notch",
     "macos",
     "hooks",
-    "dynamic-island"
+    "dynamic-island",
+    "spotify",
+    "now-playing"
   ],
   "repository": {
     "type": "git",

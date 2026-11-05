@@ -43,7 +43,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             self.server = server
         } catch {
             serverError = error.localizedDescription
-            NSLog("ClaudeNotch: could not start server: \(error)")
+            NSLog("NosyNotch: could not start server: \(error)")
         }
     }
 
@@ -51,7 +51,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
     private func setUpStatusItem() {
         let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
-        item.button?.image = NSImage(systemSymbolName: "sparkle", accessibilityDescription: "Claude Notch")
+        item.button?.image = NSImage(systemSymbolName: "sparkle", accessibilityDescription: "Nosy Notch")
         let menu = NSMenu()
         menu.delegate = self
         item.menu = menu
@@ -62,7 +62,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     func menuNeedsUpdate(_ menu: NSMenu) {
         menu.removeAllItems()
 
-        let header = NSMenuItem(title: "Claude Notch", action: nil, keyEquivalent: "")
+        let header = NSMenuItem(title: "Nosy Notch", action: nil, keyEquivalent: "")
         header.isEnabled = false
         menu.addItem(header)
 
@@ -116,7 +116,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             } else {
                 try HookInstaller.install(port: Preferences.port)
                 alert("Hooks installed 🎉",
-                      "The hooks are now in: \(HookInstaller.settingsSummary) (settings.json each, backup: settings.json.claude-notch.bak).\n\nClaude Code sessions that are already running pick up the hooks after a restart.")
+                      "The hooks are now in: \(HookInstaller.settingsSummary) (settings.json each, backup: settings.json.nosynotch.bak).\n\nClaude Code sessions that are already running pick up the hooks after a restart.")
             }
         } catch {
             alert("Error", error.localizedDescription)
