@@ -135,9 +135,9 @@ private struct Sidebar: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            MiniNotch()
-                .padding(.top, 34)
-                .padding(.bottom, 14)
+            AgentOrbit()
+                .padding(.top, 28)
+                .padding(.bottom, 6)
                 .frame(maxWidth: .infinity)
 
             VStack(spacing: 2) {
@@ -173,24 +173,58 @@ private struct Sidebar: View {
     }
 }
 
-/// A tiny live notch: the spark thinks, as if Claude were at work.
-private struct MiniNotch: View {
+/// The logo animation: a thinking spark with the three agents orbiting it, free-floating on black.
+private struct AgentOrbit: View {
+    private static let agents: [Color] = [Theme.claude, Theme.codex, Theme.cursor]
+
     var body: some View {
-        ZStack {
-            NotchShape(topRadius: 6, bottomRadius: 14)
-                .fill(Color.black)
-                .overlay(NotchShape(topRadius: 6, bottomRadius: 14).stroke(.white.opacity(0.08), lineWidth: 1))
-                .shadow(color: Theme.claude.opacity(0.35), radius: 12)
-            HStack {
+        TimelineView(.animation(minimumInterval: 1.0 / 60.0)) { timeline in
+            let t = timeline.date.timeIntervalSinceReferenceDate
+            let pulse = 0.5 + 0.5 * sin(t * 1.6)
+            ZStack {
+                // Soft glow that breathes.
+                Circle()
+                    .fill(RadialGradient(colors: [Theme.claude.opacity(0.35 + 0.15 * pulse), .clear],
+                                         center: .center, startRadius: 0, endRadius: 46))
+                    .frame(width: 96, height: 96)
+
+                // Orbit trail.
+                Ellipse()
+                    .stroke(.white.opacity(0.06), lineWidth: 1)
+                    .frame(width: 92, height: 30)
+                    .rotationEffect(.degrees(-14))
+
+                // Planets behind the spark first, then the spark, then the ones in front.
+                planets(t: t, front: false)
                 ClaudeSpark(mode: .thinking, color: Theme.claude)
-                    .frame(width: 16, height: 16)
-                Spacer()
-                WaveDots(color: Theme.claude)
+                    .frame(width: 30, height: 30)
+                    .scaleEffect(1 + 0.06 * pulse)
+                planets(t: t, front: true)
             }
-            .padding(.horizontal, 14)
-            .padding(.top, 2)
+            .frame(width: 120, height: 84)
         }
-        .frame(width: 128, height: 34)
+    }
+
+    @ViewBuilder
+    private func planets(t: TimeInterval, front: Bool) -> some View {
+        ForEach(0..<Self.agents.count, id: \.self) { i in
+            ForEach(0..<7, id: \.self) { k in
+                // k = 0 is the planet, 1… its fading trail.
+                let angle = t * 1.1 + Double(i) * 2 * .pi / 3 - Double(k) * 0.09
+                let depth = sin(angle)              // > 0 = in front of the spark
+                if (depth > 0) == front {
+                    let x = cos(angle) * 46, y = depth * 15
+                    let tilt = -14.0 * .pi / 180
+                    let size = (k == 0 ? 6.5 : 4.5 - Double(k) * 0.5) * (0.75 + 0.25 * (depth + 1) / 2)
+                    Circle()
+                        .fill(Self.agents[i])
+                        .frame(width: size, height: size)
+                        .shadow(color: Self.agents[i].opacity(k == 0 ? 0.9 : 0), radius: 4)
+                        .opacity((k == 0 ? 1 : 0.5 - Double(k) * 0.07) * (0.55 + 0.45 * (depth + 1) / 2))
+                        .offset(x: x * cos(tilt) - y * sin(tilt), y: x * sin(tilt) + y * cos(tilt))
+                }
+            }
+        }
     }
 }
 
@@ -226,74 +260,105 @@ private struct SidebarItem: View {
     }
 }
 
-/// "Like it? Star it on GitHub" – the star spins and sparkles on hover. Small enough to ignore, nice enough to click.
+/// "Star on GitHub": a glowing gold star in a card with a slowly circling gradient border. On hover the star
+/// spins, sparks fly and a shine sweeps across – noticeable, but it never moves on its own beyond a gentle glow.
 private struct StarCard: View {
     @State private var hovering = false
-    @State private var bursts = 0
+    @State private var spins = 0.0
+
+    private static let gold = LinearGradient(colors: [Color(red: 1, green: 0.86, blue: 0.35), Theme.amber,
+                                                     Color(red: 0.98, green: 0.45, blue: 0.3)],
+                                             startPoint: .topLeading, endPoint: .bottomTrailing)
 
     var body: some View {
         Button {
-            bursts += 1
             NSWorkspace.shared.open(SettingsView.repoURL)
         } label: {
-            HStack(spacing: 10) {
-                ZStack {
-                    StarSparkles(active: hovering)
-                    Image(systemName: hovering ? "star.fill" : "star")
-                        .font(.system(size: 15, weight: .semibold))
-                        .foregroundStyle(Theme.amber)
-                        .rotationEffect(.degrees(hovering ? 72 : 0))
-                        .scaleEffect(hovering ? 1.2 : 1)
-                        .symbolEffect(.bounce, value: bursts)
+            TimelineView(.animation(minimumInterval: 1.0 / 60.0)) { timeline in
+                let t = timeline.date.timeIntervalSinceReferenceDate
+                let glow = 0.5 + 0.5 * sin(t * 2)
+                HStack(spacing: 11) {
+                    ZStack {
+                        StarSparkles(active: hovering)
+                        Image(systemName: "star.fill")
+                            .font(.system(size: 19, weight: .bold))
+                            .foregroundStyle(Self.gold)
+                            .shadow(color: Theme.amber.opacity(0.4 + 0.35 * glow), radius: 6 + 4 * glow)
+                            .rotationEffect(.degrees(spins))
+                            .scaleEffect(hovering ? 1.22 : 1)
+                    }
+                    .frame(width: 26, height: 26)
+
+                    VStack(alignment: .leading, spacing: 1) {
+                        Text("Star on GitHub")
+                            .font(.system(size: 12.5, weight: .bold, design: .rounded))
+                            .foregroundStyle(hovering ? AnyShapeStyle(Self.gold) : AnyShapeStyle(.white))
+                        Text("Help others find it")
+                            .font(.system(size: 10.5))
+                            .foregroundStyle(.white.opacity(0.45))
+                    }
+                    Spacer(minLength: 0)
+                    Image(systemName: "arrow.up.right")
+                        .font(.system(size: 10, weight: .bold))
+                        .foregroundStyle(.white.opacity(hovering ? 0.8 : 0.3))
+                        .offset(x: hovering ? 2 : 0, y: hovering ? -2 : 0)
                 }
-                .frame(width: 22, height: 22)
-                VStack(alignment: .leading, spacing: 1) {
-                    Text("Enjoying it?")
-                        .font(.system(size: 12, weight: .semibold))
-                        .foregroundStyle(.white.opacity(0.9))
-                    Text("Star it on GitHub")
-                        .font(.system(size: 11))
-                        .foregroundStyle(hovering ? Theme.amber : .white.opacity(0.45))
-                }
-                Spacer(minLength: 0)
-                Image(systemName: "arrow.up.right")
-                    .font(.system(size: 10, weight: .bold))
-                    .foregroundStyle(.white.opacity(hovering ? 0.7 : 0.25))
+                .padding(.horizontal, 12)
+                .frame(height: 54)
+                .background(
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 14, style: .continuous).fill(Color(white: 0.06))
+                        RoundedRectangle(cornerRadius: 14, style: .continuous)
+                            .fill(RadialGradient(colors: [Theme.amber.opacity(hovering ? 0.22 : 0.1), .clear],
+                                                 center: .leading, startRadius: 0, endRadius: 120))
+                        // A shine sweeping across on hover.
+                        if hovering {
+                            let x = (t * 0.9).truncatingRemainder(dividingBy: 1.6) - 0.3
+                            LinearGradient(colors: [.clear, .white.opacity(0.10), .clear],
+                                           startPoint: UnitPoint(x: x - 0.25, y: 0), endPoint: UnitPoint(x: x + 0.25, y: 1))
+                        }
+                    }
+                    .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                        .strokeBorder(
+                            AngularGradient(colors: [Theme.amber, Color(red: 0.98, green: 0.45, blue: 0.3),
+                                                     Theme.amber.opacity(0.1), Theme.amber.opacity(0.1), Theme.amber],
+                                            center: .center, angle: .degrees(t * (hovering ? 160 : 50))),
+                            lineWidth: hovering ? 1.5 : 1
+                        )
+                        .opacity(hovering ? 1 : 0.7)
+                )
+                .shadow(color: Theme.amber.opacity(hovering ? 0.3 : 0.08), radius: hovering ? 14 : 8)
+                .contentShape(Rectangle())
             }
-            .padding(.horizontal, 12)
-            .frame(height: 50)
-            .background(
-                RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .fill(Theme.amber.opacity(hovering ? 0.12 : 0.05))
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .stroke(Theme.amber.opacity(hovering ? 0.45 : 0.14), lineWidth: 1)
-            )
-            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .onHover { hovering = $0 }
-        .animation(.spring(response: 0.4, dampingFraction: 0.55), value: hovering)
+        .onHover { inside in
+            hovering = inside
+            if inside { withAnimation(.spring(response: 0.7, dampingFraction: 0.6)) { spins += 360 } }
+        }
+        .animation(.spring(response: 0.35, dampingFraction: 0.6), value: hovering)
         .help("Opens github.com/ddkbs/nosynotch")
     }
 }
 
-/// Little sparks that fly out of the star while hovering.
+/// Sparks that fly out of the star while hovering.
 private struct StarSparkles: View {
     let active: Bool
 
     var body: some View {
-        TimelineView(.animation(minimumInterval: 1.0 / 30.0, paused: !active)) { timeline in
+        TimelineView(.animation(minimumInterval: 1.0 / 60.0, paused: !active)) { timeline in
             let t = timeline.date.timeIntervalSinceReferenceDate
             ZStack {
-                ForEach(0..<6, id: \.self) { i in
-                    let angle = Double(i) / 6 * 2 * .pi + t * 0.8
-                    let phase = (t * 1.3 + Double(i) * 0.37).truncatingRemainder(dividingBy: 1)
-                    Circle()
-                        .fill(Theme.amber)
-                        .frame(width: 2.5, height: 2.5)
-                        .offset(x: cos(angle) * (8 + 9 * phase), y: sin(angle) * (8 + 9 * phase))
+                ForEach(0..<8, id: \.self) { i in
+                    let angle = Double(i) / 8 * 2 * .pi + t * 0.6
+                    let phase = (t * 1.4 + Double(i) * 0.29).truncatingRemainder(dividingBy: 1)
+                    Image(systemName: i.isMultiple(of: 2) ? "sparkle" : "circle.fill")
+                        .font(.system(size: i.isMultiple(of: 2) ? 6 : 2.5))
+                        .foregroundStyle(i % 3 == 0 ? Color.white : Theme.amber)
+                        .offset(x: cos(angle) * (9 + 13 * phase), y: sin(angle) * (9 + 13 * phase))
                         .opacity(active ? (1 - phase) : 0)
                 }
             }
@@ -555,9 +620,6 @@ private struct AgentsPage: View {
             }
 
             HStack {
-                Text(actions.statusLine())
-                    .font(.system(size: 11, design: .monospaced))
-                    .foregroundStyle(.white.opacity(0.35))
                 Spacer()
                 PillButton(title: "Play demo", prominent: false, action: actions.playDemo)
             }
@@ -903,16 +965,15 @@ private struct GeneralPage: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 18) {
             Card {
-                Row(title: "Launch at login", subtitle: "Starts quietly in the menu bar") {
+                Row(title: "Launch at login", subtitle: "Starts quietly in the menu bar", divider: false) {
                     NotchToggle(isOn: Binding(get: { launchAtLogin }, set: { on in
                         do { try LoginItem.setEnabled(on); launchAtLogin = on } catch { problem = error.localizedDescription }
                     }))
                 }
-                Row(title: "Status", subtitle: actions.statusLine(), divider: false) { EmptyView() }
             }
 
             Card(title: "About") {
-                Row(title: "Nosy Notch \(Sidebar.version)", subtitle: "Made with Claude Code. Not affiliated with Anthropic, OpenAI or Anysphere.") {
+                Row(title: "Nosy Notch \(Sidebar.version)") {
                     PillButton(title: "GitHub", prominent: false) { NSWorkspace.shared.open(SettingsView.repoURL) }
                 }
                 Row(title: "Quit Nosy Notch", subtitle: "The notch goes back to being just a notch.", divider: false) {
