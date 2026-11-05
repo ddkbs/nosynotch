@@ -35,11 +35,13 @@
 
 ## Install
 
+Open Terminal and run:
+
 ```bash
 npx nosynotch
 ```
 
-That's it. The command
+That's it. Needs macOS 14+ and [Node.js](https://nodejs.org) 18+ (for `npx`; `brew install node` works too). The command
 
 1. downloads the app to `~/.nosynotch/` (or builds it locally with Swift if there is no release yet),
 2. adds the hooks to your Claude Code settings (a backup `settings.json.nosynotch.bak` is created),
@@ -51,6 +53,7 @@ Restart Claude Code sessions that are already running once so they load the hook
 npx nosynotch demo        # play every animation
 npx nosynotch autostart   # start at login (autostart off to disable)
 npx nosynotch status      # what is installed and running
+npx nosynotch settings    # open the settings window
 npx nosynotch stop
 npx nosynotch uninstall   # removes app, hooks and autostart
 ```
@@ -102,8 +105,15 @@ wins: as soon as a session works or needs you, the notch switches over, and the 
 
 ## Settings
 
-Click the ✦ in the menu bar: sounds (done / needs you / error), music player on/off, macOS notifications, install or remove
-hooks, play the demo.
+Click the ✦ in the menu bar → **Settings…** (or run `npx nosynotch settings`):
+
+- **Claude Code** – which config directories are connected, one button to connect or disconnect, play the demo
+- **Launch at login**
+- **Notifications** – sound for done / needs you / error, how long notifications stay open, optional macOS banners
+- **Music** – show Spotify / Apple Music in the notch, keep showing it while paused
+
+If you start the app without the CLI (e.g. built from source), the settings open on first launch with a big
+**Connect Claude Code** button.
 
 ## Build from source
 
@@ -162,11 +172,12 @@ Sources/NosyNotch/
 ├── NowPlaying.swift                 Spotify / Apple Music: track, cover, controls
 ├── Transcript.swift                 reads the last answer from the transcript (for "Done")
 ├── HookInstaller.swift              patches settings.json in every Claude config directory
+├── Preferences.swift / LoginItem.swift  settings, launch at login
 ├── Notifier.swift                   sounds, notifications, bringing the terminal to the front
 ├── NotchViewModel.swift             presentation (hidden/compact/expanded/…/media) and sizes
 ├── NotchWindow.swift                transparent NSPanel over the notch, hover without stealing clicks
 ├── Demo.swift / Recorder.swift      demo run, GIF recorder (--record)
-└── Views/                           notch shape, spark, indicators, confetti, checkmark, media player …
+└── Views/                           notch shape, spark, indicators, confetti, checkmark, media player, settings …
 ```
 
 If you interrupt a turn with Esc / Ctrl-C, Claude Code sends no `Stop` event. The session then falls back to "Ready" after a
