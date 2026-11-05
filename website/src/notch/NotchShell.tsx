@@ -16,6 +16,7 @@ export function NotchShell({
   glow = "transparent",
   glowOpacity = 0,
   shake = 0,
+  spring = NOTCH_SPRING,
   className = "",
   children,
 }: {
@@ -26,6 +27,8 @@ export function NotchShell({
   glow?: string;
   glowOpacity?: number;
   shake?: number;
+  /** Override the spring, e.g. a softer one for the site's own notch. */
+  spring?: object;
   className?: string;
   children?: ReactNode;
 }) {
@@ -48,7 +51,7 @@ export function NotchShell({
           borderBottomRightRadius: radius,
           boxShadow: `0 0 28px ${glow.startsWith("#") ? glow + hex : "transparent"}, 0 8px 20px rgba(0,0,0,${glowOpacity ? 0.35 : 0})`,
         }}
-        transition={NOTCH_SPRING}
+        transition={spring}
       >
         {children}
       </motion.div>

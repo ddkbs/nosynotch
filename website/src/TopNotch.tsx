@@ -19,6 +19,10 @@ type Stage =
   | "peek";
 
 const STAR_AFTER_MS = 45_000;
+/** How long the pointer rests on the notch before it opens: passing by does nothing. */
+const HOVER_INTENT_MS = 260;
+/** A calm, critically damped spring: the notch grows, it doesn't shoot out. */
+const SOFT = { type: "spring", stiffness: 150, damping: 26, mass: 1.1 } as const;
 const SLEEP_AFTER_MS = 20_000;
 const SELECTION_LINES = [
   "ooh, juicy. copying that?",
@@ -264,6 +268,7 @@ export function TopNotch() {
   const stageRef = useRef(stage);
   stageRef.current = stage;
   const closeTimer = useRef(0);
+  const openTimer = useRef(0);
   const narrow = useNarrow();
   const { archive, version, stars } = useRepoInfo();
   const typed = useTyped(INSTALL_COMMAND, stage === "open");
@@ -429,7 +434,7 @@ export function TopNotch() {
     idle: { w: 236, h: 32, r: 12, f: 6, glow: "#A78BFA", o: 0.25 },
     sleep: { w: 236, h: 32, r: 12, f: 6, glow: "#A78BFA", o: 0.1 },
     wake: { w: 250, h: 40, r: 16, f: 8, glow: "#A78BFA", o: 0.5 },
-    open: { w: wide, h: narrow ? 300 : 248, r: 30, f: 16, glow: "#B04DFF", o: 0.6 },
+    open: { w: wide, h: narrow ? 300 : 248, r: 30, f: 16, glow: "#B04DFF", o: 0.38 },
     copied: { w: narrow ? wide : 480, h: 132, r: 28, f: 14, glow: "#4ADE80", o: 0.55 },
     download: { w: narrow ? wide : 480, h: 132, r: 28, f: 14, glow: "#4ADE80", o: 0.55 },
     star: { w: narrow ? wide : 470, h: 128, r: 28, f: 14, glow: "#FFD45A", o: 0.55 },
@@ -444,16 +449,20 @@ export function TopNotch() {
     <div
       className="relative"
       onMouseEnter={() => {
-        if (calm() || stageRef.current === "open") open(false);
+        clearTimeout(closeTimer.current);
+        if (stageRef.current === "open") return;
+        if (!calm()) return;
+        openTimer.current = window.setTimeout(() => calm() && open(false), HOVER_INTENT_MS);
       }}
       onMouseLeave={() => {
+        clearTimeout(openTimer.current);
         if (stageRef.current === "open" && !pinned) {
           clearTimeout(closeTimer.current);
-          closeTimer.current = window.setTimeout(() => setStage("idle"), 380);
+          closeTimer.current = window.setTimeout(() => setStage("idle"), 450);
         }
       }}
     >
-      <NotchShell width={size.w} height={size.h} radius={size.r} flare={size.f} glow={size.glow} glowOpacity={size.o} shake={shake}>
+      <NotchShell width={size.w} height={size.h} radius={size.r} flare={size.f} glow={size.glow} glowOpacity={size.o} shake={shake} spring={SOFT}>
         <AnimatePresence mode="popLayout" initial={false}>
           {(stage === "idle" || stage === "sleep" || stage === "wake") && (
             <motion.button
@@ -490,7 +499,13 @@ export function TopNotch() {
           )}
 
           {stage === "open" && (
-            <motion.div key="open" {...fade} className="absolute inset-0 px-5 pb-4 pt-10 text-left sm:px-6">
+            <motion.div
+              key="open"
+              initial={{ opacity: 1 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0, filter: "blur(6px)", transition: { duration: 0.12 } }}
+              className="absolute inset-0 px-5 pb-4 pt-10 text-left sm:px-6"
+            >
               {/* A slow aurora and a dot grid inside the notch, echoing the drape. */}
               <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden>
                 <motion.div
@@ -502,7 +517,7 @@ export function TopNotch() {
                 <div className="absolute inset-0 opacity-[0.18] [background-image:radial-gradient(rgba(255,255,255,0.6)_0.6px,transparent_0.8px)] [background-size:9px_9px] [mask-image:linear-gradient(to_bottom,transparent,black)]" />
               </div>
 
-              <div className="relative flex items-center gap-3.5">
+              <div className="rise relative flex items-center gap-3.5" style={{ animationDelay: "180ms" }}>
                 <span className="relative grid size-11 shrink-0 place-items-center rounded-[13px] bg-gradient-to-b from-[#1b1b22] to-[#0b0b0f] shadow-[inset_0_0_0_1px_rgba(255,255,255,0.1),0_6px_20px_-6px_rgba(176,77,255,0.7)]">
                   <span className="absolute left-1/2 top-0 h-[9px] w-[22px] -translate-x-1/2 rounded-b-[6px] bg-black shadow-[0_0_0_1px_rgba(255,255,255,0.08)]" />
                   <span className="mt-1.5">
@@ -527,7 +542,8 @@ export function TopNotch() {
               <button
                 type="button"
                 onClick={copy}
-                className="cursor-target group relative mt-3.5 flex w-full items-center gap-2.5 rounded-[14px] bg-black/60 px-4 py-2.5 text-left font-mono text-[13.5px] ring-1 ring-white/10 transition-colors hover:ring-white/25"
+                style={{ animationDelay: "250ms" }}
+                className="rise cursor-target group relative mt-3.5 flex w-full items-center gap-2.5 rounded-[14px] bg-black/60 px-4 py-2.5 text-left font-mono text-[13.5px] ring-1 ring-white/10 transition-colors hover:ring-white/25"
               >
                 <span className="text-[#B04DFF]">~</span>
                 <span className="text-white/35">$</span>
@@ -538,7 +554,7 @@ export function TopNotch() {
                 </span>
               </button>
 
-              <div className="relative mt-3 flex gap-2 max-sm:flex-col">
+              <div className="rise relative mt-3 flex gap-2 max-sm:flex-col" style={{ animationDelay: "320ms" }}>
                 <Tile primary onClick={copy} hint="⌘C">
                   <svg viewBox="0 0 24 24" className="size-4" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
                     <path d="m5 7 5 5-5 5M12.5 17H19" />
@@ -557,7 +573,7 @@ export function TopNotch() {
                 </Tile>
               </div>
 
-              <div className="relative mt-3 flex items-center justify-between font-mono text-[10.5px] text-white/35">
+              <div style={{ animationDelay: "390ms" }} className="rise relative mt-3 flex items-center justify-between font-mono text-[10.5px] text-white/35">
                 <span>macOS 14+ · Node 18+ · no account</span>
                 <button type="button" onClick={() => setStage("denied")} className="cursor-target transition-colors hover:text-white/80">
                   nah, not today
