@@ -19,6 +19,20 @@ if arguments.contains("--install-hooks") || arguments.contains("--uninstall-hook
     }
 }
 
+// `ClaudeNotch --record <out-dir> [scene …]`: render every animation to PNG frames (see scripts/record-gifs.sh).
+if let index = arguments.firstIndex(of: "--record") {
+    let rest = Array(arguments.dropFirst(index + 1))
+    let output = URL(fileURLWithPath: rest.first ?? "docs/frames", isDirectory: true)
+    MainActor.assumeIsolated {
+        let app = NSApplication.shared
+        app.setActivationPolicy(.accessory)
+        let recorder = Recorder(outputDirectory: output, only: Array(rest.dropFirst()))
+        DispatchQueue.main.async { MainActor.assumeIsolated { recorder.start() } }
+        withExtendedLifetime(recorder) { app.run() }
+    }
+    exit(0)
+}
+
 MainActor.assumeIsolated {
     let app = NSApplication.shared
     let delegate = AppDelegate()
