@@ -20,6 +20,8 @@ final class Recorder {
         var stillAt: TimeInterval?
         /// Seconds after which the demo song starts "playing" in the fake media player.
         var musicAt: TimeInterval?
+        /// Seconds after which "Allow" is clicked on the open permission request.
+        var allowAt: TimeInterval?
         let steps: [(TimeInterval, HookEvent)]
     }
 
@@ -88,7 +90,18 @@ final class Recorder {
         let start = Date()
         for (delay, event) in scene.steps {
             DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
-                MainActor.assumeIsolated { store.handle(event) }
+                MainActor.assumeIsolated {
+                    store.handle(event)
+                    // Permission requests wait for Allow / Deny, like the real hook.
+                    if event.name == "PermissionRequest" { model.approvals.add(event) { _ in } }
+                }
+            }
+        }
+        if let t = scene.allowAt {
+            DispatchQueue.main.asyncAfter(deadline: .now() + t) {
+                MainActor.assumeIsolated {
+                    if let approval = model.attentionApproval { model.decide(approval, .allow) }
+                }
             }
         }
         if let t = scene.musicAt {
@@ -198,10 +211,11 @@ final class Recorder {
                 (6.9, ev("PostToolUse", tool: "Bash")),
                 (7.2, ev("PreToolUse", tool: "WebSearch", input: ["query": "SwiftUI Canvas"])),
             ]),
-            Scene(name: "attention", duration: 6.5, stillAt: 3.2, steps: [
+            Scene(name: "attention", duration: 7.5, stillAt: 3.2, allowAt: 5.4, steps: [
                 (0.0, ev("SessionStart")),
                 (0.3, prompt),
                 (1.5, ev("PermissionRequest", tool: "Bash", input: ["command": "npm publish", "description": "npm publish"])),
+                (6.4, ev("PostToolUse", tool: "Bash", input: ["command": "npm publish", "description": "npm publish"])),
             ]),
             Scene(name: "done", duration: 7.5, stillAt: 3.9, steps: [
                 (0.0, ev("SessionStart")),
@@ -251,7 +265,7 @@ final class Recorder {
                 (3.4, ev("PostToolUse", tool: "Edit")),
                 (3.8, ev("Stop", last: "Media player added – the notch now shows Spotify while Claude takes a break.")),
             ]),
-            Scene(name: "demo", duration: 17, steps: [
+            Scene(name: "demo", duration: 17, allowAt: 8.9, steps: [
                 (0.0, ev("SessionStart")),
                 (0.5, prompt),
                 (2.6, ev("PreToolUse", tool: "Grep", input: ["pattern": "func parse"])),
