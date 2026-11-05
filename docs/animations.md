@@ -4,7 +4,7 @@ Each animation with the Claude Code hook that triggers it (Codex sends the same 
 (`./scripts/record-gifs.sh`); only the desktop behind it is staged.
 
 [Thinking](#thinking) · [Working](#working) · [Needs you](#needs-you) · [Done](#done) · [Error](#error) ·
-[Compacting](#compacting) · [All sessions](#all-sessions-hover) · [Codex](#codex) · [Music](#music) · [Back to music](#back-to-music) ·
+[Compacting](#compacting) · [All sessions](#all-sessions-hover) · [Codex](#codex) · [Usage](#usage-limits) · [Music](#music) · [Back to music](#back-to-music) ·
 [Full run](#full-run)
 
 ## Thinking
@@ -106,6 +106,13 @@ Codex sessions get every animation above, with a blue spark and a small *Codex* 
 `apply_patch` shows a pencil and the files it changes, `update_plan` a checklist, `web_search` a compass. When you stop a
 Codex turn with Esc, its `Interrupt` hook puts the session straight back to *Ready*. Codex has no `StopFailure` hook,
 so the error animation is Claude-only for now.
+
+## Usage limits
+
+<img src="gifs/usage.gif" alt="Usage limits" width="560">
+
+Shown at the bottom of the hover view: 5-hour and weekly limits for Claude (Pro / Max, via a silent status line) and Codex
+(from its session files). Hover a bar to see when it resets.
 
 ## Music
 

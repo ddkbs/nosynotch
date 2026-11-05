@@ -126,9 +126,8 @@ Hover the notch to see how much of your 5-hour and weekly limits Claude and Code
 until it resets). Green below 60 %, amber below 85 %, then red.
 
 - **Claude** (Pro / Max): Claude Code only shares the limits with its status line command. Nosy Notch adds a silent status
-  line that forwards them – only in config directories that don't have a status line yet. Already have one? Add this to
-  the end of your script: `curl -s -m 1 -X POST --data-binary @- 'http://127.0.0.1:7823/usage?src=nosynotch' >/dev/null 2>&1`
-  (it needs the status line JSON on stdin, so pipe your saved input into it).
+  line that forwards them, but only in config directories that don't have a status line yet. Already have your own? Send
+  the same JSON to `http://127.0.0.1:7823/usage?src=nosynotch` from your script (e.g. with `curl --data-binary @-`).
 - **Codex**: read from the newest `rate_limits` entry in `~/.codex/sessions`.
 - Updates whenever the agent answers. Turn it off in Settings → Usage (that also removes the status line again).
 
