@@ -1,5 +1,13 @@
 # WORKLOG
 
+## 2026-11-05 (7)
+- **Codex-Unterstützung** (Codex CLI + Codex-Modus der ChatGPT-App): gleiche curl-Hooks in `~/.codex/hooks.json` (bzw. `$CODEX_HOME`), URL mit `&agent=codex`. Sitzungen merken sich ihren Agenten: blauer Spark, „Codex“/„Claude“-Badge, Icons für `apply_patch`/`update_plan`/`web_search`, `Interrupt`-Hook → sofort „Ready“. Settings-Abschnitt „Codex“, CLI installiert/entfernt/zeigt Codex-Hooks mit. Neues GIF `codex.gif`.
+- Codex führt Hooks erst aus, wenn man ihnen einmal vertraut (App: Codex → Settings → Hooks, CLI: `/hooks`) – das kann Nosy Notch nicht abnehmen, Hinweis steht in Settings/CLI/README.
+- **Genehmigen in der Notch**: `PermissionRequest`-Hook wartet auf `POST /permission`, Notch zeigt Deny / Allow / (Always allow). Getestet mit echtem Claude Code: Terminal-Dialog bleibt parallel offen, Hook-„allow“ schließt ihn. Codex zeigt seinen Prompt erst nach dem Hook → dort 45 s Wartezeit bzw. ✕ gibt sofort zurück. Antwort im Terminal / neuer Turn → Hook endet ohne Entscheidung.
+- Entscheidungen: Geheimnis in `~/.nosynotch/approval-token` (0600), Hook gibt nur Antworten mit Token weiter (gegen fremde Prozesse auf dem Port). „Always allow“ nur `addRules`/`addDirectories` – `setMode` würde z. B. die ganze Sitzung auf „accept edits“ stellen (im Test passiert). Abschaltbar in Settings → Permissions.
+- Fix: Server versucht es erneut, wenn der Port beim Start noch belegt ist (vorher blieb die App taub).
+- Offen: echter Codex-Lauf mit den Hooks (Testlauf mit `--dangerously-bypass-hook-trust` wurde vom Auto-Mode geblockt) – David muss die Hooks in Codex einmal vertrauen und kurz testen. Version noch 0.1.0 → für Release auf 0.2.0 heben und taggen. Offen von (6) bleibt: Repo public, `NPM_TOKEN`.
+
 ## 2026-11-05 (6)
 - GitHub-Repo umbenannt: `ddkbs/claude-notch` → **`ddkbs/nosynotch`** (Remote, `REPO` in der CLI, package.json, Settings-Link angepasst).
 - **Release v0.1.0** getaggt: CI grün, Release mit `NosyNotch-macos.tar.gz` (Universal arm64+x86_64, ad-hoc signiert) liegt auf GitHub. npm-Publish übersprungen (kein `NPM_TOKEN`).
