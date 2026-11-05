@@ -124,6 +124,10 @@ Cover on the left, four bars dancing in the cover's colour on the right (flat wh
 (click opens the app), title, artist, progress (click or drag to seek) and previous / play-pause / next. The song and cover in
 the GIFs are made up.
 
+With **Live equalizer** on (Settings → Music) there are five bigger, glowing bars that follow the real music: bass left,
+treble right, with automatic gain so quiet and loud songs both move. Until audio arrives (or without the macOS permission)
+they dance a bouncier made-up beat.
+
 ## Back to music
 
 <img src="gifs/handoff.gif" alt="Back to music" width="560">

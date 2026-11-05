@@ -139,6 +139,9 @@ wins: as soon as a session works or needs you, the notch switches over, and the 
 - Track info comes from the notifications Spotify and Music broadcast anyway – no permission needed.
 - For play/pause, next and seeking, macOS asks once per player whether Nosy Notch may control it ("Automation").
 - Covers: Spotify's public oEmbed endpoint and Apple's iTunes Search. Only the track ID (Spotify) or artist + title (Music) is sent.
+- **Live equalizer** (Settings → Music, off by default): five bigger bars that follow the actual music – bass on the
+  left, treble on the right. Nosy Notch listens to Spotify / Music only, through a private Core Audio tap (macOS 14.2+);
+  macOS asks once for *System Audio Recording*. Nothing is recorded or stored.
 - Browser audio, YouTube and podcasts aren't supported yet: Apple closed the private MediaRemote API to third-party apps in macOS 15.4.
 
 ## Settings
@@ -152,7 +155,7 @@ Click the ✦ in the menu bar → **Settings…** (or run `npx nosynotch setting
 - **Launch at login**
 - **Notifications** – sound for done / needs you / error, how long notifications stay open, stay small (no card, no sound) while
   you're already in that app, optional macOS banners
-- **Music** – show Spotify / Apple Music in the notch, keep showing it while paused
+- **Music** – show Spotify / Apple Music in the notch, keep showing it while paused, live equalizer
 
 If you start the app without the CLI (e.g. built from source), the settings open on first launch with a big
 **Connect Claude Code** button.
@@ -212,6 +215,8 @@ Sources/NosyNotch/
 ├── SessionStore.swift               event stream → state per session
 ├── Session.swift                    states, tool icons/labels, colours, error texts
 ├── NowPlaying.swift                 Spotify / Apple Music: track, cover, controls
+├── AudioSpectrum.swift              live equalizer: Core Audio tap on the player + FFT
+├── Usage.swift                      usage limits (Claude status line, Codex session files)
 ├── Transcript.swift                 reads the last answer from the transcript (for "Done")
 ├── Approvals.swift                  permission requests waiting for Allow / Deny in the notch
 ├── HookInstaller.swift              patches settings.json in every Claude config directory and ~/.codex/hooks.json
