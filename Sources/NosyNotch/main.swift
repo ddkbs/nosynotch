@@ -12,10 +12,15 @@ if arguments.contains("--install-hooks") || arguments.contains("--uninstall-hook
                 try HookInstaller.Codex.install(port: Preferences.port)
                 print("✓ Codex hooks installed in: \(HookInstaller.Codex.displayPath) – trust them once in Codex (/hooks)")
             }
+            if HookInstaller.Cursor.isAvailable {
+                try HookInstaller.Cursor.install(port: Preferences.port)
+                print("✓ Cursor hooks installed in: \(HookInstaller.Cursor.displayPath)")
+            }
         } else {
             try HookInstaller.uninstall()
             try HookInstaller.Codex.uninstall()
-            print("✓ Hooks removed from: \(HookInstaller.settingsSummary), \(HookInstaller.Codex.displayPath)")
+            try HookInstaller.Cursor.uninstall()
+            print("✓ Hooks removed from: \(HookInstaller.settingsSummary), \(HookInstaller.Codex.displayPath), \(HookInstaller.Cursor.displayPath)")
         }
         exit(0)
     } catch {

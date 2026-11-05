@@ -1,3 +1,4 @@
+import CoreServices
 import Foundation
 
 /// Adds / removes the Nosy Notch hooks in `settings.json` of every Claude Code config directory:
@@ -313,5 +314,93 @@ extension HookInstaller {
             file["hooks"] = hooks.isEmpty ? nil : hooks
             try save(file, to: hooksURL)
         }
+    }
+}
+
+// MARK: - Cursor
+
+extension HookInstaller {
+    /// Cursor's agent reads `~/.cursor/hooks.json`: `{"version": 1, "hooks": {"stop": [{"command": …}]}}`.
+    /// Event names are camelCase; the app maps them (see `HookEvent.cursorEventName`). Cursor expects JSON on
+    /// stdout, so our command prints `{}` (or `{"continue": true}` for the prompt hook) and never blocks anything.
+    enum Cursor {
+        static let events = [
+            "sessionStart", "sessionEnd", "beforeSubmitPrompt", "preToolUse", "postToolUse", "postToolUseFailure",
+            "afterAgentResponse", "stop", "subagentStop", "preCompact",
+        ]
+
+        static var home: URL {
+            FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(".cursor", isDirectory: true)
+        }
+
+        static var hooksURL: URL { home.appendingPathComponent("hooks.json") }
+
+        static var isAvailable: Bool {
+            FileManager.default.fileExists(atPath: home.path)
+                || NSWorkspaceProxy.isInstalled("com.todesktop.230313mzl4w4u92")
+        }
+
+        static var displayPath: String {
+            hooksURL.path.replacingOccurrences(of: FileManager.default.homeDirectoryForCurrentUser.path, with: "~")
+        }
+
+        static func command(for event: String, port: UInt16) -> String {
+            let reply = event == "beforeSubmitPrompt" ? #"{"continue":true}"# : "{}"
+            return [
+                "curl -s -m 2 -X POST",
+                "-H 'Content-Type: application/json'",
+                "-H 'Expect:'",
+                "-H \"X-Term-Program: ${TERM_PROGRAM:-}\"",
+                "-H \"X-Bundle-Id: ${__CFBundleIdentifier:-}\"",
+                "--data-binary @-",
+                "'http://127.0.0.1:\(port)/event?src=\(marker)&agent=cursor'",
+                ">/dev/null 2>&1; printf '%s' '\(reply)'",
+            ].joined(separator: " ")
+        }
+
+        private static func isOurs(_ entry: [String: Any]) -> Bool {
+            ((entry["command"] as? String) ?? "").contains(marker)
+        }
+
+        static var isInstalled: Bool {
+            guard let file = try? load(hooksURL), let hooks = file["hooks"] as? [String: Any] else { return false }
+            return events.allSatisfy { event in
+                let current = command(for: event, port: Preferences.port)
+                return ((hooks[event] as? [[String: Any]]) ?? []).contains { ($0["command"] as? String) == current }
+            }
+        }
+
+        static func install(port: UInt16 = EventServer.defaultPort) throws {
+            var file = try load(hooksURL)
+            var hooks = (file["hooks"] as? [String: Any]) ?? [:]
+            for event in events {
+                var entries = ((hooks[event] as? [[String: Any]]) ?? []).filter { !isOurs($0) }
+                entries.append(["command": command(for: event, port: port), "timeout": 5])
+                hooks[event] = entries
+            }
+            file["version"] = file["version"] ?? 1
+            file["hooks"] = hooks
+            try save(file, to: hooksURL)
+        }
+
+        static func uninstall() throws {
+            guard FileManager.default.fileExists(atPath: hooksURL.path) else { return }
+            var file = try load(hooksURL)
+            guard var hooks = file["hooks"] as? [String: Any] else { return }
+            for (name, value) in hooks {
+                guard let entries = value as? [[String: Any]] else { continue }
+                let remaining = entries.filter { !isOurs($0) }
+                hooks[name] = remaining.isEmpty ? nil : remaining
+            }
+            file["hooks"] = hooks
+            try save(file, to: hooksURL)
+        }
+    }
+}
+
+/// Keeps AppKit out of the installer's signature (it also runs from the command line).
+enum NSWorkspaceProxy {
+    static func isInstalled(_ bundleID: String) -> Bool {
+        LSCopyApplicationURLsForBundleIdentifier(bundleID as CFString, nil)?.takeRetainedValue() != nil
     }
 }

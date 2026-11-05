@@ -117,7 +117,7 @@ final class SessionStore: ObservableObject {
             s.unseenSince = Date()
             if let start = s.turnStartedAt { s.lastTurnDuration = Date().timeIntervalSince(start) }
             s.turnStartedAt = nil
-            s.lastSummary = event.lastAssistantMessage.map(Self.condense)
+            s.lastSummary = event.lastAssistantMessage.map(Self.condense) ?? s.lastSummary
             transition = .finished(s)
 
         case "StopFailure":
@@ -129,6 +129,10 @@ final class SessionStore: ObservableObject {
 
         case "SubagentStop":
             break
+
+        case "AgentResponse":
+            // Cursor sends the answer text before its `stop` hook.
+            if let text = event.lastAssistantMessage { s.lastSummary = Self.condense(text) }
 
         case "Interrupt":
             // Codex only: the user stopped the turn (Esc). Claude Code has no such hook.

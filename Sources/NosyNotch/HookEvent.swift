@@ -34,22 +34,53 @@ struct HookEvent {
               let name = json["hook_event_name"] as? String
         else { return nil }
 
-        self.name = name
-        self.agent = Agent(query: query["agent"])
-        self.sessionID = (json["session_id"] as? String) ?? "default"
-        self.cwd = json["cwd"] as? String
+        let agent = Agent(query: query["agent"])
+        self.agent = agent
+        if agent == .cursor {
+            // Cursor names its hooks differently (camelCase) and keys sessions by conversation.
+            self.name = Self.cursorEventName(name, status: json["status"] as? String)
+            self.sessionID = (json["conversation_id"] as? String) ?? (json["session_id"] as? String) ?? "cursor"
+            self.cwd = (json["cwd"] as? String) ?? (json["workspace_roots"] as? [String])?.first
+        } else {
+            self.name = name
+            self.sessionID = (json["session_id"] as? String) ?? "default"
+            self.cwd = json["cwd"] as? String
+        }
         self.transcriptPath = json["transcript_path"] as? String
         self.toolName = json["tool_name"] as? String
         self.toolInput = (json["tool_input"] as? [String: Any]) ?? [:]
         self.message = json["message"] as? String
         self.notificationType = json["notification_type"] as? String
         self.prompt = json["prompt"] as? String
-        self.lastAssistantMessage = json["last_assistant_message"] as? String
-        self.error = json["error"] as? String
+        self.lastAssistantMessage = (json["last_assistant_message"] as? String)
+            ?? (agent == .cursor ? json["text"] as? String : nil)
+        self.error = (json["error"] as? String) ?? (agent == .cursor && json["status"] as? String == "error" ? "error" : nil)
         self.errorDetails = json["error_details"] as? String
         self.permissionSuggestions = (json["permission_suggestions"] as? [[String: Any]]) ?? []
         self.termProgram = headers["x-term-program"].flatMap { $0.isEmpty ? nil : $0 }
         self.hostBundleID = headers["x-bundle-id"].flatMap { $0.isEmpty ? nil : $0 }
+    }
+
+    /// Cursor hook → the Claude Code name the store understands.
+    static func cursorEventName(_ name: String, status: String?) -> String {
+        switch name {
+        case "sessionStart": return "SessionStart"
+        case "sessionEnd": return "SessionEnd"
+        case "beforeSubmitPrompt": return "UserPromptSubmit"
+        case "preToolUse": return "PreToolUse"
+        case "postToolUse": return "PostToolUse"
+        case "postToolUseFailure": return "PostToolUseFailure"
+        case "preCompact": return "PreCompact"
+        case "subagentStop": return "SubagentStop"
+        case "afterAgentResponse": return "AgentResponse"
+        case "stop":
+            switch status {
+            case "aborted": return "Interrupt"
+            case "error": return "StopFailure"
+            default: return "Stop"
+            }
+        default: return name
+        }
     }
 
     /// Memberwise initializer used by the built-in demo.

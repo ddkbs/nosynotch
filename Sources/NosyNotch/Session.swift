@@ -2,7 +2,7 @@ import SwiftUI
 
 /// Which coding agent a session belongs to.
 enum Agent: String, Equatable {
-    case claude, codex
+    case claude, codex, cursor
 
     init(query value: String?) {
         self = Agent(rawValue: value?.lowercased() ?? "") ?? .claude
@@ -12,6 +12,7 @@ enum Agent: String, Equatable {
         switch self {
         case .claude: return "Claude"
         case .codex: return "Codex"
+        case .cursor: return "Cursor"
         }
     }
 
@@ -20,6 +21,7 @@ enum Agent: String, Equatable {
         switch self {
         case .claude: return Theme.claude
         case .codex: return Theme.codex
+        case .cursor: return Theme.cursor
         }
     }
 }
@@ -49,7 +51,10 @@ struct ToolActivity: Equatable {
 
     var symbol: String {
         switch name {
-        case "Bash", "BashOutput", "KillShell": return "terminal"
+        case "Bash", "BashOutput", "KillShell", "Shell", "run_terminal_cmd": return "terminal"
+        case "edit_file", "search_replace", "StrReplace": return "pencil"
+        case "read_file": return "doc.text"
+        case "codebase_search", "grep_search", "file_search": return "magnifyingglass"
         case "Edit", "MultiEdit": return "pencil"
         case "Write": return "square.and.pencil"
         case "Read": return "doc.text"
@@ -70,7 +75,10 @@ struct ToolActivity: Equatable {
 
     var verb: String {
         switch name {
-        case "Bash", "BashOutput": return "Running"
+        case "Bash", "BashOutput", "Shell", "run_terminal_cmd": return "Running"
+        case "edit_file", "search_replace", "StrReplace": return "Editing"
+        case "read_file": return "Reading"
+        case "codebase_search", "grep_search", "file_search": return "Searching"
         case "Edit", "MultiEdit", "NotebookEdit": return "Editing"
         case "Write": return "Writing"
         case "Read": return "Reading"
@@ -123,7 +131,8 @@ struct ToolActivity: Equatable {
         case "WebSearch": raw = str("query")
         case "Task", "Agent": raw = str("description") ?? str("subagent_type")
         case "apply_patch": raw = patchFiles(str("command") ?? str("input") ?? str("patch"))
-        default: raw = str("description") ?? str("command") ?? str("query") ?? file("file_path")
+        default: raw = str("description") ?? str("command") ?? str("query") ?? file("file_path") ?? file("target_file")
+            ?? file("path")
         }
         guard let raw else { return nil }
         if name == "apply_patch" { return raw }
@@ -220,6 +229,7 @@ enum Theme {
     static let violet = Color(red: 0.655, green: 0.545, blue: 0.980)     // #A78BFA
     static let danger = Color(red: 0.973, green: 0.443, blue: 0.443)     // #F87171
     static let codex = Color(red: 0.502, green: 0.667, blue: 1.0)        // #80AAFF
+    static let cursor = Color(red: 0.82, green: 0.84, blue: 0.88)        // #D1D6E0
 
     static func color(for state: ActivityState, agent: Agent = .claude) -> Color {
         switch state {

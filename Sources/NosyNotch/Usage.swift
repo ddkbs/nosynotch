@@ -51,6 +51,7 @@ final class UsageStore: ObservableObject {
         switch agent {
         case .claude: if claude != usage { claude = usage } else { return }
         case .codex: if codex != usage { codex = usage } else { return }
+        case .cursor: return   // Cursor doesn't expose its limits
         }
         save()
         onChange?()
