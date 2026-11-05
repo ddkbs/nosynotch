@@ -25,7 +25,7 @@ final class SettingsWindowController {
             window.styleMask = [.titled, .closable, .fullSizeContentView]
             window.titlebarAppearsTransparent = true
             window.isReleasedWhenClosed = false
-            window.setContentSize(CGSize(width: 480, height: 640))
+            window.setContentSize(CGSize(width: 480, height: 720))
             window.center()
             self.window = window
         }
@@ -47,6 +47,7 @@ struct SettingsView: View {
 
     @State private var launchAtLogin = LoginItem.isEnabled
     @State private var hooks: [(path: String, installed: Bool)] = []
+    @State private var codexConnected = HookInstaller.Codex.isInstalled
     @State private var problem: String?
 
     private var allConnected: Bool { !hooks.isEmpty && hooks.allSatisfy(\.installed) }
@@ -81,6 +82,38 @@ struct SettingsView: View {
                     FooterText(allConnected
                          ? "Every new Claude Code session reports to the notch. Restart sessions that were already running."
                          : "Adds a tiny hook to each Claude Code settings.json (a backup is kept).")
+                }
+
+                Section {
+                    LabeledContent(HookInstaller.Codex.displayPath) {
+                        if !HookInstaller.Codex.isAvailable {
+                            Label("Codex not found", systemImage: "questionmark.circle")
+                                .foregroundStyle(.secondary)
+                        } else {
+                            Label(codexConnected ? "Connected" : "Not connected",
+                                  systemImage: codexConnected ? "checkmark.circle.fill" : "circle.dashed")
+                                .foregroundStyle(codexConnected ? Color.green : Color.secondary)
+                        }
+                    }
+                    if HookInstaller.Codex.isAvailable {
+                        HStack {
+                            if codexConnected {
+                                Button("Disconnect") { toggleCodex() }
+                            } else {
+                                Button("Connect Codex") { toggleCodex() }
+                                    .controlSize(.large)
+                                    .buttonStyle(.borderedProminent)
+                                    .tint(Theme.codex)
+                            }
+                            Spacer()
+                        }
+                    }
+                } header: {
+                    Text("Codex")
+                } footer: {
+                    FooterText(codexConnected
+                         ? "One more step: Codex only runs hooks you trust. In the ChatGPT app open Codex → Settings → Hooks (or type /hooks in the Codex CLI) and trust the Nosy Notch hooks."
+                         : "Works with the Codex CLI and the Codex mode of the ChatGPT app. Adds the same tiny hook to ~/.codex/hooks.json.")
                 }
 
                 Section("General") {
@@ -125,7 +158,7 @@ struct SettingsView: View {
 
             footer
         }
-        .frame(width: 480, height: 640)
+        .frame(width: 480, height: 720)
         .background(Color(nsColor: .windowBackgroundColor))
         .onAppear(perform: reloadHooks)
         .onChange(of: mediaEnabled) { _, _ in actions.settingsChanged() }
@@ -185,6 +218,16 @@ struct SettingsView: View {
         hooks = HookInstaller.settingsURLs.map { url in
             (url.deletingLastPathComponent().path.replacingOccurrences(of: home, with: "~"), HookInstaller.isInstalled(at: url))
         }
+        codexConnected = HookInstaller.Codex.isInstalled
+    }
+
+    private func toggleCodex() {
+        do {
+            if codexConnected { try HookInstaller.Codex.uninstall() } else { try HookInstaller.Codex.install(port: Preferences.port) }
+        } catch {
+            problem = error.localizedDescription
+        }
+        reloadHooks()
     }
 
     private func toggleHooks() {

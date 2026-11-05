@@ -7,10 +7,15 @@ if arguments.contains("--install-hooks") || arguments.contains("--uninstall-hook
     do {
         if arguments.contains("--install-hooks") {
             try HookInstaller.install(port: Preferences.port)
-            print("✓ Hooks installed in: \(HookInstaller.settingsSummary)")
+            print("✓ Claude Code hooks installed in: \(HookInstaller.settingsSummary)")
+            if HookInstaller.Codex.isAvailable {
+                try HookInstaller.Codex.install(port: Preferences.port)
+                print("✓ Codex hooks installed in: \(HookInstaller.Codex.displayPath) – trust them once in Codex (/hooks)")
+            }
         } else {
             try HookInstaller.uninstall()
-            print("✓ Hooks removed from: \(HookInstaller.settingsSummary)")
+            try HookInstaller.Codex.uninstall()
+            print("✓ Hooks removed from: \(HookInstaller.settingsSummary), \(HookInstaller.Codex.displayPath)")
         }
         exit(0)
     } catch {

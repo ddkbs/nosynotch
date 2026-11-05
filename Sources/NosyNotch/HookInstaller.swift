@@ -27,15 +27,17 @@ enum HookInstaller {
         ("PreCompact", nil),
     ]
 
-    static func command(port: UInt16) -> String {
-        [
+    /// `agent` is added to the URL for every agent but Claude (whose hook command stays unchanged since 0.1.0).
+    static func command(port: UInt16, agent: Agent = .claude) -> String {
+        let query = agent == .claude ? "src=\(marker)" : "src=\(marker)&agent=\(agent.rawValue)"
+        return [
             "curl -s -m 2 -X POST",
             "-H 'Content-Type: application/json'",
             "-H 'Expect:'",
             "-H \"X-Term-Program: ${TERM_PROGRAM:-}\"",
             "-H \"X-Bundle-Id: ${__CFBundleIdentifier:-}\"",
             "--data-binary @-",
-            "'http://127.0.0.1:\(port)/event?src=\(marker)'",
+            "'http://127.0.0.1:\(port)/event?\(query)'",
             ">/dev/null 2>&1 || true",
         ].joined(separator: " ")
     }
@@ -134,7 +136,7 @@ enum HookInstaller {
 
     // MARK: - Helpers
 
-    private static func isOurs(_ group: [String: Any]) -> Bool {
+    fileprivate static func isOurs(_ group: [String: Any]) -> Bool {
         let hooks = (group["hooks"] as? [[String: Any]]) ?? []
         return hooks.contains { hook in
             let command = (hook["command"] as? String) ?? ""
@@ -142,7 +144,7 @@ enum HookInstaller {
         }
     }
 
-    private static func load(_ url: URL) throws -> [String: Any] {
+    fileprivate static func load(_ url: URL) throws -> [String: Any] {
         guard FileManager.default.fileExists(atPath: url.path) else { return [:] }
         let data = try Data(contentsOf: url)
         if data.isEmpty { return [:] }
@@ -154,7 +156,7 @@ enum HookInstaller {
         return object
     }
 
-    private static func save(_ settings: [String: Any], to url: URL) throws {
+    fileprivate static func save(_ settings: [String: Any], to url: URL) throws {
         let fm = FileManager.default
         try fm.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
 
@@ -167,5 +169,82 @@ enum HookInstaller {
 
         let data = try JSONSerialization.data(withJSONObject: settings, options: [.prettyPrinted, .withoutEscapingSlashes])
         try data.write(to: url, options: .atomic)
+    }
+}
+
+// MARK: - Codex
+
+extension HookInstaller {
+    /// Codex (CLI and the Codex mode of the ChatGPT desktop app) reads hooks from `~/.codex/hooks.json`
+    /// (or `$CODEX_HOME/hooks.json`). The format matches Claude Code's `hooks` block. Codex skips new or
+    /// changed hooks until the user trusts them once (`/hooks` in the CLI, Settings → Hooks in the app).
+    enum Codex {
+        static let events: [(name: String, matcher: String?, timeout: Int)] = [
+            ("SessionStart", nil, 5),
+            ("SessionEnd", nil, 3),       // Codex caps SessionEnd and Interrupt at 3 s
+            ("UserPromptSubmit", nil, 5),
+            ("PreToolUse", "*", 5),
+            ("PostToolUse", "*", 5),
+            ("PermissionRequest", "*", 5),
+            ("Stop", nil, 5),
+            ("Interrupt", nil, 3),
+            ("SubagentStop", nil, 5),
+            ("PreCompact", nil, 5),
+        ]
+
+        static var home: URL {
+            if let env = ProcessInfo.processInfo.environment["CODEX_HOME"], !env.isEmpty {
+                return URL(fileURLWithPath: (env as NSString).expandingTildeInPath, isDirectory: true)
+            }
+            return FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(".codex", isDirectory: true)
+        }
+
+        static var hooksURL: URL { home.appendingPathComponent("hooks.json") }
+
+        /// Codex has been used on this Mac (its home folder exists).
+        static var isAvailable: Bool { FileManager.default.fileExists(atPath: home.path) }
+
+        static var displayPath: String {
+            hooksURL.path.replacingOccurrences(of: FileManager.default.homeDirectoryForCurrentUser.path, with: "~")
+        }
+
+        static var isInstalled: Bool {
+            guard let file = try? load(hooksURL), let hooks = file["hooks"] as? [String: Any] else { return false }
+            let current = command(port: Preferences.port, agent: .codex)
+            return events.allSatisfy { event in
+                ((hooks[event.name] as? [[String: Any]]) ?? []).contains { group in
+                    ((group["hooks"] as? [[String: Any]]) ?? []).contains { ($0["command"] as? String) == current }
+                }
+            }
+        }
+
+        static func install(port: UInt16 = EventServer.defaultPort) throws {
+            var file = try load(hooksURL)
+            var hooks = (file["hooks"] as? [String: Any]) ?? [:]
+            for event in events {
+                var groups = ((hooks[event.name] as? [[String: Any]]) ?? []).filter { !isOurs($0) }
+                var group: [String: Any] = [
+                    "hooks": [["type": "command", "command": command(port: port, agent: .codex), "timeout": event.timeout]],
+                ]
+                if let matcher = event.matcher { group["matcher"] = matcher }
+                groups.append(group)
+                hooks[event.name] = groups
+            }
+            file["hooks"] = hooks
+            try save(file, to: hooksURL)
+        }
+
+        static func uninstall() throws {
+            guard FileManager.default.fileExists(atPath: hooksURL.path) else { return }
+            var file = try load(hooksURL)
+            guard var hooks = file["hooks"] as? [String: Any] else { return }
+            for (name, value) in hooks {
+                guard let groups = value as? [[String: Any]] else { continue }
+                let remaining = groups.filter { !isOurs($0) }
+                hooks[name] = remaining.isEmpty ? nil : remaining
+            }
+            file["hooks"] = hooks.isEmpty ? nil : hooks
+            try save(file, to: hooksURL)
+        }
     }
 }
