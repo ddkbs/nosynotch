@@ -74,7 +74,7 @@ npx nosynotch uninstall   # removes app, hooks and autostart
 | **Working** | Spark spins faster, the right wing shows the tool (terminal, pencil, magnifier, globe …) |
 | **Needs you** | Opens up with an amber glow and a shake, waving hand, the command it wants to run and **Allow / Deny** buttons, sound |
 | **Compacting** | Purple spark that shrinks and turns backwards |
-| **Done** | Checkmark draws itself, confetti, project, duration and the start of Claude's answer, sound |
+| **Done** | Checkmark draws itself, confetti, project, duration and the start of Claude's answer, sound. Already looking at that app? Just a small check in the notch, no sound |
 | **Error** | Red glow and a sputtering spark when a turn dies from an API error (rate limit, overload, auth …) |
 | **Music** | When Claude is idle: album cover left, equalizer in the cover's colour right. Hover for the player |
 | **Hover** | List of all sessions with status, current tool and timer. Click jumps to the right terminal |
@@ -137,7 +137,8 @@ Click the ✦ in the menu bar → **Settings…** (or run `npx nosynotch setting
 - **Codex** – connect or disconnect `~/.codex/hooks.json`
 - **Permissions** – answer permission requests in the notch (on by default)
 - **Launch at login**
-- **Notifications** – sound for done / needs you / error, how long notifications stay open, optional macOS banners
+- **Notifications** – sound for done / needs you / error, how long notifications stay open, keep "Done" small while you're
+  already in that app, optional macOS banners
 - **Music** – show Spotify / Apple Music in the notch, keep showing it while paused
 
 If you start the app without the CLI (e.g. built from source), the settings open on first launch with a big

@@ -52,6 +52,12 @@ input" reminder Claude Code sends ~60 s after a finished turn is ignored on purp
 A checkmark draws itself, confetti bursts, green glow, "Glass" sound. Shows the project, how long the turn took and the start
 of Claude's last answer. Click to jump to the terminal, ✕ to close.
 
+**Already in that app?** If the app the session runs in is in front (the Claude app, your terminal, VS Code, ChatGPT …),
+there is no big card and no sound – just a green check in the compact notch for three seconds
+(Settings → Notifications to turn this off):
+
+<img src="gifs/quiet-done.gif" alt="Done while the app is in front" width="560">
+
 ## Error
 
 <img src="gifs/error.gif" alt="Error" width="560">
