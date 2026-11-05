@@ -18,6 +18,8 @@ final class Recorder {
         var dismissFlashAt: TimeInterval?
         /// Moment (seconds) that is also saved as a still PNG – the notch fully expanded.
         var stillAt: TimeInterval?
+        /// Seconds after which the demo song starts "playing" in the fake media player.
+        var musicAt: TimeInterval?
         let steps: [(TimeInterval, HookEvent)]
     }
 
@@ -55,7 +57,7 @@ final class Recorder {
 
     private func record(_ scene: Scene, completion: @escaping () -> Void) {
         let store = SessionStore()
-        let model = NotchViewModel(store: store)
+        let model = NotchViewModel(store: store, media: NowPlaying(observeSystem: false))
         model.notchSize = CGSize(width: 185, height: 32)
         model.hasPhysicalNotch = true
         store.onChange = { model.recompute() }
@@ -89,6 +91,13 @@ final class Recorder {
                 MainActor.assumeIsolated { store.handle(event) }
             }
         }
+        if let t = scene.musicAt {
+            DispatchQueue.main.asyncAfter(deadline: .now() + t) {
+                MainActor.assumeIsolated {
+                    model.media.preview(Self.demoTrack, artwork: Self.demoArtwork(), playing: true, position: 74)
+                }
+            }
+        }
         if let t = scene.dismissFlashAt {
             DispatchQueue.main.asyncAfter(deadline: .now() + t) {
                 MainActor.assumeIsolated { model.dismissFlash() }
@@ -115,9 +124,10 @@ final class Recorder {
                     if let still = scene.stillAt, frame == Int(still * Self.fps) {
                         urls.append(self.outputDirectory.appendingPathComponent("stills/\(scene.name).png"))
                     }
+                    let targets = urls
                     self.writer.async {
                         guard let png = image.representation(using: .png, properties: [:]) else { return }
-                        for url in urls {
+                        for url in targets {
                             try? FileManager.default.createDirectory(at: url.deletingLastPathComponent(),
                                                                      withIntermediateDirectories: true)
                             try? png.write(to: url)
@@ -137,6 +147,28 @@ final class Recorder {
     }
 
     // MARK: - Scenes
+
+    static let demoTrack = NowPlaying.Track(id: "spotify:track:demo", title: "Neon Horizon", artist: "Lumen Drive",
+                                            album: "Night Shift", duration: 213, source: .spotify)
+
+    /// A made-up album cover: sunset gradient, sun and horizon lines.
+    static func demoArtwork() -> NSImage {
+        NSImage(size: CGSize(width: 300, height: 300), flipped: false) { rect in
+            NSGradient(colors: [NSColor(red: 0.98, green: 0.45, blue: 0.30, alpha: 1),
+                                NSColor(red: 0.85, green: 0.20, blue: 0.55, alpha: 1),
+                                NSColor(red: 0.28, green: 0.12, blue: 0.50, alpha: 1)])?
+                .draw(in: rect, angle: -90)
+            NSColor(red: 1, green: 0.85, blue: 0.45, alpha: 1).setFill()
+            NSBezierPath(ovalIn: CGRect(x: 80, y: 110, width: 140, height: 140)).fill()
+            NSColor(red: 0.28, green: 0.12, blue: 0.50, alpha: 1).setFill()
+            for i in 0..<6 {
+                let y = 110 + CGFloat(i) * 14
+                NSBezierPath(rect: CGRect(x: 0, y: y, width: 300, height: 4 + CGFloat(5 - i))).fill()
+            }
+            NSBezierPath(rect: CGRect(x: 0, y: 0, width: 300, height: 112)).fill()
+            return true
+        }
+    }
 
     static var scenes: [Scene] {
         let cwd = "/Users/you/Projects/claude-notch"
@@ -197,6 +229,13 @@ final class Recorder {
                 (0.0, ev("PostToolUse", "c", cwd: "/Users/you/Projects/website", tool: "Bash")),
                 (0.0, ev("Stop", "c", cwd: "/Users/you/Projects/website", last: "Build ist durch.")),
             ]),
+            Scene(name: "media", duration: 7, height: 170, hoverAt: 2.6, stillAt: 5.0, musicAt: 0.5, steps: []),
+            Scene(name: "handoff", duration: 9, dismissFlashAt: 6.6, musicAt: 0.0, steps: [
+                (1.4, prompt),
+                (2.6, ev("PreToolUse", tool: "Edit", input: ["file_path": "\(cwd)/Sources/NotchView.swift"])),
+                (3.4, ev("PostToolUse", tool: "Edit")),
+                (3.8, ev("Stop", last: "Media-Player eingebaut – Notch zeigt jetzt Spotify, wenn Claude Pause macht.")),
+            ]),
             Scene(name: "demo", duration: 17, steps: [
                 (0.0, ev("SessionStart")),
                 (0.5, prompt),
@@ -222,7 +261,7 @@ private struct RecordingStage: View {
         ZStack(alignment: .top) {
             Wallpaper()
             menuBar
-            NotchView(model: model, store: store)
+            NotchView(model: model, store: store, media: model.media)
         }
         .frame(width: Recorder.width)
         .environment(\.colorScheme, .dark)
