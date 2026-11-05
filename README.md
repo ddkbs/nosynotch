@@ -77,7 +77,7 @@ npx nosynotch uninstall   # removes app, hooks and autostart
 | **Done** | Checkmark draws itself, confetti, project, duration and the start of Claude's answer, sound. Already looking at that app? Just a small check in the notch, no sound (same for *Needs you*) |
 | **Error** | Red glow and a sputtering spark when a turn dies from an API error (rate limit, overload, auth …) |
 | **Music** | When Claude is idle: album cover left, equalizer in the cover's colour right. Hover for the player |
-| **Hover** | List of all sessions with status, current tool and timer. Click jumps to the right terminal |
+| **Hover** | List of all sessions with status, current tool and timer. Click jumps to the right terminal. Below: your 5-hour and weekly usage limits as bars |
 
 Works with several sessions at once – Claude Code and Codex mixed. Each session shows a small *Claude* / *Codex*
 badge, Codex sessions spin in blue. Macs without a notch get a virtual one in the middle of the menu bar.
@@ -120,6 +120,18 @@ When Claude Code or Codex asks for permission, the notch shows the command with 
 - Already in that app? Then the notch stays small and leaves the question to the app's own prompt.
 - Turn it off in Settings → Permissions.
 
+## Usage limits
+
+Hover the notch to see how much of your 5-hour and weekly limits Claude and Codex have used (hover a bar for the time
+until it resets). Green below 60 %, amber below 85 %, then red.
+
+- **Claude** (Pro / Max): Claude Code only shares the limits with its status line command. Nosy Notch adds a silent status
+  line that forwards them – only in config directories that don't have a status line yet. Already have one? Add this to
+  the end of your script: `curl -s -m 1 -X POST --data-binary @- 'http://127.0.0.1:7823/usage?src=nosynotch' >/dev/null 2>&1`
+  (it needs the status line JSON on stdin, so pipe your saved input into it).
+- **Codex**: read from the newest `rate_limits` entry in `~/.codex/sessions`.
+- Updates whenever the agent answers. Turn it off in Settings → Usage (that also removes the status line again).
+
 ## Music
 
 When no Claude session is busy and **Spotify** or **Apple Music** is playing, the notch turns into a mini player. Claude always
@@ -137,6 +149,7 @@ Click the ✦ in the menu bar → **Settings…** (or run `npx nosynotch setting
 - **Claude Code** – which config directories are connected, one button to connect or disconnect, play the demo
 - **Codex** – connect or disconnect `~/.codex/hooks.json`
 - **Permissions** – answer permission requests in the notch (on by default)
+- **Usage** – 5-hour and weekly limit bars in the hover view
 - **Launch at login**
 - **Notifications** – sound for done / needs you / error, how long notifications stay open, stay small (no card, no sound) while
   you're already in that app, optional macOS banners
