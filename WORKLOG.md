@@ -1,5 +1,12 @@
 # WORKLOG
 
+## 2026-11-05 (11)
+- Fix: **Cursor erschien als „Claude“** – Cursor führt zusätzlich die Hooks aus `~/.claude/settings.json` aus (Cursor-Log bestätigt). Payloads mit `cursor_version` gelten jetzt immer als Cursor; Duplikate über die Claude-URL werden verworfen, solange unsere Cursor-Hooks installiert sind.
+- Fix: Genehmigungs-Karte klappt nach **30 s** von selbst zu und gibt die Anfrage an den App-eigenen Dialog zurück (blieb vorher bis ✕ offen).
+- Fix: Live-Equalizer fragt seltener nach Audio-Zugriff – Tap bleibt über Pausen offen, wird nur bei 1 min Stille neu verbunden. Hinweis: Jeder lokale Build (neue ad-hoc-Signatur) kann die macOS-Abfrage erneut auslösen.
+- Settings: eigene Animationen für Codex (Sechseck + blinkendes `>_`) und Cursor (tippender Zeiger mit Wellen); Status/„Made with“ entfernt, neuer Gold-Stern, freistehende Orbit-Animation.
+- Offen: Agent-Glyphen evtl. auch in der Notch statt des Sparks für Codex/Cursor; Release v0.2.0.
+
 ## 2026-11-05 (10)
 - Projektordner heißt jetzt `~/Desktop/Projects/nosynotch` (von David umbenannt).
 - **Grüner Punkt für ungesehene Ergebnisse** (Notch-Flügel, Cover-Badge, Session-Zeile) bis App-Wechsel/Hover/Klick/✕; **Erinnerung nach 5 min** für ungesehenes „Fertig“ und unbeantwortetes „Braucht dich“ (leiserer Sound). **Stumm** 1 h / 8 h / ∞ im Menü und in Settings (nur Ton + Banner, Animationen laufen weiter).
