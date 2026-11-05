@@ -1,5 +1,12 @@
 # WORKLOG
 
+## 2026-11-05 (9)
+- **Usage-Balken** im Hover (Settings → Usage, standardmäßig an): 5h- und Wochenlimit für Claude und Codex, grün/gelb/rot, Hover auf Balken = Zeit bis Reset. Claude: Limits gibt es nur im Statusline-JSON → stille Statusline (`curl … /usage`) wird installiert, **nur wenn keine eigene existiert**; Ausschalten entfernt sie. Codex: letzter `rate_limits`-Eintrag aus `~/.codex/sessions/**/rollout-*.jsonl` (bei SessionStart/Prompt/Stop + App-Start). Echte Werte kamen an. Neues GIF `usage.gif`.
+- **Live-Equalizer** (Settings → Music, standardmäßig aus): 5 größere, leuchtende Balken, per Core-Audio-Process-Tap (macOS 14.2+) auf die Audio-Prozesse von Spotify/Music + FFT, automatische Verstärkung pro Band (sonst waren die Balken fast immer voll). Live mit Spotify geprüft. `NSAudioCaptureUsageDescription` in Info.plist. Tap läuft nur, wenn Musik spielt und die Option an ist.
+- Auffällig: Nach jedem lokalen Build (ad-hoc-Signatur ändert sich) erkennt die App den laufenden Song erst beim nächsten Play/Pause/Trackwechsel (Automation-Rechte hängen an der Signatur). Für Releases egal.
+- Cursor: hat eigene Hooks (`~/.cursor/hooks.json`, andere Eventnamen wie `beforeSubmitPrompt`, `beforeShellExecution` mit allow/deny/ask, `stop` mit Status) → Integration machbar, noch nicht gebaut. Claude Code im Cursor-Terminal läuft schon jetzt.
+- Offen: Cursor-Unterstützung, Version 0.2.0 taggen, Repo public, `NPM_TOKEN`.
+
 ## 2026-11-05 (8)
 - **Leises „Fertig“**: Ist die App der Sitzung vorne (Claude-App, Terminal, VS Code, ChatGPT …), zeigt die Notch bei `Stop` nur kurz (3 s) einen grünen Haken in der kompakten Leiste – keine Karte, kein Sound, kein Banner. Sonst wie bisher groß.
 - Nachtrag: auch **„Braucht dich“** bleibt klein, wenn die App vorne ist (kein Sound, keine Karte, bernsteinfarbene Blase in der Leiste); der Permission-Hook antwortet dann sofort ohne Entscheidung → der App-eigene Dialog übernimmt. Live geprüft mit Claude-App vorne. Fehler bleiben immer groß.
