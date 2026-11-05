@@ -100,6 +100,55 @@ const permissionCommand = (agent = 'claude') => {
 const STATUS_LINE_COMMAND =
   "curl -s -m 1 -X POST -H 'Content-Type: application/json' -H 'Expect:' --data-binary @- " +
   `'http://127.0.0.1:${PORT}/usage?src=${MARKER}' >/dev/null 2>&1; true`;
+// Cursor's agent: ~/.cursor/hooks.json, camelCase events, JSON expected on stdout. Must match HookInstaller.Cursor.
+const CURSOR_EVENTS = [
+  'sessionStart', 'sessionEnd', 'beforeSubmitPrompt', 'preToolUse', 'postToolUse', 'postToolUseFailure',
+  'afterAgentResponse', 'stop', 'subagentStop', 'preCompact',
+];
+const cursorCommand = (event) =>
+  [
+    'curl -s -m 2 -X POST',
+    "-H 'Content-Type: application/json'",
+    "-H 'Expect:'",
+    '-H "X-Term-Program: ${TERM_PROGRAM:-}"',
+    '-H "X-Bundle-Id: ${__CFBundleIdentifier:-}"',
+    '--data-binary @-',
+    `'http://127.0.0.1:${PORT}/event?src=${MARKER}&agent=cursor'`,
+    `>/dev/null 2>&1; printf '%s' '${event === 'beforeSubmitPrompt' ? '{"continue":true}' : '{}'}'`,
+  ].join(' ');
+const cursorDir = () => path.join(HOME, '.cursor');
+const cursorAvailable = () => fs.existsSync(cursorDir()) || fs.existsSync('/Applications/Cursor.app');
+const cursorHooksFile = () => path.join(cursorDir(), 'hooks.json');
+const ownEntry = (e) => typeof e?.command === 'string' && e.command.includes(MARKER);
+function cursorHooksInstalled() {
+  const hooks = readSettings(cursorHooksFile()).hooks || {};
+  return CURSOR_EVENTS.every((name) => (hooks[name] || []).some((e) => e?.command === cursorCommand(name)));
+}
+function installCursorHooks() {
+  const file = cursorHooksFile();
+  const settings = readSettings(file);
+  const hooks = settings.hooks || {};
+  for (const name of CURSOR_EVENTS) hooks[name] = [...(hooks[name] || []).filter((e) => !ownEntry(e)), { command: cursorCommand(name), timeout: 5 }];
+  settings.version = settings.version ?? 1;
+  settings.hooks = hooks;
+  writeSettings(file, settings);
+  ok(`Hooks added to ${pretty(file)}`);
+}
+function removeCursorHooks() {
+  const file = cursorHooksFile();
+  if (!fs.existsSync(file)) return;
+  const settings = readSettings(file);
+  if (!settings.hooks) return;
+  for (const name of Object.keys(settings.hooks)) {
+    if (!Array.isArray(settings.hooks[name])) continue;
+    const rest = settings.hooks[name].filter((e) => !ownEntry(e));
+    if (rest.length) settings.hooks[name] = rest;
+    else delete settings.hooks[name];
+  }
+  writeSettings(file, settings);
+  ok(`Hooks removed from ${pretty(file)}.`);
+}
+
 const commandFor = (event, agent) => (event === 'PermissionRequest' ? permissionCommand(agent) : hookCommand(agent));
 const timeoutFor = (event, fallback = 5) => (event === 'PermissionRequest' ? 600 : fallback);
 
@@ -314,7 +363,10 @@ const codexAvailable = () => fs.existsSync(codexHome());
 const codexHooksFile = () => path.join(codexHome(), 'hooks.json');
 const codexHooksInstalled = () => hooksInstalledIn(codexHooksFile(), CODEX_EVENTS, 'codex');
 
-const hooksInstalled = () => settingsFiles().every((f) => hooksInstalledIn(f)) && (!codexAvailable() || codexHooksInstalled());
+const hooksInstalled = () =>
+  settingsFiles().every((f) => hooksInstalledIn(f)) &&
+  (!codexAvailable() || codexHooksInstalled()) &&
+  (!cursorAvailable() || cursorHooksInstalled());
 
 function installHooks() {
   for (const file of settingsFiles()) installHooksIn(file);
@@ -324,6 +376,7 @@ function installHooks() {
     console.log(dim('  Codex runs new hooks only after you trust them once:'));
     console.log(dim('  ChatGPT app → Codex → Settings → Hooks, or type /hooks in the Codex CLI.'));
   }
+  if (cursorAvailable()) installCursorHooks();
 }
 
 function installHooksIn(file, events = HOOK_EVENTS, agent = 'claude') {
@@ -345,6 +398,7 @@ function installHooksIn(file, events = HOOK_EVENTS, agent = 'claude') {
 function removeHooks() {
   for (const file of settingsFiles()) removeHooksIn(file);
   removeHooksIn(codexHooksFile());
+  removeCursorHooks();
 }
 
 function removeHooksIn(file) {
@@ -462,11 +516,14 @@ async function status() {
   if (codexAvailable()) {
     console.log(`  Codex:      ${codexHooksInstalled() ? green('✓') : dim('–')} ${pretty(codexHooksFile())}`);
   }
+  if (cursorAvailable()) {
+    console.log(`  Cursor:     ${cursorHooksInstalled() ? green('✓') : dim('–')} ${pretty(cursorHooksFile())}`);
+  }
   console.log(`  Autostart:  ${fs.existsSync(LAUNCH_AGENT) ? green('on') : dim('off')}`);
 }
 
 function help() {
-  console.log(`${orange('✦')} ${bold('nosynotch')} ${dim(pkg.version)} – Claude Code & Codex status in your MacBook notch
+  console.log(`${orange('✦')} ${bold('nosynotch')} ${dim(pkg.version)} – Claude Code, Codex & Cursor in your MacBook notch
 
   ${bold('npx nosynotch')}              install (if needed), add hooks, start
   ${bold('npx nosynotch stop')}         stop
@@ -496,7 +553,7 @@ async function main() {
       if (hadAutostart) autostart(true);
       if (!hooksInstalled()) installHooks();
       await start();
-      console.log(`\n  ${bold('Done!')} Look at your notch the next time Claude or Codex works.`);
+      console.log(`\n  ${bold('Done!')} Look at your notch the next time Claude, Codex or Cursor works.`);
       console.log(dim('  Settings: click ✦ in the menu bar → Settings…  (or `npx nosynotch settings`)'));
       console.log(dim('  Try it:   `npx nosynotch demo` plays every animation.'));
       break;
