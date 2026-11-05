@@ -166,7 +166,7 @@ struct SettingsView: View {
 
     private var footer: some View {
         HStack {
-            Link("GitHub", destination: URL(string: "https://github.com/ddkbs/claude-notch")!)
+            Link("GitHub", destination: URL(string: "https://github.com/ddkbs/nosynotch")!)
             Spacer()
             Button("Quit Nosy Notch") { NSApp.terminate(nil) }
         }

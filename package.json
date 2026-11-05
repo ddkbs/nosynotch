@@ -27,9 +27,11 @@
     "spotify",
     "now-playing"
   ],
+  "homepage": "https://github.com/ddkbs/nosynotch#readme",
+  "bugs": "https://github.com/ddkbs/nosynotch/issues",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/ddkbs/claude-notch.git"
+    "url": "git+https://github.com/ddkbs/nosynotch.git"
   },
   "author": "David Kubus",
   "license": "MIT"

@@ -10,7 +10,7 @@ const { spawn, spawnSync } = require('child_process');
 const pkg = require('../package.json');
 const PKG_ROOT = path.resolve(__dirname, '..');
 // GitHub repository that hosts the release binaries.
-const REPO = 'ddkbs/claude-notch';
+const REPO = 'ddkbs/nosynotch';
 const PORT = 7823;
 const BASE = `http://127.0.0.1:${PORT}`;
 const LABEL = 'dev.davidkubus.nosynotch';
