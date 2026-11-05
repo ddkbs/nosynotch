@@ -4,7 +4,7 @@ Each animation with the Claude Code hook that triggers it (Codex sends the same 
 (`./scripts/record-gifs.sh`); only the desktop behind it is staged.
 
 [Thinking](#thinking) · [Working](#working) · [Needs you](#needs-you) · [Done](#done) · [Error](#error) ·
-[Compacting](#compacting) · [All sessions](#all-sessions-hover) · [Codex](#codex) · [Usage](#usage-limits) · [Music](#music) · [Back to music](#back-to-music) ·
+[Compacting](#compacting) · [Unseen](#unseen) · [All sessions](#all-sessions-hover) · [Codex & Cursor](#codex--cursor) · [Usage](#usage-limits) · [Music](#music) · [Back to music](#back-to-music) ·
 [Full run](#full-run)
 
 ## Thinking
@@ -40,7 +40,8 @@ The hover list also says *what* is happening ("Editing Parser.swift", "Running �
 
 The notch opens with an amber glow and a shake, a hand waves, and the "Funk" sound plays. The message says which tool
 and command Claude wants to run, with **Deny** / **Allow** buttons underneath (and **Always allow** when Claude Code
-suggests a rule). Click one and the agent continues. If you answer in the terminal instead, the notch closes by itself. The "waiting for your
+suggests a rule). Click one and the agent continues. With head gestures on (Settings → Permissions) and AirPods in, the hint
+changes to "Nod to allow · shake to deny". If you answer in the terminal instead, the notch closes by itself. The "waiting for your
 input" reminder Claude Code sends ~60 s after a finished turn is ignored on purpose.
 
 ## Done
@@ -58,6 +59,16 @@ there is no big card and no sound – just a green check in the compact notch fo
 (Settings → Notifications to turn this off):
 
 <img src="gifs/quiet-done.gif" alt="Done while the app is in front" width="560">
+
+## Unseen
+
+<img src="gifs/unseen.gif" alt="Unseen result" width="560">
+
+**Trigger:** `Stop` while you weren't looking
+
+If a turn finishes and you don't switch to that app, hover the list or click the card, a green dot breathes in the notch
+(on the cover while music plays, next to the session in the hover list). After five minutes it reminds you once more with
+a softer sound – the same goes for a question nobody answered (Settings → Alerts).
 
 ## Error
 
@@ -96,7 +107,7 @@ Move the pointer over the notch: a list of every session with status, current to
 terminal to the front, ✕ removes a session. With several sessions the compact notch always shows the most important one
 (needs you / error > working > done > ready).
 
-## Codex
+## Codex & Cursor
 
 <img src="gifs/codex.gif" alt="Codex" width="560">
 
@@ -106,6 +117,10 @@ Codex sessions get every animation above, with a blue spark and a small *Codex* 
 `apply_patch` shows a pencil and the files it changes, `update_plan` a checklist, `web_search` a compass. When you stop a
 Codex turn with Esc, its `Interrupt` hook puts the session straight back to *Ready*. Codex has no `StopFailure` hook,
 so the error animation is Claude-only for now.
+
+**Cursor**'s agent (`~/.cursor/hooks.json`) shows up the same way with a silver spark: its `beforeSubmitPrompt`,
+`preToolUse` and `stop` hooks become thinking, tools and done; a `stop` with status `aborted` or `error` becomes
+*Ready* or the error animation.
 
 ## Usage limits
 
@@ -140,6 +155,12 @@ Without a click the same happens after 6 seconds.
 <img src="gifs/demo.gif" alt="Full run" width="720">
 
 Thinking → Grep → Edit → permission for Bash → tests run → done. Play it live with `npx nosynotch demo`.
+
+## Settings window
+
+<img src="gifs/settings.gif" alt="Settings" width="620">
+
+Recorded with `./scripts/record-gifs.sh settings`.
 
 ## Re-recording the GIFs
 
