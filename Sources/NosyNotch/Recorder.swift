@@ -26,6 +26,8 @@ final class Recorder {
         var focused = false
         /// Fill in made-up usage limits for the hover view.
         var usage = false
+        /// Seconds after which a nearly used-up 5-hour limit "resets".
+        var limitResetAt: TimeInterval?
         let steps: [(TimeInterval, HookEvent)]
     }
 
@@ -68,6 +70,13 @@ final class Recorder {
         model.hasPhysicalNotch = true
         store.onChange = { model.recompute() }
         store.onTransition = { scene.focused ? model.showQuietly($0) : model.handle($0) }
+        if let t = scene.limitResetAt {
+            model.usage.onReset = { agent, window in model.showLimitReset(agent: agent, window: window) }
+            model.usage.set(AgentUsage(fiveHour: UsageWindow(usedPercent: 94, resetsAt: Date() + t)), for: .claude)
+            DispatchQueue.main.asyncAfter(deadline: .now() + t + 0.05) {
+                MainActor.assumeIsolated { model.usage.checkResets(now: Date().addingTimeInterval(1)) }
+            }
+        }
         if scene.usage {
             let now = Date()
             model.usage.set(AgentUsage(fiveHour: UsageWindow(usedPercent: 38, resetsAt: now + 2 * 3600 + 840),
@@ -292,6 +301,7 @@ final class Recorder {
                 (0.0, ev("PreToolUse", "a", tool: "Edit", input: ["file_path": "\(cwd)/Sources/NotchView.swift"])),
                 (0.0, ev("UserPromptSubmit", "cx", agent: .codex, cwd: "/Users/you/Projects/api-server")),
             ]),
+            Scene(name: "limit-reset", duration: 5.5, stillAt: 3.0, limitResetAt: 0.6, steps: []),
             Scene(name: "media", duration: 7, height: 170, hoverAt: 2.6, stillAt: 5.0, musicAt: 0.5, steps: []),
             Scene(name: "handoff", duration: 9, dismissFlashAt: 6.6, musicAt: 0.0, steps: [
                 (1.4, prompt),
