@@ -18,6 +18,7 @@ final class EventServer {
     var onSettings: (@Sendable () -> Void)?
 
     private(set) var lastError: String?
+    private var stopped = false
 
     init(port: UInt16 = EventServer.defaultPort, onEvent: @escaping @Sendable (HookEvent) -> Void) {
         self.port = port
@@ -36,10 +37,25 @@ final class EventServer {
         listener.newConnectionHandler = { [weak self] connection in
             self?.accept(connection)
         }
-        listener.stateUpdateHandler = { [weak self] state in
-            if case .failed(let error) = state {
-                self?.lastError = error.localizedDescription
-                NSLog("NosyNotch: server failed: \(error)")
+        listener.stateUpdateHandler = { [weak self, weak listener] state in
+            guard let self else { return }
+            switch state {
+            case .ready:
+                self.lastError = nil
+            case .waiting(let error):
+                self.lastError = error.localizedDescription
+                NSLog("NosyNotch: server waiting (\(error))")
+            case .failed(let error):
+                // E.g. the port was still taken by a previous instance – try again instead of staying deaf.
+                self.lastError = error.localizedDescription
+                NSLog("NosyNotch: server not listening (\(error)), retrying")
+                listener?.cancel()
+                self.queue.asyncAfter(deadline: .now() + 1) { [weak self] in
+                    guard let self, self.listener === listener, !self.stopped else { return }
+                    try? self.start()
+                }
+            default:
+                break
             }
         }
         listener.start(queue: queue)
@@ -47,6 +63,7 @@ final class EventServer {
     }
 
     func stop() {
+        stopped = true
         listener?.cancel()
         listener = nil
     }
