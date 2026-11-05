@@ -18,7 +18,7 @@
     <td align="center" width="50%"><img src="docs/gifs/tools.gif" alt="Working"><br><b>Working</b><br><sub>Live icon for every tool Claude uses</sub></td>
   </tr>
   <tr>
-    <td align="center"><img src="docs/gifs/attention.gif" alt="Needs you"><br><b>Needs you</b><br><sub>Permission prompt or question – glow, shake, sound</sub></td>
+    <td align="center"><img src="docs/gifs/attention.gif" alt="Needs you"><br><b>Needs you</b><br><sub>Allow or deny right in the notch – glow, shake, sound</sub></td>
     <td align="center"><img src="docs/gifs/done.gif" alt="Done"><br><b>Done</b><br><sub>Checkmark, confetti and a summary of the answer</sub></td>
   </tr>
   <tr>
@@ -72,7 +72,7 @@ npx nosynotch uninstall   # removes app, hooks and autostart
 |---|---|
 | **Thinking** | Slides out sideways, the spark rotates and pulses, three dots dance on the right |
 | **Working** | Spark spins faster, the right wing shows the tool (terminal, pencil, magnifier, globe …) |
-| **Needs you** | Opens up with an amber glow and a shake, waving hand, the question or the command it wants to run, sound |
+| **Needs you** | Opens up with an amber glow and a shake, waving hand, the command it wants to run and **Allow / Deny** buttons, sound |
 | **Compacting** | Purple spark that shrinks and turns backwards |
 | **Done** | Checkmark draws itself, confetti, project, duration and the start of Claude's answer, sound |
 | **Error** | Red glow and a sputtering spark when a turn dies from an API error (rate limit, overload, auth …) |
@@ -106,6 +106,19 @@ until you trust them once (see [Install](#install)). Bonus: Codex reports when y
 `~/.claude`, `$CLAUDE_CONFIG_DIR` and every `~/.claude-*` folder that looks like a config directory. `npx nosynotch status`
 lists each one. Added an account later? Run `npx nosynotch hooks` again.
 
+## Allow or deny from the notch
+
+When Claude Code or Codex asks for permission, the notch shows the command with **Deny** and **Allow** (plus
+**Always allow** when Claude Code offers a rule for it). Click, and the agent carries on – no need to find the right terminal.
+
+- **Claude Code** keeps its own dialog open at the same time. Answer wherever you like; the other one closes.
+- **Codex** shows its own prompt only after the hook returns: click ✕ in the notch (or wait 45 s) to answer in Codex instead.
+- Your settings still win: a matching deny rule blocks the command even if you click Allow. *Always allow* only adds
+  allow rules or directories, never switches the permission mode.
+- The permission hook waits for the notch and prints its answer only if it carries a secret from
+  `~/.nosynotch/approval-token`. If Nosy Notch isn't running, the hook ends immediately and the normal prompt appears.
+- Turn it off in Settings → Permissions.
+
 ## Music
 
 When no Claude session is busy and **Spotify** or **Apple Music** is playing, the notch turns into a mini player. Claude always
@@ -122,6 +135,7 @@ Click the ✦ in the menu bar → **Settings…** (or run `npx nosynotch setting
 
 - **Claude Code** – which config directories are connected, one button to connect or disconnect, play the demo
 - **Codex** – connect or disconnect `~/.codex/hooks.json`
+- **Permissions** – answer permission requests in the notch (on by default)
 - **Launch at login**
 - **Notifications** – sound for done / needs you / error, how long notifications stay open, optional macOS banners
 - **Music** – show Spotify / Apple Music in the notch, keep showing it while paused
@@ -185,6 +199,7 @@ Sources/NosyNotch/
 ├── Session.swift                    states, tool icons/labels, colours, error texts
 ├── NowPlaying.swift                 Spotify / Apple Music: track, cover, controls
 ├── Transcript.swift                 reads the last answer from the transcript (for "Done")
+├── Approvals.swift                  permission requests waiting for Allow / Deny in the notch
 ├── HookInstaller.swift              patches settings.json in every Claude config directory and ~/.codex/hooks.json
 ├── Preferences.swift / LoginItem.swift  settings, launch at login
 ├── Notifier.swift                   sounds, notifications, bringing the terminal to the front

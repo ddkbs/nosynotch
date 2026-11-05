@@ -39,7 +39,8 @@ The hover list also says *what* is happening ("Editing Parser.swift", "Running Â
 **Trigger:** `PermissionRequest` (the moment the permission dialog opens) and `Notification` (questions, MCP input â€¦)
 
 The notch opens with an amber glow and a shake, a hand waves, and the "Funk" sound plays. The message says which tool
-and command Claude wants to run. As soon as you answer in the terminal, the notch closes by itself. The "waiting for your
+and command Claude wants to run, with **Deny** / **Allow** buttons underneath (and **Always allow** when Claude Code
+suggests a rule). Click one and the agent continues. If you answer in the terminal instead, the notch closes by itself. The "waiting for your
 input" reminder Claude Code sends ~60 s after a finished turn is ignored on purpose.
 
 ## Done
