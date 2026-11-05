@@ -1,7 +1,8 @@
 # Alle Animationen
 
-Jede Animation mit dem Claude-Code-Hook, der sie auslöst. Alle GIFs sind echte Aufnahmen der App
-(`./scripts/record-gifs.sh`), nur der Desktop dahinter ist gestellt.
+Jede Animation mit dem Claude-Code-Hook, der sie auslöst. Alle GIFs und Screenshots sind echte Aufnahmen
+der App (`./scripts/record-gifs.sh`), nur der Desktop dahinter ist gestellt.
+Standbilder mit ausgeklappter Notch: [Screenshots](#screenshots).
 
 | | |
 |---|---|
@@ -97,6 +98,18 @@ zeigt die kompakte Notch immer die wichtigste (Braucht dich / Fehler > Arbeitet 
 Denken → Grep → Edit → Erlaubnis für Bash → Tests laufen → Fertig. Live vorführen lässt sich das mit
 `npx claude-notch demo`.
 
+## Screenshots
+
+Ausgeklappte Notch als PNG (2×), z. B. für Blogposts oder die GitHub-Social-Preview. Liegen in
+[`docs/screenshots/`](screenshots/).
+
+| | |
+|---|---|
+| ![Mehrere Sessions](screenshots/hover.png) | ![Fertig](screenshots/done.png) |
+| ![Braucht dich](screenshots/attention.png) | ![Fehler](screenshots/error.png) |
+| ![Denkt nach](screenshots/thinking.png) | ![Tool läuft](screenshots/tools.png) |
+| ![Komprimiert](screenshots/compacting.png) | |
+
 ## GIFs neu aufnehmen
 
 ```bash
@@ -105,4 +118,4 @@ Denken → Grep → Edit → Erlaubnis für Bash → Tests laufen → Fertig. Li
 ```
 
 Braucht `ffmpeg` (`brew install ffmpeg`). Unten links erscheint kurz ein kleines Fenster, das
-aufgenommen wird. Die Szenen stehen in `Sources/ClaudeNotch/Recorder.swift`.
+aufgenommen wird. Die Szenen und der Zeitpunkt jedes Screenshots stehen in `Sources/ClaudeNotch/Recorder.swift`.

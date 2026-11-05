@@ -2,6 +2,8 @@
 
 Live-Status von **Claude Code** direkt in der MacBook-Notch – mit Animationen.
 
+![claude-notch: ausgeklappte Notch mit drei Sessions](docs/screenshots/hover.png)
+
 ![claude-notch Demo](docs/gifs/demo.gif)
 
 | | |
@@ -9,7 +11,7 @@ Live-Status von **Claude Code** direkt in der MacBook-Notch – mit Animationen.
 | ![Denkt nach](docs/gifs/thinking.gif) | ![Braucht dich](docs/gifs/attention.gif) |
 | ![Fertig](docs/gifs/done.gif) | ![Fehler](docs/gifs/error.gif) |
 
-**[→ Alle Animationen mit Erklärung](docs/animations.md)**
+**[→ Alle Animationen und Screenshots mit Erklärung](docs/animations.md)**
 
 | Zustand | Notch |
 |---|---|
