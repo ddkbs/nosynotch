@@ -90,6 +90,7 @@ struct NotchView: View {
                 if let session = model.attention {
                     AttentionView(session: store.sessions[session.id] ?? session,
                                   approval: model.attentionApproval,
+                                  head: model.head,
                                   onDecide: { approval, decision in model.decide(approval, decision) },
                                   onDismiss: { model.dismissFlash() })
                         .transition(.blurFade.combined(with: .scale(scale: 0.85, anchor: .top)))
@@ -469,6 +470,7 @@ struct FailureView: View {
 struct AttentionView: View {
     let session: Session
     var approval: PendingApproval?
+    var head: HeadGestures?
     var onDecide: (PendingApproval, ApprovalDecision) -> Void = { _, _ in }
     var onDismiss: () -> Void
 
@@ -476,7 +478,7 @@ struct AttentionView: View {
         VStack(spacing: 0) {
             header
             if let approval {
-                ApprovalButtons(approval: approval, onDecide: onDecide)
+                ApprovalButtons(approval: approval, head: head, onDecide: onDecide)
                     .padding(.horizontal, 22)
                     .padding(.top, 10)
                     .transition(.opacity.combined(with: .move(edge: .top)))
@@ -532,16 +534,47 @@ struct AttentionView: View {
     }
 }
 
+/// "or answer in the terminal" – or, with head gestures on and AirPods connected, "Nod to allow".
+struct ApprovalHint: View {
+    let approval: PendingApproval
+    @ObservedObject var head: HeadGestures
+
+    var body: some View {
+        if head.isTracking {
+            HStack(spacing: 5) {
+                Image(systemName: "airpodspro")
+                    .font(.system(size: 11, weight: .semibold))
+                    .symbolEffect(.pulse)
+                Text("Nod to allow · shake to deny")
+                    .font(.system(size: 11, weight: .medium))
+            }
+            .foregroundStyle(Theme.amber.opacity(0.85))
+            .transition(.opacity)
+        } else {
+            Self.fallback(approval)
+        }
+    }
+
+    static func fallback(_ approval: PendingApproval) -> some View {
+        Text(approval.agent == .codex ? "or answer in Codex" : "or answer in the terminal")
+            .font(.system(size: 11))
+            .foregroundStyle(.white.opacity(0.35))
+    }
+}
+
 /// Deny · (Always) · Allow for a permission request.
 struct ApprovalButtons: View {
     let approval: PendingApproval
+    var head: HeadGestures?
     var onDecide: (PendingApproval, ApprovalDecision) -> Void
 
     var body: some View {
         HStack(spacing: 8) {
-            Text(approval.agent == .codex ? "or answer in Codex" : "or answer in the terminal")
-                .font(.system(size: 11))
-                .foregroundStyle(.white.opacity(0.35))
+            if let head {
+                ApprovalHint(approval: approval, head: head)
+            } else {
+                ApprovalHint.fallback(approval)
+            }
             Spacer(minLength: 8)
             NotchButton(title: "Deny", style: .quiet) { onDecide(approval, .deny) }
             if approval.canAlwaysAllow {

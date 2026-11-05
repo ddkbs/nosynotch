@@ -16,6 +16,7 @@ enum Preferences {
         static let remindAfterFiveMinutes = "remindAfterFiveMinutes"
         static let usageAgents = "usageAgents"
         static let contextEnabled = "contextEnabled"
+        static let headGestures = "headGestures"
         static let mutedUntil = "mutedUntil"
         static let liveEqualizer = "liveEqualizer"
         static let port = "port"
@@ -42,6 +43,7 @@ enum Preferences {
             Key.remindAfterFiveMinutes: true,
             Key.usageAgents: "all",
             Key.contextEnabled: true,
+            Key.headGestures: false,
             Key.liveEqualizer: false,
             Key.port: Int(EventServer.defaultPort),
         ])
@@ -98,6 +100,9 @@ enum Preferences {
         let choice = usageAgents
         return choice == "all" || choice == agent.rawValue
     }
+
+    /// Nod (AirPods) to allow, shake to deny. Off unless you turn it on.
+    static var headGestures: Bool { defaults.bool(forKey: Key.headGestures) }
 
     /// Context-window fill ring per session in the hover list.
     static var contextEnabled: Bool { defaults.object(forKey: Key.contextEnabled) as? Bool ?? true }

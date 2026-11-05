@@ -37,6 +37,8 @@ final class NotchViewModel: ObservableObject {
     let usage: UsageStore
     /// Live band levels of the playing music (only with the live equalizer turned on).
     let spectrum = AudioSpectrum()
+    /// Nod / shake with AirPods while a permission request is open (opt-in).
+    let head = HeadGestures()
 
     static let usageRowHeight: CGFloat = 24
 
@@ -80,6 +82,10 @@ final class NotchViewModel: ObservableObject {
         let usage = usage ?? UsageStore(load: false)
         self.usage = usage
         usage.onChange = { [weak self] in self?.objectWillChange.send() }
+        head.onGesture = { [weak self] gesture in
+            guard let self, let approval = self.attentionApproval else { return }
+            self.decide(approval, gesture == .nod ? .allow : .deny)
+        }
         media.onChange = { [weak self] in self?.recompute() }
         approvals.onChange = { [weak self] in
             guard let self else { return }
@@ -251,6 +257,10 @@ final class NotchViewModel: ObservableObject {
 
     func recompute() {
         updateSpectrum()
+        defer {
+            let canTrack = Bundle.main.bundleURL.pathExtension == "app"
+            head.setActive(canTrack && Preferences.headGestures && presentation == .attention && attentionApproval != nil)
+        }
         // Attention is over as soon as that session moves on (e.g. permission granted).
         if let a = attention {
             var stillWaiting = false

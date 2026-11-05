@@ -20,6 +20,8 @@
     <string>14.0</string>
     <key>LSUIElement</key>
     <true/>
+    <key>NSMotionUsageDescription</key>
+    <string>Only if you turn on head gestures: nod with your AirPods to allow a request, shake your head to deny. Motion is only read while a request is open.</string>
     <key>NSAudioCaptureUsageDescription</key>
     <string>Only if you turn on the live equalizer: lets the bars in the notch move with the music from Spotify or Music. Nothing is recorded or stored.</string>
     <key>NSAppleEventsUsageDescription</key>
