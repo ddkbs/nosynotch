@@ -2,6 +2,15 @@
 
 Live-Status von **Claude Code** direkt in der MacBook-Notch – mit Animationen.
 
+![claude-notch Demo](docs/gifs/demo.gif)
+
+| | |
+|---|---|
+| ![Denkt nach](docs/gifs/thinking.gif) | ![Braucht dich](docs/gifs/attention.gif) |
+| ![Fertig](docs/gifs/done.gif) | ![Fehler](docs/gifs/error.gif) |
+
+**[→ Alle Animationen mit Erklärung](docs/animations.md)**
+
 | Zustand | Notch |
 |---|---|
 | **Denkt nach** | Notch fährt seitlich aus, das Spark-Logo rotiert, Strahlen pulsieren als Welle, rechts tanzen drei Punkte |
@@ -9,6 +18,7 @@ Live-Status von **Claude Code** direkt in der MacBook-Notch – mit Animationen.
 | **Braucht dich** (Permission/Rückfrage) | Notch klappt auf, oranges Glühen, Shake, winkende Hand + Nachricht, Sound |
 | **Komprimiert** | violetter, sich zusammenziehender Spark |
 | **Fertig** | Notch klappt auf, Häkchen zeichnet sich, Konfetti-Burst, Projekt + Dauer + Zusammenfassung der letzten Antwort, Sound |
+| **Fehler** (API-Fehler, Rate-Limit …) | Notch klappt auf, rotes Glühen, flackernder Spark, übersetzte Fehlermeldung, Sound |
 | **Hover** | Liste aller laufenden Sessions mit Status, aktuellem Tool und Timer. Klick → springt ins richtige Terminal |
 
 Funktioniert mit mehreren parallelen Sessions. Auf Macs ohne Notch hängt eine „virtuelle“ Notch mittig an der Menüleiste.
@@ -20,9 +30,23 @@ Claude Code ──hook (curl, ~15 ms)──▶ 127.0.0.1:7823/event ──▶ Cl
 ```
 
 Kein MCP-Server nötig: Ein MCP-Server wird nur aufgerufen, wenn *Claude* sich entscheidet, ein Tool zu benutzen. Für einen Live-Status braucht man aber jedes Lifecycle-Event. Genau dafür gibt es **Claude Code Hooks**
-(`UserPromptSubmit`, `PreToolUse`, `PostToolUse`, `Notification`, `Stop`, `SessionStart/End`, `PreCompact`, `SubagentStop`).
+(`UserPromptSubmit`, `PreToolUse`, `PostToolUse(Failure)`, `PermissionRequest`, `Notification`, `Stop`, `StopFailure`,
+`SessionStart/End`, `PreCompact`, `SubagentStop`).
 Jeder Hook ist ein einzeiliges `curl`, das das Hook-JSON an die App schickt. Läuft die App nicht, schlägt `curl` sofort fehl,
 `|| true` sorgt dafür, dass Claude Code davon nie blockiert wird.
+
+### Verbindung mit Claude Code
+
+Es gibt nichts zu koppeln oder einzuloggen: Sobald die Hooks in der `settings.json` stehen, schickt **jede** Claude-Code-Session
+(Terminal, VS Code, Desktop-App mit Claude Code) ihre Events an die Notch. Zu beachten:
+
+- **Laufende Sessions neu starten.** Claude Code liest die Hooks beim Start. Neue Sessions sind sofort dabei.
+- **Mehrere Accounts / `CLAUDE_CONFIG_DIR`.** Wer mit `CLAUDE_CONFIG_DIR=~/.claude-work` o. ä. arbeitet, hat eine eigene
+  `settings.json`. `npx claude-notch` trägt die Hooks deshalb in `~/.claude`, in `$CLAUDE_CONFIG_DIR` und in jeden
+  `~/.claude-*`-Ordner ein, der wie ein Config-Ordner aussieht. `npx claude-notch status` zeigt, wo sie stehen.
+  Kommt später ein neuer Account dazu: einfach `npx claude-notch hooks` noch mal ausführen.
+- **Testen:** `npx claude-notch status` muss bei jedem Ordner ✓ zeigen, dann in einer neuen Session etwas fragen. Die Notch
+  sollte sofort ausfahren. Wenn nicht: `curl -s 127.0.0.1:7823/health` prüft, ob die App läuft.
 
 ## Installation
 
@@ -32,7 +56,7 @@ npx claude-notch
 
 Das war's. Der Befehl
 1. lädt die fertige Binary von GitHub Releases nach `~/.claude-notch/` (gibt es kein Release, kompiliert er sie lokal mit Swift),
-2. trägt die Hooks in `~/.claude/settings.json` ein (vorher wird `settings.json.claude-notch.bak` angelegt),
+2. trägt die Hooks in `~/.claude/settings.json` ein (und in weitere Config-Ordner, siehe oben; vorher wird jeweils `settings.json.claude-notch.bak` angelegt),
 3. startet den Notch-Helfer im Hintergrund (ohne Dock-Icon, nur ein ✦ in der Menüleiste).
 
 **Kein Apple-Developer-Account, kein App Store, kein Xcode-Projekt.** Die Binary ist ad-hoc signiert. Dateien, die über Node/curl
@@ -63,7 +87,7 @@ oder als `.app`: `./scripts/build-app.sh --open`.
 <details>
 <summary>Hooks manuell eintragen</summary>
 
-Für jedes Event (`SessionStart`, `SessionEnd`, `UserPromptSubmit`, `PreToolUse`, `PostToolUse`, `Notification`, `Stop`, `SubagentStop`, `PreCompact`):
+Für jedes Event (`SessionStart`, `SessionEnd`, `UserPromptSubmit`, `PreToolUse`, `PostToolUse`, `PostToolUseFailure`, `PermissionRequest`, `Notification`, `Stop`, `StopFailure`, `SubagentStop`, `PreCompact`):
 
 ```json
 {
@@ -83,7 +107,7 @@ Für jedes Event (`SessionStart`, `SessionEnd`, `UserPromptSubmit`, `PreToolUse`
   }
 }
 ```
-`matcher` braucht es nur bei `PreToolUse`/`PostToolUse`.
+`matcher` braucht es nur bei den Tool-Events (`PreToolUse`, `PostToolUse`, `PostToolUseFailure`, `PermissionRequest`).
 </details>
 
 ## Einstellungen (Menüleiste ✦)
@@ -94,6 +118,8 @@ Für jedes Event (`SessionStart`, `SessionEnd`, `UserPromptSubmit`, `PreToolUse`
 ## Entwicklung
 
 `swift run` startet ohne App-Bundle, also ohne macOS-Mitteilungen. Alles andere funktioniert.
+
+GIFs für README und `docs/` neu aufnehmen: `./scripts/record-gifs.sh` (braucht `ffmpeg`), siehe [docs/animations.md](docs/animations.md#gifs-neu-aufnehmen).
 
 Releases: Version in `package.json` hochzählen, Tag `vX.Y.Z` pushen. GitHub Actions baut die Universal-Binary (arm64 + x86_64),
 hängt sie ans Release und veröffentlicht auf npm, falls das Secret `NPM_TOKEN` gesetzt ist.
@@ -107,11 +133,12 @@ Sources/ClaudeNotch/
 ├── SessionStore.swift               Event-Stream → Zustand pro Session
 ├── Session.swift                    Zustände, Tool-Icons/Labels, Farben
 ├── Transcript.swift                 liest die letzte Antwort aus dem Transcript (für „Fertig“)
-├── HookInstaller.swift              ~/.claude/settings.json patchen
+├── HookInstaller.swift              settings.json aller Claude-Config-Ordner patchen
 ├── Notifier.swift                   Sounds, Mitteilungen, Terminal aktivieren
 ├── NotchViewModel.swift             Präsentation (hidden/compact/expanded/celebrating/attention) + Größen
 ├── NotchWindow.swift                transparentes NSPanel über der Notch, Hover ohne Klicks zu klauen
 ├── Demo.swift                       Demo-Ablauf
+├── Recorder.swift                   nimmt alle Animationen als Frames auf (--record, für die GIFs)
 └── Views/                           NotchShape, ClaudeSpark, Indikatoren, Konfetti, Häkchen …
 ```
 
