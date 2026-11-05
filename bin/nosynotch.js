@@ -95,6 +95,11 @@ const permissionCommand = (agent = 'claude') => {
     `case "$r" in "${token} "*) printf '%s' "\${r#${token} }";; esac; true`,
   ].join(' ');
 };
+// Claude Code only passes usage limits to its status line – a silent one forwards them (only if you have none).
+// Must match HookInstaller.statusLineCommand.
+const STATUS_LINE_COMMAND =
+  "curl -s -m 1 -X POST -H 'Content-Type: application/json' -H 'Expect:' --data-binary @- " +
+  `'http://127.0.0.1:${PORT}/usage?src=${MARKER}' >/dev/null 2>&1; true`;
 const commandFor = (event, agent) => (event === 'PermissionRequest' ? permissionCommand(agent) : hookCommand(agent));
 const timeoutFor = (event, fallback = 5) => (event === 'PermissionRequest' ? 600 : fallback);
 
@@ -332,6 +337,7 @@ function installHooksIn(file, events = HOOK_EVENTS, agent = 'claude') {
     hooks[name] = groups;
   }
   settings.hooks = hooks;
+  if (agent === 'claude' && !settings.statusLine) settings.statusLine = { type: 'command', command: STATUS_LINE_COMMAND };
   writeSettings(file, settings);
   ok(`Hooks added to ${pretty(file)} ${dim(`(backup: ${path.basename(file)}.nosynotch.bak)`)}`);
 }
@@ -344,7 +350,10 @@ function removeHooks() {
 function removeHooksIn(file) {
   if (!fs.existsSync(file)) return;
   const settings = readSettings(file);
-  if (!settings.hooks) return;
+  const ownStatusLine = typeof settings.statusLine?.command === 'string' && settings.statusLine.command.includes(MARKER);
+  if (ownStatusLine) delete settings.statusLine;
+  if (!settings.hooks && !ownStatusLine) return;
+  settings.hooks = settings.hooks || {};
   for (const name of Object.keys(settings.hooks)) {
     const groups = Array.isArray(settings.hooks[name]) ? settings.hooks[name].filter((g) => !isOurs(g)) : settings.hooks[name];
     if (Array.isArray(groups) && groups.length === 0) delete settings.hooks[name];
