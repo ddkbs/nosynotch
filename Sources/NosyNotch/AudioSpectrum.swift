@@ -184,15 +184,15 @@ final class AudioSpectrum: @unchecked Sendable {
             // and loud masters both use the full height and the bars actually jump.
             let db = 20 * log10(max(mean / Float(n), 1e-9))
             bandPeak[b] = max(db, bandPeak[b] - 0.12)
-            let range: Float = 22
+            let range: Float = 28
             let x = min(1, max(0, (db - (bandPeak[b] - range)) / range))
-            bands[b] = pow(x, 1.6)
+            bands[b] = pow(x, 1.4)
         }
 
         // Fast attack, slow release – looks like a real VU meter.
         for b in 0..<Self.bandCount {
             let target = bands[b]
-            smoothed[b] += (target - smoothed[b]) * (target > smoothed[b] ? 0.75 : 0.25)
+            smoothed[b] += (target - smoothed[b]) * (target > smoothed[b] ? 0.35 : 0.08)
         }
         let audible = peak > 0.0005
         let snapshot = smoothed

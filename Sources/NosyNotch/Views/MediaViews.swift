@@ -50,13 +50,13 @@ struct EqualizerBars: View {
                     let level: Double = {
                         if let levels { return Double(levels[i]) }
                         // No audio (yet): a bouncier fallback with a shared "beat".
-                        let beat = pow(0.5 + 0.5 * sin(t * 7.8), 3)
-                        let wobble = 0.5 + 0.5 * sin(t * (5.3 + Double(i) * 1.7) + Double(i) * 1.3)
+                        let beat = pow(0.5 + 0.5 * sin(t * 5.2), 3)
+                        let wobble = 0.5 + 0.5 * sin(t * (3.4 + Double(i) * 0.9) + Double(i) * 1.3)
                         return 0.25 + 0.45 * wobble + 0.3 * beat * (i == 0 || i == 1 ? 1 : 0.6)
                     }()
                     Capsule()
                         .fill(color)
-                        .frame(width: 3, height: playing ? 3 + 17 * CGFloat(min(1, max(0, level))) : 3)
+                        .frame(width: 3, height: playing ? 3 + 15 * CGFloat(min(1, max(0, level))) : 3)
                         .shadow(color: color.opacity(playing ? 0.6 : 0), radius: 3)
                 }
             }
