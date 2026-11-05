@@ -56,7 +56,7 @@ final class NotchWindowController {
         self.model = model
         self.panel = NotchPanel(contentRect: NSRect(x: 0, y: 0, width: 600, height: 300))
 
-        let host = NSHostingView(rootView: NotchView(model: model, store: model.store))
+        let host = NSHostingView(rootView: NotchView(model: model, store: model.store, media: model.media))
         host.sizingOptions = []
         host.wantsLayer = true
         host.layer?.backgroundColor = .clear

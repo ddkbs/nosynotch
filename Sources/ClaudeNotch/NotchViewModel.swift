@@ -16,6 +16,8 @@ final class NotchViewModel: ObservableObject {
         case attention
         /// The turn ended with an API error.
         case failed
+        /// Nothing from Claude – music is playing: cover on the left, equalizer on the right.
+        case media
     }
 
     struct Celebration: Equatable {
@@ -27,8 +29,10 @@ final class NotchViewModel: ObservableObject {
     static let expandedWidth: CGFloat = 460
     static let rowHeight: CGFloat = 50
     static let maxRows = 4
+    static let mediaCardHeight: CGFloat = 84
 
     let store: SessionStore
+    let media: NowPlaying
 
     @Published var notchSize = CGSize(width: 185, height: 32)
     @Published var hasPhysicalNotch = true
@@ -44,9 +48,17 @@ final class NotchViewModel: ObservableObject {
 
     private var flashWork: DispatchWorkItem?
 
-    init(store: SessionStore) {
+    init(store: SessionStore, media: NowPlaying) {
         self.store = store
+        self.media = media
+        media.onChange = { [weak self] in self?.recompute() }
     }
+
+    /// A track is loaded in Spotify / Music and the media player is enabled.
+    var hasMedia: Bool { Preferences.mediaEnabled && media.track != nil }
+
+    /// Whether the hover view lists Claude sessions (always, unless there are none but music is playing).
+    var showsSessionList: Bool { !store.sessions.isEmpty || !hasMedia }
 
     // MARK: - Geometry
 
@@ -57,11 +69,15 @@ final class NotchViewModel: ObservableObject {
         switch presentation {
         case .hidden:
             return CGSize(width: notchSize.width + 2 * flare, height: hasPhysicalNotch ? notchSize.height : 0)
-        case .compact:
+        case .compact, .media:
             return CGSize(width: compactWidth, height: notchSize.height)
         case .expanded:
-            let rows = CGFloat(min(max(store.sessions.count, 1), Self.maxRows))
-            return CGSize(width: wide, height: notchSize.height + 10 + rows * Self.rowHeight + 12)
+            var height = notchSize.height + 12
+            if hasMedia { height += 2 + Self.mediaCardHeight }
+            if showsSessionList {
+                height += 10 + CGFloat(min(max(store.sessions.count, 1), Self.maxRows)) * Self.rowHeight
+            }
+            return CGSize(width: wide, height: height)
         case .celebrating:
             return CGSize(width: wide, height: notchSize.height + 104)
         case .attention, .failed:
@@ -72,21 +88,21 @@ final class NotchViewModel: ObservableObject {
     /// Size of the window that hosts the notch – big enough for the largest state plus glow.
     var canvasSize: CGSize {
         CGSize(width: Self.expandedWidth + 80,
-               height: notchSize.height + 10 + CGFloat(Self.maxRows) * Self.rowHeight + 12 + 40)
+               height: notchSize.height + 10 + Self.mediaCardHeight + 10 + CGFloat(Self.maxRows) * Self.rowHeight + 12 + 40)
     }
 
     var topRadius: CGFloat { Self.topRadius(for: presentation) }
 
     var bottomRadius: CGFloat {
         switch presentation {
-        case .hidden, .compact: return min(12, notchSize.height * 0.38)
+        case .hidden, .compact, .media: return min(12, notchSize.height * 0.38)
         default: return 26
         }
     }
 
     private static func topRadius(for p: Presentation) -> CGFloat {
         switch p {
-        case .hidden, .compact: return 6
+        case .hidden, .compact, .media: return 6
         default: return 14
         }
     }
@@ -144,10 +160,12 @@ final class NotchViewModel: ObservableObject {
             next = .attention
         } else if failure != nil {
             next = .failed
-        } else if isHovering && !store.sessions.isEmpty {
+        } else if isHovering && (!store.sessions.isEmpty || hasMedia) {
             next = .expanded
         } else if store.hasActivity || store.hasWaiting {
             next = .compact
+        } else if hasMedia && media.isPlaying {
+            next = .media
         } else {
             next = .hidden
         }

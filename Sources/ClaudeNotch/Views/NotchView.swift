@@ -3,6 +3,7 @@ import SwiftUI
 struct NotchView: View {
     @ObservedObject var model: NotchViewModel
     @ObservedObject var store: SessionStore
+    @ObservedObject var media: NowPlaying
 
     private var spring: Animation { .spring(response: 0.42, dampingFraction: 0.74) }
 
@@ -26,6 +27,7 @@ struct NotchView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .animation(spring, value: model.presentation)
         .animation(spring, value: store.sessions.count)
+        .animation(spring, value: media.track == nil)
         .animation(.linear(duration: 0.55), value: model.shakes)
     }
 
@@ -35,6 +37,7 @@ struct NotchView: View {
         switch model.presentation {
         case .attention: return Theme.amber
         case .failed: return Theme.danger
+        case .media: return media.accent
         case .celebrating: return Theme.success
         default: return store.primary?.accent ?? .clear
         }
@@ -44,6 +47,7 @@ struct NotchView: View {
         switch model.presentation {
         case .attention, .celebrating, .failed: return 0.55
         case .compact: return store.hasWaiting ? 0.45 : 0.18
+        case .media: return 0.22
         default: return 0
         }
     }
@@ -58,27 +62,36 @@ struct NotchView: View {
 
             switch model.presentation {
             case .expanded:
-                SessionList(store: store)
-                    .transition(.blurFade.combined(with: .move(edge: .top)))
+                VStack(spacing: 0) {
+                    if model.hasMedia {
+                        MediaPlayerCard(media: media)
+                            .padding(.top, 2)
+                    }
+                    if model.showsSessionList {
+                        SessionList(store: store)
+                    }
+                }
+                .transition(.blurFade.combined(with: .move(edge: .top)))
             case .celebrating:
                 if let celebration = model.celebration {
                     CelebrationView(celebration: celebration,
                                     live: store.sessions[celebration.session.id],
-                                    onTap: { model.dismissFlash() })
+                                    onTap: { model.dismissFlash() },
+                                    onDismiss: { model.dismissFlash() })
                         .id(celebration.id)
                         .transition(.blurFade.combined(with: .scale(scale: 0.85, anchor: .top)))
                 }
             case .attention:
                 if let session = model.attention {
-                    AttentionView(session: store.sessions[session.id] ?? session)
+                    AttentionView(session: store.sessions[session.id] ?? session, onDismiss: { model.dismissFlash() })
                         .transition(.blurFade.combined(with: .scale(scale: 0.85, anchor: .top)))
                 }
             case .failed:
                 if let session = model.failure {
-                    FailureView(session: store.sessions[session.id] ?? session)
+                    FailureView(session: store.sessions[session.id] ?? session, onDismiss: { model.dismissFlash() })
                         .transition(.blurFade.combined(with: .scale(scale: 0.85, anchor: .top)))
                 }
-            case .hidden, .compact:
+            case .hidden, .compact, .media:
                 EmptyView()
             }
         }
@@ -88,6 +101,32 @@ struct NotchView: View {
     /// The strip at notch height: activity on the left wing, status on the right wing.
     @ViewBuilder
     private var header: some View {
+        if model.presentation == .media {
+            mediaHeader
+        } else {
+            claudeHeader
+        }
+    }
+
+    /// Cover on the left wing, equalizer on the right.
+    private var mediaHeader: some View {
+        HStack(spacing: 0) {
+            MediaArtwork(image: media.artwork)
+                .frame(width: 20, height: 20)
+                .id(media.track?.id)
+                .transition(.scale(scale: 0.2).combined(with: .opacity))
+                .frame(width: Self.wingContent, alignment: .center)
+                .onTapGesture { media.openPlayer() }
+            Spacer(minLength: model.notchSize.width)
+            EqualizerBars(color: media.accent, playing: media.isPlaying)
+                .frame(width: Self.wingContent, alignment: .center)
+                .transition(.scale(scale: 0.2).combined(with: .opacity))
+        }
+        .padding(.horizontal, 4)
+    }
+
+    @ViewBuilder
+    private var claudeHeader: some View {
         let primary = store.primary
         let visible = model.presentation != .hidden
         HStack(spacing: 0) {
@@ -236,6 +275,7 @@ struct CelebrationView: View {
     /// Latest state of the session (the summary may arrive a moment after the Stop event).
     let live: Session?
     var onTap: () -> Void
+    var onDismiss: () -> Void
 
     @State private var appeared = false
     @State private var burstStart = Date().addingTimeInterval(0.2)
@@ -286,6 +326,9 @@ struct CelebrationView: View {
             TerminalActivator.activate(session)
             onTap()
         }
+        .overlay(alignment: .topTrailing) {
+            DismissButton(action: onDismiss).padding(.top, 8).padding(.trailing, 14)
+        }
         .onAppear {
             withAnimation(.spring(response: 0.45, dampingFraction: 0.8).delay(0.15)) { appeared = true }
         }
@@ -300,6 +343,7 @@ struct CelebrationView: View {
 
 struct FailureView: View {
     let session: Session
+    var onDismiss: () -> Void
 
     var body: some View {
         HStack(spacing: 14) {
@@ -343,6 +387,9 @@ struct FailureView: View {
         .padding(.top, 12)
         .contentShape(Rectangle())
         .onTapGesture { TerminalActivator.activate(session) }
+        .overlay(alignment: .topTrailing) {
+            DismissButton(action: onDismiss).padding(.top, 8).padding(.trailing, 14)
+        }
     }
 }
 
@@ -350,6 +397,7 @@ struct FailureView: View {
 
 struct AttentionView: View {
     let session: Session
+    var onDismiss: () -> Void
 
     var body: some View {
         HStack(spacing: 14) {
@@ -392,5 +440,8 @@ struct AttentionView: View {
         .padding(.top, 12)
         .contentShape(Rectangle())
         .onTapGesture { TerminalActivator.activate(session) }
+        .overlay(alignment: .topTrailing) {
+            DismissButton(action: onDismiss).padding(.top, 8).padding(.trailing, 14)
+        }
     }
 }

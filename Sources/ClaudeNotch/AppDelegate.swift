@@ -3,7 +3,8 @@ import AppKit
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private lazy var store = SessionStore()
-    private lazy var model = NotchViewModel(store: store)
+    private lazy var nowPlaying = NowPlaying()
+    private lazy var model = NotchViewModel(store: store, media: nowPlaying)
     private var windowController: NotchWindowController?
     private var server: EventServer?
     private var statusItem: NSStatusItem?
@@ -86,6 +87,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         sound.state = Preferences.soundEnabled ? .on : .off
         menu.addItem(sound)
 
+        let media = item("Media-Player in der Notch (Spotify / Musik)", #selector(toggleMedia))
+        media.state = Preferences.mediaEnabled ? .on : .off
+        menu.addItem(media)
+
         let notifications = item("macOS-Mitteilungen", #selector(toggleNotifications))
         notifications.state = Preferences.systemNotifications ? .on : .off
         menu.addItem(notifications)
@@ -120,6 +125,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
     @objc private func toggleSound() {
         Preferences.soundEnabled.toggle()
+    }
+
+    @objc private func toggleMedia() {
+        Preferences.mediaEnabled.toggle()
+        model.recompute()
     }
 
     @objc private func toggleNotifications() {
