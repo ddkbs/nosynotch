@@ -59,7 +59,6 @@ const LINKS = [
   ["Moments", "#moments"],
   ["Agents", "#agents"],
   ["Nod", "#nod"],
-  ["Privacy", "#privacy"],
 ];
 
 /** The page's own menu bar, macOS style, with the site's notch hanging in the middle. */

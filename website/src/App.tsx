@@ -2,16 +2,14 @@ import { Analytics } from "@vercel/analytics/react";
 import { motion } from "motion/react";
 import { useEffect, useState, type ReactNode } from "react";
 import SpectralDrape from "./backgrounds/SpectralDrape";
-import { CURSORS, Cursor, type CursorKind } from "./cursors/Cursors";
-import { CursorSwitcher } from "./cursors/CursorSwitcher";
 import { INSTALL_COMMAND, openInstall, REPO_URL, up, useRepoInfo } from "./lib";
 import { LogoMark } from "./Logo";
 import { SiteMenuBar } from "./MenuBar";
 import { Agents } from "./sections/Agents";
 import { Moments } from "./sections/Moments";
 import { Nod } from "./sections/Nod";
-import { Pipeline } from "./sections/Pipeline";
 import Magnet from "./vendor/Magnet";
+import TargetCursor from "./vendor/TargetCursor";
 
 function PrimaryButton({ onClick, children }: { onClick: () => void; children: ReactNode }) {
   return (
@@ -105,13 +103,19 @@ function Hero() {
       <LookUp />
 
       <div className="mx-auto flex min-h-[100svh] max-w-[1100px] flex-col items-center justify-center px-5 pb-20 pt-28 text-center">
-        <motion.span
+        <motion.a
           {...up(0.05)}
-          className="mb-7 inline-flex items-center gap-2 rounded-full border border-white/10 bg-black/45 py-1 pl-1.5 pr-3.5 text-[12.5px] text-white/70 backdrop-blur-md"
+          href={version ? `${REPO_URL}/releases/tag/v${version}` : `${REPO_URL}/releases`}
+          target="_blank"
+          rel="noreferrer"
+          className="cursor-target group mb-7 inline-flex items-center gap-2 rounded-full border border-white/10 bg-black/45 py-1 pl-1.5 pr-3 text-[12.5px] text-white/70 backdrop-blur-md transition-colors hover:border-white/25 hover:text-white"
         >
-          <span className="rounded-full bg-white/10 px-2 py-0.5 font-mono text-[11px] text-white">v{version ?? "0.2.0"}</span>
+          <span className="rounded-full bg-white/10 px-2 py-0.5 font-mono text-[11px] text-white transition-colors group-hover:bg-white group-hover:text-black">
+            v{version ?? "0.2.0"}
+          </span>
           free · open source · for Claude Code, Codex and Cursor
-        </motion.span>
+          <span className="text-white/35 transition-transform duration-300 group-hover:translate-x-0.5 group-hover:text-white/80">→</span>
+        </motion.a>
         <motion.h1 {...up(0.12)} className="text-[clamp(50px,9vw,120px)] font-semibold leading-[0.9] tracking-[-0.06em]">
           Agents work.
           <br />
@@ -201,46 +205,11 @@ function Footer() {
   );
 }
 
-const CURSOR_KEY = "nosy-cursor";
-
-function useCursorChoice(): [CursorKind, (k: CursorKind) => void] {
-  const [kind, setKind] = useState<CursorKind>(() => {
-    try {
-      const saved = localStorage.getItem(CURSOR_KEY) as CursorKind | null;
-      if (saved && CURSORS.some((c) => c.id === saved)) return saved;
-    } catch {
-      /* storage may be blocked */
-    }
-    return "target";
-  });
-  const set = (k: CursorKind) => {
-    setKind(k);
-    try {
-      localStorage.setItem(CURSOR_KEY, k);
-    } catch {
-      /* ignore */
-    }
-  };
-  // Number keys switch cursors while trying them out.
-  useEffect(() => {
-    if (!import.meta.env.DEV) return;
-    const onKey = (e: KeyboardEvent) => {
-      const i = Number(e.key) - 1;
-      if (i >= 0 && i < CURSORS.length && !(e.target instanceof HTMLInputElement)) set(CURSORS[i].id);
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, []);
-  return [kind, set];
-}
-
 export default function App() {
-  const [cursor, setCursor] = useCursorChoice();
   return (
     <>
       <Analytics />
-      <Cursor kind={cursor} />
-      {import.meta.env.DEV && <CursorSwitcher value={cursor} onChange={setCursor} />}
+      <TargetCursor targetSelector=".cursor-target" spinDuration={2.4} hideDefaultCursor />
       <SiteMenuBar />
       <Hero />
 
@@ -256,7 +225,7 @@ export default function App() {
                 <span className="text-white/45">at a glance.</span>
               </>
             }
-            body="This is the real notch, rebuilt from the app's code. Pick a moment, or just watch. When it asks for permission, answer it."
+            body="The real notch, rebuilt from the app's code. Pick a moment, or just watch. When it asks for permission, answer it."
           />
           <Moments />
         </section>
@@ -281,27 +250,6 @@ export default function App() {
           <Nod />
         </section>
 
-        <section id="privacy" className="scroll-mt-20 pt-36">
-          <SectionHead
-            kicker="How it works"
-            color="#4ADE80"
-            title={
-              <>
-                One curl.
-                <br />
-                <span className="text-white/45">Never leaves your Mac.</span>
-              </>
-            }
-            body={
-              <>
-                Every agent runs small hooks at each step. Nosy Notch adds a one-line curl that tells the app on{" "}
-                <span className="font-mono text-[13.5px] text-white/80">127.0.0.1</span> what happened, in about 15 ms. If the app isn't running, the
-                agent carries on as if nothing happened. The only outside requests are for album covers.
-              </>
-            }
-          />
-          <Pipeline />
-        </section>
       </main>
 
       <Finale />

@@ -82,14 +82,6 @@ body {
   }
 }
 
-/* The custom cursor replaces the system one on devices with a fine pointer. */
-@media (pointer: fine) {
-  html.custom-cursor,
-  html.custom-cursor * {
-    cursor: none !important;
-  }
-}
-
 /* Headline gradient: the same colours as the drape, drifting slowly. */
 .text-drape {
   background: linear-gradient(100deg, #6d5bff 0%, #b04dff 28%, #ff4f9a 55%, #ff9a5a 80%, #ffd38a 100%);
@@ -196,5 +188,16 @@ body {
   .text-drape,
   .beam {
     animation: none;
+  }
+}
+
+@keyframes blink-lid {
+  0%,
+  92%,
+  100% {
+    height: 0%;
+  }
+  95% {
+    height: 100%;
   }
 }

@@ -1,18 +1,17 @@
 import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useRef, useState } from "react";
 import { MenuBarContent } from "../MenuBar";
-import { ease } from "../lib";
 import { MomentNotch, type MomentId } from "../notch/MomentNotch";
 
-const MOMENTS: { id: MomentId; title: string; body: string; color: string; clip: string; ms: number }[] = [
-  { id: "thinking", title: "Thinking", body: "The notch slides out. The spark turns, three dots wait with you.", color: "#D97757", clip: "thinking", ms: 4200 },
-  { id: "working", title: "Working", body: "Terminal, pencil, magnifier, globe: you always see which tool is running.", color: "#D97757", clip: "tools", ms: 5600 },
-  { id: "attention", title: "Needs you", body: "Amber glow, a little shake and the exact command. Go on, answer it.", color: "#F5A524", clip: "attention", ms: 9000 },
-  { id: "done", title: "Done", body: "A checkmark draws itself, confetti flies, and you read how the answer starts.", color: "#4ADE80", clip: "done", ms: 5200 },
-  { id: "unseen", title: "Didn't see it?", body: "A green dot breathes until you look. One gentle reminder after five minutes.", color: "#4ADE80", clip: "unseen", ms: 4200 },
-  { id: "sessions", title: "Every session", body: "Hover for all sessions, their context fill and your 5-hour and weekly limits.", color: "#A78BFA", clip: "usage", ms: 6400 },
-  { id: "agents", title: "Claude, Codex, Cursor", body: "Each agent has its own mark and colour. Many sessions, one notch.", color: "#80AAFF", clip: "codex", ms: 6000 },
-  { id: "music", title: "Music in between", body: "Nothing running? Spotify or Apple Music takes over, until an agent needs the notch again.", color: "#F26B9E", clip: "media", ms: 4600 },
+const MOMENTS: { id: MomentId; title: string; color: string; ms: number }[] = [
+  { id: "thinking", title: "Thinking", color: "#D97757", ms: 4200 },
+  { id: "working", title: "Working", color: "#D97757", ms: 5600 },
+  { id: "attention", title: "Needs you", color: "#F5A524", ms: 9000 },
+  { id: "done", title: "Done", color: "#4ADE80", ms: 5200 },
+  { id: "unseen", title: "Didn't see it?", color: "#4ADE80", ms: 4200 },
+  { id: "sessions", title: "Every session", color: "#A78BFA", ms: 6400 },
+  { id: "agents", title: "Claude, Codex, Cursor", color: "#80AAFF", ms: 6000 },
+  { id: "music", title: "Music in between", color: "#F26B9E", ms: 4600 },
 ];
 
 /**
@@ -22,7 +21,6 @@ const MOMENTS: { id: MomentId; title: string; body: string; color: string; clip:
 export function Moments() {
   const [index, setIndex] = useState(0);
   const [auto, setAuto] = useState(true);
-  const [recorded, setRecorded] = useState(false);
   const [elapsed, setElapsed] = useState(0);
   const [onScreen, setOnScreen] = useState(false);
   const box = useRef<HTMLDivElement>(null);
@@ -59,8 +57,7 @@ export function Moments() {
           <div className="absolute inset-0 bg-black/10" />
           <MenuBarContent app="Terminal" />
           <div className="absolute left-1/2 top-0 z-10 origin-top -translate-x-1/2 scale-[0.78] sm:scale-100 md:scale-[1.28]">
-            {recorded ? null : (
-              <MomentNotch
+            <MomentNotch
                 key={m.id}
                 moment={m.id}
                 onSettled={() => {
@@ -72,20 +69,7 @@ export function Moments() {
                   }, 2600);
                 }}
               />
-            )}
           </div>
-          {recorded && (
-            <video
-              key={m.clip}
-              src={`/demo/${m.clip}.mp4`}
-              autoPlay
-              muted
-              loop
-              playsInline
-              className="absolute inset-x-0 top-0 w-full"
-              aria-label={`Recording: ${m.title}`}
-            />
-          )}
           {/* Terminal window peeking in from below, so the strip reads as a real desktop. */}
           <div className="absolute inset-x-[8%] bottom-[-40px] h-[150px] rounded-t-xl border border-white/15 bg-black/70 p-4 font-mono text-[12px] text-white/70 backdrop-blur-xl sm:inset-x-[18%]">
             <div className="mb-3 flex gap-1.5">
@@ -133,27 +117,6 @@ export function Moments() {
         })}
       </div>
 
-      <div className="mx-auto mt-4 flex min-h-[48px] max-w-[620px] flex-col items-center gap-2 text-center">
-        <AnimatePresence mode="wait" initial={false}>
-          <motion.p
-            key={m.id}
-            initial={{ opacity: 0, y: 6, filter: "blur(4px)" }}
-            animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
-            exit={{ opacity: 0, y: -4, filter: "blur(4px)" }}
-            transition={{ duration: 0.3, ease }}
-            className="text-[15px] leading-relaxed text-muted-foreground"
-          >
-            {m.body}
-          </motion.p>
-        </AnimatePresence>
-        <button
-          type="button"
-          onClick={() => setRecorded((r) => !r)}
-          className="cursor-target font-mono text-[11px] text-faint transition-colors hover:text-muted-foreground"
-        >
-          {recorded ? "● recording from the app · show live" : "● live in your browser · show the real recording"}
-        </button>
-      </div>
     </div>
   );
 }
