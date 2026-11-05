@@ -1,5 +1,10 @@
 # WORKLOG
 
+## 2026-11-05 (13)
+- **CI repariert**: seit „live equalizer“ (7 Runs) rot. Ursache: `macos-15`-Runner baut mit Xcode 16.4 / Swift 6.1, der bei den `TimelineView`+`Canvas`-Animationen (MediaViews, ClaudeSpark, …) mit „unable to type-check … in reasonable time“ abbricht. Lokal (Swift 6.4) kein Problem.
+- Entscheidung: Runner auf `macos-26` (aktuelles Xcode) statt jede Animation blind über CI-Runden umzubauen. Zusätzlich Balkenhöhe im Live-Equalizer in eigene Funktion ausgelagert (harmlos, bleibt drin).
+- Offen: `actions/checkout@v4` / `upload-artifact@v4` laufen auf Node 20 (Deprecation-Warnung) → bei Gelegenheit auf v5 heben.
+
 ## 2026-11-05 (12)
 - Codex und Cursor haben jetzt auch **in der Notch** eigene Symbole (Leiste, Sitzungsliste, Settings), abhängig vom Zustand: Codex-Sechseck läuft schneller beim Arbeiten, rückwärts beim Komprimieren, pulsiert beim Warten; Cursor = isometrischer Würfel (an Cursors Logo angelehnt, nicht kopiert), dreht sich beim Arbeiten.
 - GIFs mit Codex/Cursor neu: `codex`, `hover`, `usage`, `settings`.
