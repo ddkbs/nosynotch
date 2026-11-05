@@ -201,3 +201,13 @@ body {
     height: 100%;
   }
 }
+
+@keyframes gold-sweep {
+  0% {
+    transform: translateX(0) skewX(-12deg);
+  }
+  45%,
+  100% {
+    transform: translateX(480%) skewX(-12deg);
+  }
+}
