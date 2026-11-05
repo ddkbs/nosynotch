@@ -37,6 +37,8 @@ final class NotchViewModel: ObservableObject {
     let usage: UsageStore
     /// Live band levels of the playing music (only with the live equalizer turned on).
     let spectrum = AudioSpectrum()
+    private var tappedPlayer: String?
+    private var wasPlaying = false
     /// Nod / shake with AirPods while a permission request is open (opt-in).
     let head = HeadGestures()
 
@@ -253,10 +255,17 @@ final class NotchViewModel: ObservableObject {
 
     /// Tap the player's audio only while it plays and the live equalizer is on (and we run as an .app –
     /// the audio permission needs a bundle).
+    ///
+    /// The tap starts with the first play and then stays open across pauses: every new tap is a fresh audio
+    /// capture, and macOS may ask about it again. It closes when the player quits or the option is turned off.
     private func updateSpectrum() {
         let canTap = Bundle.main.bundleURL.pathExtension == "app"
-        let follow = canTap && Preferences.liveEqualizer && Preferences.mediaEnabled && media.isPlaying
-        spectrum.follow(bundleID: follow ? media.track?.source.bundleID : nil)
+        let wanted = canTap && Preferences.liveEqualizer && Preferences.mediaEnabled ? media.track?.source.bundleID : nil
+        if wanted != tappedPlayer { tappedPlayer = media.isPlaying ? wanted : (wanted == nil ? nil : tappedPlayer) }
+        spectrum.follow(bundleID: tappedPlayer)
+        // Spotify sometimes plays through a new helper process after a long pause – reattach if it went quiet.
+        if media.isPlaying && !wasPlaying { spectrum.reattachIfSilent() }
+        wasPlaying = media.isPlaying
     }
 
     func recompute() {

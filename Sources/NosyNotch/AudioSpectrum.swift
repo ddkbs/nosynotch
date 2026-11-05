@@ -25,6 +25,7 @@ final class AudioSpectrum: @unchecked Sendable {
     private var aggregateID = AudioObjectID(kAudioObjectUnknown)
     private var procID: AudioDeviceIOProcID?
     private var bundlePrefix: String?
+    private var tapStartedAt = Date.distantPast
 
     // FFT
     private static let fftSize = 1024
@@ -68,10 +69,23 @@ final class AudioSpectrum: @unchecked Sendable {
         }
     }
 
+    /// Re-create the tap if nothing audible arrived for a minute (the player switched audio processes).
+    func reattachIfSilent() {
+        queue.asyncAfter(deadline: .now() + 2) { [self] in
+            guard let bundleID = bundlePrefix else { return }
+            let silentFor = lock.withLock { Date().timeIntervalSince($0.lastSignal) }
+            guard silentFor > 60, Date().timeIntervalSince(tapStartedAt) > 60 else { return }
+            stopTap()
+            bundlePrefix = bundleID
+            if #available(macOS 14.2, *) { try? startTap(bundleID: bundleID) }
+        }
+    }
+
     // MARK: - Tap
 
     @available(macOS 14.2, *)
     private func startTap(bundleID: String) throws {
+        tapStartedAt = Date()
         let processes = Self.audioProcesses(matching: bundleID)
         guard !processes.isEmpty else { throw Self.error("No audio process for \(bundleID)") }
 
