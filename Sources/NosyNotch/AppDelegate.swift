@@ -14,7 +14,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private lazy var settings = SettingsWindowController(actions: .init(
         statusLine: { [weak self] in self?.statusLine ?? "" },
         playDemo: { [weak self] in self?.playDemo() },
-        settingsChanged: { [weak self] in self?.model.recompute() }
+        settingsChanged: { [weak self] in
+            self?.model.objectWillChange.send()
+            self?.model.recompute()
+        },
+        muteChanged: { [weak self] in self?.updateStatusIcon() }
     ))
 
     func applicationDidFinishLaunching(_ notification: Notification) {
