@@ -1,5 +1,12 @@
 # WORKLOG
 
+## 2026-11-05 (5)
+- **Name: Nosy Notch** (npm/CLI `nosynotch`, App `Nosy Notch.app`, Bundle-ID `dev.davidkubus.nosynotch`, Daten `~/.nosynotch`). Grund: „Claude“ ist Marke von Anthropic. Alte claude-notch-Hooks werden erkannt und ersetzt, `npx nosynotch` räumt alte App/LaunchAgent/Ordner weg. GitHub-Repo heißt noch `ddkbs/claude-notch` (Release-Downloads zeigen dorthin).
+- **Alles Englisch**: App, CLI, README, docs. WORKLOG bleibt deutsch.
+- README: keine PNGs mehr (David will keine), Demo-GIF oben + beschriftetes 2-Spalten-Raster. `docs/screenshots` gelöscht, Stills nur noch mit `STILLS=1`.
+- **Einstellungsfenster** (✦ → Settings…, `npx nosynotch settings`, `POST /settings`): Connect-Button + Status je Config-Ordner, Launch at login (gleicher LaunchAgent wie CLI), 3 Sounds einzeln, Anzeigedauer, macOS-Mitteilungen, Musik an/aus + „auch pausiert zeigen“. Menü nur noch Settings / Demo / Quit. Öffnet sich beim allerersten Start, wenn keine Hooks da sind.
+- Offen: Damit `npx nosynotch` für andere klappt: Repo öffentlich (oder Binaries woanders hosten), Tag `v0.1.0` → Release, `NPM_TOKEN` setzen → npm publish. Repo ggf. in `nosynotch` umbenennen (dann `REPO` in bin/nosynotch.js anpassen).
+
 ## 2026-11-05 (4)
 - **Media-Player als Ruhe-Notch**: Spielt Spotify/Apple Music und Claude ist idle → Cover links, EQ in Cover-Farbe rechts; Hover → Player (Titel, Fortschritt mit Spulen, Zurück/Play/Weiter). Claude hat immer Vorrang.
 - **✕ an allen Benachrichtigungen** (Fertig / Braucht dich / Fehler) → zurück zur Ruhe-Notch (Musik).
