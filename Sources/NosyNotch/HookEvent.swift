@@ -8,6 +8,9 @@ struct HookEvent {
     let name: String
     /// Which agent sent it (`?agent=codex` in the hook URL; Claude Code hooks don't set it).
     let agent: Agent
+    /// Cursor also runs the hooks in `~/.claude/settings.json`. Such a duplicate carries `cursor_version` but
+    /// arrives through a Claude hook URL.
+    let isCursorViaClaudeHook: Bool
     let sessionID: String
     let cwd: String?
     let transcriptPath: String?
@@ -34,8 +37,11 @@ struct HookEvent {
               let name = json["hook_event_name"] as? String
         else { return nil }
 
-        let agent = Agent(query: query["agent"])
+        let queried = Agent(query: query["agent"])
+        let fromCursor = json["cursor_version"] != nil
+        let agent: Agent = fromCursor ? .cursor : queried
         self.agent = agent
+        self.isCursorViaClaudeHook = fromCursor && queried != .cursor
         if agent == .cursor {
             // Cursor names its hooks differently (camelCase) and keys sessions by conversation.
             self.name = Self.cursorEventName(name, status: json["status"] as? String)
@@ -89,6 +95,7 @@ struct HookEvent {
          lastAssistantMessage: String? = nil, error: String? = nil, errorDetails: String? = nil) {
         self.name = name
         self.agent = agent
+        self.isCursorViaClaudeHook = false
         self.sessionID = sessionID
         self.cwd = cwd
         self.transcriptPath = nil

@@ -82,6 +82,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
     private func startServer() {
         let server = EventServer(port: Preferences.port) { [weak self] event in
+            // Cursor runs our Claude hooks too – with our own Cursor hooks installed that's a duplicate.
+            if event.isCursorViaClaudeHook && HookInstaller.Cursor.isInstalledCached { return }
             Task { @MainActor in
                 self?.store.handle(event)
                 self?.approvals.observe(event)

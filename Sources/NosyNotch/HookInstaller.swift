@@ -362,6 +362,13 @@ extension HookInstaller {
             ((entry["command"] as? String) ?? "").contains(marker)
         }
 
+        /// `isInstalled`, re-read at most every 30 s (asked for every Cursor event).
+        static var isInstalledCached: Bool {
+            if Date().timeIntervalSince(cache.date) > 30 { cache = (Date(), isInstalled) }
+            return cache.value
+        }
+        nonisolated(unsafe) private static var cache = (date: Date.distantPast, value: false)
+
         static var isInstalled: Bool {
             guard let file = try? load(hooksURL), let hooks = file["hooks"] as? [String: Any] else { return false }
             return events.allSatisfy { event in
