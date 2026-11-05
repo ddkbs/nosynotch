@@ -2,10 +2,14 @@ import AppKit
 import SwiftUI
 
 /// Renders every notch animation into PNG frames so `scripts/record-gifs.sh` can turn them into GIFs
-/// for the README and `docs/`.
+/// for the README and MP4s for the website.
 ///
-/// `NosyNotch --record <out-dir> [scene …]` plays scripted hook events into a fresh store per scene,
-/// shows the real `NotchView` on a fake menu bar in a regular window and snapshots it at 30 fps.
+/// `NosyNotch --record <out-dir> [scene …]` plays scripted hook events into a fresh store per scene and shows the
+/// real `NotchView` on a fake menu bar in a regular window. Frames are rendered deterministically: frame N shows
+/// the moment N / fps on a virtual clock (`Clock`), SwiftUI's own animations are stepped with
+/// `NSHostingView._renderForTest(interval:)`. Slow frames make the recording take longer, they never drop.
+///
+/// Environment: `FPS` (default 60) and `SCALE` (pixels per point, default 2; 3 = 1680 px wide).
 @MainActor
 final class Recorder {
     struct Scene {
@@ -31,13 +35,22 @@ final class Recorder {
         let steps: [(TimeInterval, HookEvent)]
     }
 
-    static let fps: Double = 30
+    static let fps: Double = environment("FPS", default: 60, in: 1...240)
+    static let scale: CGFloat = CGFloat(environment("SCALE", default: 2, in: 1...4))
     static let width: CGFloat = 560
+
+    private static func environment(_ key: String, default value: Double, in range: ClosedRange<Double>) -> Double {
+        guard let raw = ProcessInfo.processInfo.environment[key], !raw.isEmpty else { return value }
+        guard let number = Double(raw), range.contains(number) else {
+            FileHandle.standardError.write(Data("✗ \(key)=\(raw) is not a number in \(range)\n".utf8))
+            exit(1)
+        }
+        return number
+    }
 
     private let outputDirectory: URL
     private var queue: [Scene]
     private var window: NSWindow?
-    private let writer = DispatchQueue(label: "nosynotch.recorder", qos: .userInitiated)
 
     init(outputDirectory: URL, only names: [String]) {
         self.outputDirectory = outputDirectory
@@ -55,15 +68,18 @@ final class Recorder {
 
     private func next() {
         guard !queue.isEmpty else {
-            writer.async {
-                DispatchQueue.main.async { NSApp.terminate(nil) }
-            }
+            FrameWriter.shared.finish { NSApp.terminate(nil) }
             return
         }
         record(queue.removeFirst()) { [weak self] in self?.next() }
     }
 
     private func record(_ scene: Scene, completion: @escaping () -> Void) {
+        // Everything below – store dates, flash timeouts, the scripted events – runs on the virtual clock.
+        let start = Date()
+        Clock.startVirtual(at: start)
+        let clock = RecordingClock(date: start)
+
         let store = SessionStore()
         let model = NotchViewModel(store: store, media: NowPlaying(observeSystem: false))
         model.notchSize = CGSize(width: 185, height: 32)
@@ -72,29 +88,78 @@ final class Recorder {
         store.onTransition = { scene.focused ? model.showQuietly($0) : model.handle($0) }
         if let t = scene.limitResetAt {
             model.usage.onReset = { agent, window in model.showLimitReset(agent: agent, window: window) }
-            model.usage.set(AgentUsage(fiveHour: UsageWindow(usedPercent: 94, resetsAt: Date() + t)), for: .claude)
-            DispatchQueue.main.asyncAfter(deadline: .now() + t + 0.05) {
-                MainActor.assumeIsolated { model.usage.checkResets(now: Date().addingTimeInterval(1)) }
-            }
+            model.usage.set(AgentUsage(fiveHour: UsageWindow(usedPercent: 94, resetsAt: start + t)), for: .claude)
+            Clock.after(t + 0.05) { model.usage.checkResets(now: Clock.now().addingTimeInterval(1)) }
         }
         if scene.usage {
-            let now = Date()
-            model.usage.set(AgentUsage(fiveHour: UsageWindow(usedPercent: 38, resetsAt: now + 2 * 3600 + 840),
-                                       week: UsageWindow(usedPercent: 71, resetsAt: now + 3 * 86_400)), for: .claude)
-            model.usage.set(AgentUsage(fiveHour: UsageWindow(usedPercent: 12, resetsAt: now + 4 * 3600),
-                                       week: UsageWindow(usedPercent: 90, resetsAt: now + 86_400)), for: .codex)
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
-                MainActor.assumeIsolated {
-                    store.setContext("a", percent: 64)
-                    store.setContext("cx", percent: 88)
-                }
+            model.usage.set(AgentUsage(fiveHour: UsageWindow(usedPercent: 38, resetsAt: start + 2 * 3600 + 840),
+                                       week: UsageWindow(usedPercent: 71, resetsAt: start + 3 * 86_400)), for: .claude)
+            model.usage.set(AgentUsage(fiveHour: UsageWindow(usedPercent: 12, resetsAt: start + 4 * 3600),
+                                       week: UsageWindow(usedPercent: 90, resetsAt: start + 86_400)), for: .codex)
+            Clock.after(0.2) {
+                store.setContext("a", percent: 64)
+                store.setContext("cx", percent: 88)
             }
+        }
+
+        for (delay, event) in scene.steps {
+            Clock.after(delay) {
+                store.handle(event)
+                // Permission requests wait for Allow / Deny, like the real hook.
+                if event.name == "PermissionRequest" { model.approvals.add(event) { _ in } }
+            }
+        }
+        if let t = scene.allowAt {
+            Clock.after(t) { if let approval = model.attentionApproval { model.decide(approval, .allow) } }
+        }
+        if let t = scene.musicAt {
+            Clock.after(t) { model.media.preview(Self.demoTrack, artwork: Self.demoArtwork(), playing: true, position: 74) }
+        }
+        if let t = scene.dismissFlashAt {
+            Clock.after(t) { model.dismissFlash() }
+        }
+        if let t = scene.hoverAt {
+            Clock.after(t) { model.isHovering = true }
         }
 
         let size = CGSize(width: Self.width, height: scene.height)
-        let host = NSHostingView(rootView: RecordingStage(model: model, store: store))
+        let host = NSHostingView(rootView: RecordingStage(model: model, store: store, clock: clock))
         host.frame = CGRect(origin: .zero, size: size)
+        show(host, size: size)
 
+        let dir = outputDirectory.appendingPathComponent(scene.name, isDirectory: true)
+        try? FileManager.default.removeItem(at: dir)
+        try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        let total = Int((scene.duration * Self.fps).rounded())
+        let stillFrame = scene.stillAt.map { Int(($0 * Self.fps).rounded()) }
+        print("● \(scene.name) (\(total) frames, \(Int(Self.fps)) fps, \(Int(Self.width * Self.scale)) px) …")
+
+        var frame = 0
+        func step() {
+            let now = start + Double(frame) / Self.fps
+            Clock.advance(to: now)
+            clock.date = now
+            host._renderForTest(interval: frame == 0 ? 0 : 1 / Self.fps)
+
+            var urls = [dir.appendingPathComponent(String(format: "frame_%04d.png", frame))]
+            if frame == stillFrame { urls.append(outputDirectory.appendingPathComponent("stills/\(scene.name).png")) }
+            FrameWriter.shared.write(Self.snapshot(host), to: urls)
+
+            frame += 1
+            if frame < total {
+                // Back to the run loop between frames so queued main-thread work (Combine, Tasks) gets to run.
+                DispatchQueue.main.async { MainActor.assumeIsolated { step() } }
+            } else {
+                store.onChange = nil
+                store.onTransition = nil
+                Clock.stopVirtual()
+                completion()
+            }
+        }
+        step()
+    }
+
+    private func show(_ host: NSView, size: CGSize) {
         let window = self.window ?? NSWindow(contentRect: CGRect(origin: .zero, size: size),
                                              styleMask: [.borderless], backing: .buffered, defer: false)
         window.setContentSize(size)
@@ -107,82 +172,20 @@ final class Recorder {
         }
         window.orderFrontRegardless()
         self.window = window
+    }
 
-        let dir = outputDirectory.appendingPathComponent(scene.name, isDirectory: true)
-        try? FileManager.default.removeItem(at: dir)
-        try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
-        print("● \(scene.name) (\(Int(scene.duration))s) …")
-
-        let start = Date()
-        for (delay, event) in scene.steps {
-            DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
-                MainActor.assumeIsolated {
-                    store.handle(event)
-                    // Permission requests wait for Allow / Deny, like the real hook.
-                    if event.name == "PermissionRequest" { model.approvals.add(event) { _ in } }
-                }
-            }
-        }
-        if let t = scene.allowAt {
-            DispatchQueue.main.asyncAfter(deadline: .now() + t) {
-                MainActor.assumeIsolated {
-                    if let approval = model.attentionApproval { model.decide(approval, .allow) }
-                }
-            }
-        }
-        if let t = scene.musicAt {
-            DispatchQueue.main.asyncAfter(deadline: .now() + t) {
-                MainActor.assumeIsolated {
-                    model.media.preview(Self.demoTrack, artwork: Self.demoArtwork(), playing: true, position: 74)
-                }
-            }
-        }
-        if let t = scene.dismissFlashAt {
-            DispatchQueue.main.asyncAfter(deadline: .now() + t) {
-                MainActor.assumeIsolated { model.dismissFlash() }
-            }
-        }
-        if let t = scene.hoverAt {
-            DispatchQueue.main.asyncAfter(deadline: .now() + t) {
-                MainActor.assumeIsolated { model.isHovering = true }
-            }
-        }
-
-        var frame = 0
-        let total = Int(scene.duration * Self.fps)
-        let timer = Timer(timeInterval: 1 / Self.fps, repeats: true) { [weak self] timer in
-            MainActor.assumeIsolated {
-                guard let self else { return timer.invalidate() }
-                // Catch up on dropped ticks so the GIF plays at real speed.
-                let due = min(total, Int(Date().timeIntervalSince(start) * Self.fps) + 1)
-                guard frame < due, let rep = host.bitmapImageRepForCachingDisplay(in: host.bounds) else { return }
-                host.cacheDisplay(in: host.bounds, to: rep)
-                let image = rep
-                while frame < due {
-                    var urls = [dir.appendingPathComponent(String(format: "frame_%04d.png", frame))]
-                    if let still = scene.stillAt, frame == Int(still * Self.fps) {
-                        urls.append(self.outputDirectory.appendingPathComponent("stills/\(scene.name).png"))
-                    }
-                    let targets = urls
-                    self.writer.async {
-                        guard let png = image.representation(using: .png, properties: [:]) else { return }
-                        for url in targets {
-                            try? FileManager.default.createDirectory(at: url.deletingLastPathComponent(),
-                                                                     withIntermediateDirectories: true)
-                            try? png.write(to: url)
-                        }
-                    }
-                    frame += 1
-                }
-                if frame >= total {
-                    timer.invalidate()
-                    store.onChange = nil
-                    store.onTransition = nil
-                    completion()
-                }
-            }
-        }
-        RunLoop.main.add(timer, forMode: .common)
+    /// The view's current state at `scale` pixels per point, independent of the screen's backing scale.
+    static func snapshot(_ view: NSView) -> NSBitmapImageRep? {
+        let bounds = view.bounds
+        guard let rep = NSBitmapImageRep(bitmapDataPlanes: nil,
+                                         pixelsWide: Int((bounds.width * scale).rounded()),
+                                         pixelsHigh: Int((bounds.height * scale).rounded()),
+                                         bitsPerSample: 8, samplesPerPixel: 4, hasAlpha: true, isPlanar: false,
+                                         colorSpaceName: .deviceRGB, bytesPerRow: 0, bitsPerPixel: 0)
+        else { return nil }
+        rep.size = bounds.size
+        view.cacheDisplay(in: bounds, to: rep)
+        return rep
     }
 
     // MARK: - Scenes
@@ -325,10 +328,48 @@ final class Recorder {
     }
 }
 
+/// The virtual time the recorder hands to every `ClockTimeline` in the stage.
+@MainActor
+final class RecordingClock: ObservableObject {
+    @Published var date: Date
+    init(date: Date) { self.date = date }
+}
+
+/// Encodes and writes frames off the main thread, with a cap on how many wait in memory.
+final class FrameWriter: @unchecked Sendable {
+    static let shared = FrameWriter()
+
+    private let queue = DispatchQueue(label: "nosynotch.recorder.writer", qos: .userInitiated, attributes: .concurrent)
+    private let group = DispatchGroup()
+    private let slots = DispatchSemaphore(value: ProcessInfo.processInfo.activeProcessorCount * 2)
+
+    func write(_ image: NSBitmapImageRep?, to urls: [URL]) {
+        guard let image else { return }
+        slots.wait()
+        queue.async(group: group) { [slots] in
+            defer { slots.signal() }
+            guard let png = image.representation(using: .png, properties: [:]) else { return }
+            for url in urls {
+                try? FileManager.default.createDirectory(at: url.deletingLastPathComponent(),
+                                                         withIntermediateDirectories: true)
+                try? png.write(to: url)
+            }
+        }
+    }
+
+    /// Calls `done` on the main queue once every frame is on disk.
+    func finish(_ done: @escaping @MainActor () -> Void) {
+        group.notify(queue: .main) { MainActor.assumeIsolated(done) }
+    }
+
+    func wait() { group.wait() }
+}
+
 /// The notch on a stylised desktop: wallpaper + menu bar.
 private struct RecordingStage: View {
     @ObservedObject var model: NotchViewModel
     @ObservedObject var store: SessionStore
+    @ObservedObject var clock: RecordingClock
 
     var body: some View {
         ZStack(alignment: .top) {
@@ -338,6 +379,7 @@ private struct RecordingStage: View {
         }
         .frame(width: Recorder.width)
         .environment(\.colorScheme, .dark)
+        .environment(\.virtualDate, clock.date)
     }
 
     private var menuBar: some View {
@@ -420,21 +462,38 @@ enum SettingsRecorder {
         window.orderFrontRegardless()
         print("● settings …")
 
+        // About 1.8 s per page, on the virtual clock like the notch scenes.
+        let start = Date()
+        Clock.startVirtual(at: start)
+        let clock = RecordingClock(date: start)
+        let perPage = Int((1.8 * Recorder.fps).rounded())
         var frame = 0
         for page in pages {
-            let host = NSHostingView(rootView: SettingsView(actions: actions, page: page))
+            let host = NSHostingView(rootView: SettingsStage(clock: clock) { SettingsView(actions: actions, page: page) })
             host.frame = CGRect(origin: .zero, size: SettingsView.size)
             window.contentView = host
-            // A fixed number of frames per page (≈ 1.8 s at 15 fps), however long rendering takes.
-            for _ in 0..<27 {
-                RunLoop.main.run(until: Date().addingTimeInterval(1 / 15))
-                guard let rep = host.bitmapImageRepForCachingDisplay(in: host.bounds) else { continue }
-                host.cacheDisplay(in: host.bounds, to: rep)
+            for i in 0..<perPage {
+                let now = start + Double(frame) / Recorder.fps
+                Clock.advance(to: now)
+                clock.date = now
+                RunLoop.main.run(until: Date())   // let queued main-thread work run
+                host._renderForTest(interval: i == 0 ? 0 : 1 / Recorder.fps)
                 let url = dir.appendingPathComponent(String(format: "frame_%04d.png", frame))
-                try? rep.representation(using: .png, properties: [:])?.write(to: url)
+                FrameWriter.shared.write(Recorder.snapshot(host), to: [url])
                 frame += 1
             }
         }
+        FrameWriter.shared.wait()
+        Clock.stopVirtual()
         window.orderOut(nil)
+    }
+
+    private struct SettingsStage<Content: View>: View {
+        @ObservedObject var clock: RecordingClock
+        @ViewBuilder var content: () -> Content
+
+        var body: some View {
+            content().environment(\.virtualDate, clock.date)
+        }
     }
 }
