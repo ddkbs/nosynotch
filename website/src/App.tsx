@@ -211,7 +211,7 @@ function useCursorChoice(): [CursorKind, (k: CursorKind) => void] {
     } catch {
       /* storage may be blocked */
     }
-    return "notch";
+    return "target";
   });
   const set = (k: CursorKind) => {
     setKind(k);

@@ -31,7 +31,7 @@ export function CursorSwitcher({ value, onChange }: { value: CursorKind; onChang
                 <span className="ml-auto truncate text-[11px] text-white/40">{c.hint}</span>
               </button>
             ))}
-            <div className="px-2.5 pb-1 pt-1.5 text-[10.5px] text-white/30">Keys 1–5 switch too</div>
+            <div className="px-2.5 pb-1 pt-1.5 text-[10.5px] text-white/30">Keys 1–6 switch too</div>
           </motion.div>
         )}
       </AnimatePresence>

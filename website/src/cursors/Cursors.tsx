@@ -1,8 +1,10 @@
 import { useEffect, useRef } from "react";
+import TargetCursor from "../vendor/TargetCursor";
 
-export type CursorKind = "notch" | "spark" | "eye" | "swarm" | "system";
+export type CursorKind = "target" | "notch" | "spark" | "eye" | "swarm" | "system";
 
 export const CURSORS: { id: CursorKind; label: string; hint: string }[] = [
+  { id: "target", label: "Target", hint: "the one from sketchy & davidkubus.dev" },
   { id: "notch", label: "Notch", hint: "a pill that wraps buttons" },
   { id: "spark", label: "Spark", hint: "Claude's spark with a trail" },
   { id: "eye", label: "Eye", hint: "it looks where you go" },
@@ -139,8 +141,6 @@ function NotchCursor() {
       ctx.fillStyle = "rgba(255,255,255,0.9)";
       ctx.fill();
     } else {
-      ctx.fillStyle = q.target ? "rgba(0,0,0,0)" : "rgba(0,0,0,0.3)";
-      ctx.fill();
       ctx.lineWidth = 1.5;
       ctx.strokeStyle = q.target ? "rgba(255,255,255,0.35)" : "rgba(255,255,255,0.6)";
       ctx.stroke();
@@ -335,6 +335,7 @@ export function Cursor({ kind }: { kind: CursorKind }) {
     return () => document.documentElement.classList.remove("custom-cursor");
   }, [kind, fine]);
   if (!fine || kind === "system") return null;
+  if (kind === "target") return <TargetCursor targetSelector=".cursor-target" spinDuration={2.4} hideDefaultCursor />;
   if (kind === "spark") return <SparkCursor />;
   if (kind === "eye") return <EyeCursor />;
   if (kind === "swarm") return <SwarmCursor />;
