@@ -1,5 +1,11 @@
 # WORKLOG
 
+## 2026-11-05 (3)
+- Aufnahmen mit neuem, farbigem macOS-artigem Hintergrund (Radialverläufe statt `.blur()`, weil `cacheDisplay` keine Blur-Filter rendert).
+- Pro Szene zusätzlich ein Standbild mit ausgeklappter Notch → `docs/screenshots/*.png` (2×). README zeigt oben die ausgeklappte Hover-Liste, `docs/animations.md` hat einen Screenshot-Abschnitt.
+- Turn-Dauern unter 1 s werden nicht mehr angezeigt („0s“).
+- Offen: wie (2).
+
 ## 2026-11-05 (2)
 - **Fehler-Zustand**: `StopFailure` (Rate-Limit, Überlastung, Auth …) → rotes „Claude ist gestolpert“, flackernder Spark, Sound Basso, Fehlercode übersetzt. `PostToolUseFailure` löst bewusst *keinen* Alarm aus (rote Tests sind Alltag).
 - **`PermissionRequest`-Hook** dazu: „Braucht dich“ kommt sofort beim Erlaubnis-Dialog, mit Tool + Befehl in der Nachricht; die nachfolgende `permission_prompt`-Notification wird nicht doppelt gemeldet.
