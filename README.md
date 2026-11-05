@@ -76,7 +76,8 @@ orange for Claude, blue for Codex, silver for Cursor. Macs without a notch get a
 
 **While an agent works**, the notch slides out sideways: a spark spins on the left, the current tool on the right
 (terminal, pencil, magnifier, globe …). Hover it to see every session with its status, a ring for how full its context
-window is, and your 5-hour and weekly limits as bars. A click on a session brings its terminal or app to the front.
+window is, and your 5-hour and weekly limits as bars. If a limit was at 80 % or more, the notch tells you the moment it resets.
+A click on a session brings its terminal or app to the front.
 
 **When it needs you**, the notch opens with an amber glow, shakes and shows the exact command. Click **Allow**,
 **Deny** or **Always allow** – the agent carries on, no hunting for the right window. Claude Code keeps its own dialog
@@ -99,7 +100,7 @@ Click the ✦ in the menu bar → **Settings…**
 - **Agents** – connect Claude Code, Codex and Cursor
 - **Alerts** – sounds, mute for 1 h / 8 h / ∞, reminders
 - **Permissions** – the notch buttons and head gestures
-- **Usage** – which limits to show, context rings
+- **Usage** – which limits to show, a heads-up when a limit resets, context rings
 - **Music** – player and the live equalizer
 
 Mute is also right in the menu bar menu. Everything that needs a macOS permission (controlling your player, the live

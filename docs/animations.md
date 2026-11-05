@@ -129,6 +129,16 @@ so the error animation is Claude-only for now.
 Shown at the bottom of the hover view: 5-hour and weekly limits for Claude (Pro / Max, via a silent status line) and Codex
 (from its session files). Hover a bar to see when it resets.
 
+## Limit reset
+
+<img src="gifs/limit-reset.gif" alt="Limit reset" width="560">
+
+**Trigger:** a 5-hour or weekly limit that was at least 80 % used reaches its reset time
+
+The ring drains back to empty while the arrow turns once: "Claude is ready again". Works with the last numbers the app
+saw, so it also fires when the agent isn't running, and once after launch if the reset happened meanwhile. Turn it off
+in Settings → Usage.
+
 ## Music
 
 <img src="gifs/media.gif" alt="Music" width="560">
