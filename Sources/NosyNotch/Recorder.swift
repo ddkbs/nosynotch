@@ -242,6 +242,11 @@ final class Recorder {
                 (1.7, ev("PostToolUse", tool: "Edit")),
                 (2.2, ev("Stop", last: "Parser refactored – all 42 tests pass.")),
             ]),
+            Scene(name: "unseen", duration: 10, stillAt: 8.8, steps: [
+                (0.0, ev("SessionStart")),
+                (0.3, prompt),
+                (1.0, ev("Stop", last: "Parser refactored – all 42 tests pass.")),
+            ]),
             Scene(name: "compacting", duration: 4.5, stillAt: 3.0, steps: [
                 (0.0, ev("SessionStart")),
                 (0.3, prompt),
