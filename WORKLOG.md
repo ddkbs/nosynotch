@@ -1,13 +1,12 @@
 # WORKLOG
 
-## 2026-11-05 (11)
+## 2026-11-05 (14)
 - **Website** in `website/` (Vite + React 19 + Tailwind 4, gleiches Gerüst/Design wie sketchy-Website). Lokal: `npm --prefix website run dev` (Port 5179 via `.claude/launch.json`).
   - **Version A** (`/`): eigener Nachbau des React-Bits-Pro-Hintergrunds „Spectral Drape“ (Code ist Paywall → selbst geschrieben, nach Davids Bildschirmaufnahme abgestimmt: frontales Punkteraster, Stoff-Falten, Flattern, Brush, Click-Ripples, Parallax). Punktfarben laufen langsam durch die Agentenpalette (`NOSY_PALETTE`). Cursor = Notch-Pille, die sich um Buttons legt.
   - **Version B** (`/b/`): „Nosy“-Konzept: Strichfeld, das zum Cursor schaut (ohne Maus zur Notch), große Notch mit Augen, Funken-Cursor mit Spur.
   - Gemeinsam: Demo-Player (GIFs als MP4 in `public/demo`, ~5 MB), Download-Menü als Notch auf Mac-Screen (Deny / Download .app / Allow kopiert `npx nosynotch` + Konfetti; Deny = beleidigte Augen), Docs unter `/docs/`.
   - `?tick` in der URL rendert Canvas auch im versteckten Tab (nur für Screenshots beim Tunen).
-- CI ist rot, nicht wegen Actions-Limit: Xcode 16.4 auf dem Runner scheitert an `MediaViews.swift:45` (Type-Check-Timeout) und Sendable bei `fetchArtwork`.
-- Offen: David wählt A oder B, dann B/A entfernen; Hintergrund-Bewegung live begutachten; CI-Fix; Repo public, `NPM_TOKEN`, Tag v0.2.0; Deploy auf Vercel (`nosynotch.davidkubus.dev`).
+- Offen: David wählt A oder B, dann B/A entfernen; Hintergrund-Bewegung live begutachten; Repo public, `NPM_TOKEN`, Tag v0.2.0; Deploy auf Vercel (`nosynotch.davidkubus.dev`).
 
 ## 2026-11-05 (13)
 - **CI repariert**: seit „live equalizer“ (7 Runs) rot. Ursache: `macos-15`-Runner baut mit Xcode 16.4 / Swift 6.1, der bei den `TimelineView`+`Canvas`-Animationen (MediaViews, ClaudeSpark, …) mit „unable to type-check … in reasonable time“ abbricht. Lokal (Swift 6.4) kein Problem.
