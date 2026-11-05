@@ -1,0 +1,34 @@
+{
+  "name": "claude-notch",
+  "version": "0.1.0",
+  "description": "Live, animated Claude Code status in your MacBook notch – powered by Claude Code hooks.",
+  "bin": {
+    "claude-notch": "bin/claude-notch.js"
+  },
+  "files": [
+    "bin/",
+    "Sources/",
+    "Resources/",
+    "Package.swift"
+  ],
+  "os": [
+    "darwin"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "keywords": [
+    "claude",
+    "claude-code",
+    "notch",
+    "macos",
+    "hooks",
+    "dynamic-island"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ddkbs/claude-notch.git"
+  },
+  "author": "David Kubus",
+  "license": "MIT"
+}
