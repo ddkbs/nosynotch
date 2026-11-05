@@ -168,7 +168,8 @@ private struct Sidebar: View {
     }
 
     static var version: String {
-        Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "dev"
+        // `swift run` / the GIF recorder have no Info.plist – keep in sync with Resources/Info.plist.
+        Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "0.2.0"
     }
 }
 

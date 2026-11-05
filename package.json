@@ -1,6 +1,6 @@
 {
   "name": "nosynotch",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Nosy Notch – your MacBook notch keeps an eye on Claude Code (live, animated status) and plays your music when Claude is idle.",
   "bin": {
     "nosynotch": "bin/nosynotch.js"
