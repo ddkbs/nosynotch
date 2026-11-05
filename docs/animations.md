@@ -53,7 +53,8 @@ A checkmark draws itself, confetti bursts, green glow, "Glass" sound. Shows the 
 of Claude's last answer. Click to jump to the terminal, ✕ to close.
 
 **Already in that app?** If the app the session runs in is in front (the Claude app, your terminal, VS Code, ChatGPT …),
-there is no big card and no sound – just a green check in the compact notch for three seconds
+there is no big card and no sound – just a green check in the compact notch for three seconds. The same goes for
+*Needs you*: the compact notch shows the amber bubble and the app's own prompt takes the question
 (Settings → Notifications to turn this off):
 
 <img src="gifs/quiet-done.gif" alt="Done while the app is in front" width="560">

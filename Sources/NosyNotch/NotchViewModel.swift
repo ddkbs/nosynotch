@@ -164,8 +164,13 @@ final class NotchViewModel: ObservableObject {
         recompute()
     }
 
-    /// "Done" without the big celebration – you're already looking at that app.
+    /// "Done" / "needs you" without the big card – you're already looking at that app. A waiting session
+    /// shows up in the compact notch anyway (amber bubble); "done" gets a check for 3 s.
     func showQuietly(_ transition: Transition) {
+        if case .needsAttention(let session) = transition {
+            if attention?.id == session.id { endFlash() } else { recompute() }
+            return
+        }
         guard case .finished(let session) = transition else { return handle(transition) }
         if celebration?.session.id == session.id { celebration = nil }
         if attention?.id == session.id { attention = nil }

@@ -146,13 +146,13 @@ struct SettingsView: View {
                                 .frame(width: 34, alignment: .trailing)
                         }
                     }
-                    Toggle("Keep \"Done\" small when I'm already in that app", isOn: $quietWhenFocused)
+                    Toggle("Stay small when I'm already in that app", isOn: $quietWhenFocused)
                     Toggle("Also send macOS notifications", isOn: $systemNotifications)
                         .onChange(of: systemNotifications) { _, _ in Notifier.requestAuthorizationIfNeeded() }
                 } header: {
                     Text("Notifications")
                 } footer: {
-                    FooterText("The notch itself is the notification – macOS banners are optional. While the app a session runs in is in front (Claude, your terminal, VS Code, ChatGPT …), \"Done\" is just a small check in the notch, without sound.")
+                    FooterText("The notch itself is the notification – macOS banners are optional. While the app a session runs in is in front (Claude, your terminal, VS Code, ChatGPT …), \"Done\" and \"needs you\" stay in the small notch, without sound – the app's own prompt is right in front of you.")
                 }
 
                 Section {

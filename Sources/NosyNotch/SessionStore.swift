@@ -7,6 +7,14 @@ enum Transition {
     case finished(Session)
     case needsAttention(Session)
     case failed(Session)
+
+    /// Transitions that stay small while you're already in the session's app.
+    var quietCandidate: Session? {
+        switch self {
+        case .finished(let s), .needsAttention(let s): return s
+        default: return nil
+        }
+    }
 }
 
 /// Turns the raw hook event stream into per-session state.

@@ -21,9 +21,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
         store.onChange = { [weak self] in self?.model.recompute() }
         store.onTransition = { [weak self] transition in
-            // Done while you're looking at that very app (Claude, terminal, Codex …): small check, no sound.
-            if case .finished(let session) = transition, Preferences.quietWhenFocused,
-               TerminalActivator.isFrontmost(session) {
+            // Done / needs you while you're looking at that very app (Claude, terminal, Codex …):
+            // stay in the small notch, no sound.
+            if let session = transition.quietCandidate, Self.isLookingAt(session) {
                 self?.model.showQuietly(transition)
                 return
             }
@@ -43,6 +43,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         }
     }
 
+    private static func isLookingAt(_ session: Session) -> Bool {
+        Preferences.quietWhenFocused && TerminalActivator.isFrontmost(session)
+    }
+
     func applicationWillTerminate(_ notification: Notification) {
         server?.stop()
     }
@@ -59,6 +63,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         server.onPermission = { [weak self] event, reply in
             Task { @MainActor in
                 guard let self else { return reply(nil) }
+                // You're in that app: its own prompt is right in front of you (Codex only shows it once we answer).
+                if let session = self.store.sessions[event.sessionID], Self.isLookingAt(session) { return reply(nil) }
                 self.approvals.add(event, reply: reply)
             }
         }
