@@ -1,5 +1,10 @@
 # WORKLOG
 
+## 2026-11-05 (12)
+- Codex und Cursor haben jetzt auch **in der Notch** eigene Symbole (Leiste, Sitzungsliste, Settings), abhängig vom Zustand: Codex-Sechseck läuft schneller beim Arbeiten, rückwärts beim Komprimieren, pulsiert beim Warten; Cursor = isometrischer Würfel (an Cursors Logo angelehnt, nicht kopiert), dreht sich beim Arbeiten.
+- GIFs mit Codex/Cursor neu: `codex`, `hover`, `usage`, `settings`.
+- Frage FPS im Aufnahmefenster: liegt am Recorder (30× pro Sekunde `cacheDisplay` in 2× + PNG auf dem Main-Thread), nicht an der App.
+
 ## 2026-11-05 (11)
 - Fix: **Cursor erschien als „Claude“** – Cursor führt zusätzlich die Hooks aus `~/.claude/settings.json` aus (Cursor-Log bestätigt). Payloads mit `cursor_version` gelten jetzt immer als Cursor; Duplikate über die Claude-URL werden verworfen, solange unsere Cursor-Hooks installiert sind.
 - Fix: Genehmigungs-Karte klappt nach **30 s** von selbst zu und gibt die Anfrage an den App-eigenen Dialog zurück (blieb vorher bis ✕ offen).
