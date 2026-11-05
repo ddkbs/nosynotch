@@ -178,8 +178,8 @@ private struct AgentOrbit: View {
     private static let agents: [Color] = [Theme.claude, Theme.codex, Theme.cursor]
 
     var body: some View {
-        TimelineView(.animation(minimumInterval: 1.0 / 60.0)) { timeline in
-            let t = timeline.date.timeIntervalSinceReferenceDate
+        ClockTimeline(minimumInterval: 1.0 / 60.0) { now in
+            let t = now.timeIntervalSinceReferenceDate
             let pulse = 0.5 + 0.5 * sin(t * 1.6)
             ZStack {
                 // Soft glow that breathes.
@@ -274,8 +274,8 @@ private struct StarCard: View {
         Button {
             NSWorkspace.shared.open(SettingsView.repoURL)
         } label: {
-            TimelineView(.animation(minimumInterval: 1.0 / 60.0)) { timeline in
-                let t = timeline.date.timeIntervalSinceReferenceDate
+            ClockTimeline(minimumInterval: 1.0 / 60.0) { now in
+                let t = now.timeIntervalSinceReferenceDate
                 let glow = 0.5 + 0.5 * sin(t * 2)
                 HStack(spacing: 11) {
                     ZStack {
@@ -349,8 +349,8 @@ private struct StarSparkles: View {
     let active: Bool
 
     var body: some View {
-        TimelineView(.animation(minimumInterval: 1.0 / 60.0, paused: !active)) { timeline in
-            let t = timeline.date.timeIntervalSinceReferenceDate
+        ClockTimeline(minimumInterval: 1.0 / 60.0, paused: !active) { now in
+            let t = now.timeIntervalSinceReferenceDate
             ZStack {
                 ForEach(0..<8, id: \.self) { i in
                     let angle = Double(i) / 8 * 2 * .pi + t * 0.6
@@ -809,8 +809,8 @@ private struct NodIllustration: View {
     let active: Bool
 
     var body: some View {
-        TimelineView(.animation(minimumInterval: 1.0 / 30.0, paused: !active)) { timeline in
-            let t = timeline.date.timeIntervalSinceReferenceDate
+        ClockTimeline(minimumInterval: 1.0 / 30.0, paused: !active) { now in
+            let t = now.timeIntervalSinceReferenceDate
             let cycle = t.truncatingRemainder(dividingBy: 2.4)
             let nod = cycle < 0.9 ? sin(cycle / 0.9 * .pi * 2) * 12 : 0
             HStack(spacing: 14) {

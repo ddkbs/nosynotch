@@ -7,7 +7,7 @@ struct UsageWindow: Codable, Equatable {
 
     /// A window whose reset time has passed starts from zero again.
     var current: UsageWindow {
-        if let resetsAt, resetsAt < Date() { return UsageWindow(usedPercent: 0, resetsAt: nil) }
+        if let resetsAt, resetsAt < Clock.now() { return UsageWindow(usedPercent: 0, resetsAt: nil) }
         return self
     }
 }
@@ -15,7 +15,7 @@ struct UsageWindow: Codable, Equatable {
 struct AgentUsage: Codable, Equatable {
     var fiveHour: UsageWindow?
     var week: UsageWindow?
-    var updatedAt = Date()
+    var updatedAt = Clock.now()
 
     var isEmpty: Bool { fiveHour == nil && week == nil }
 }
@@ -52,7 +52,7 @@ final class UsageStore: ObservableObject {
     /// A window whose reset time has passed while it was at ≥ 80 % fires `onReset` once. Works with the last
     /// known numbers, so it also fires when the agent isn't running – and once after launch if it reset meanwhile
     /// (up to 12 hours late).
-    func checkResets(now: Date = Date()) {
+    func checkResets(now: Date = Clock.now()) {
         guard Preferences.notifyLimitReset else { return }
         var notified = Set(UserDefaults.standard.stringArray(forKey: Self.notifiedKey) ?? [])
         let before = notified.count

@@ -25,8 +25,8 @@ struct ClaudeSpark: View {
     private static let rays: [CGFloat] = [1.0, 0.82, 0.95, 0.78, 1.0, 0.86, 0.93, 0.8, 0.97, 0.84]
 
     var body: some View {
-        TimelineView(.animation(minimumInterval: 1.0 / 60.0, paused: !animated)) { timeline in
-            let t = timeline.date.timeIntervalSinceReferenceDate
+        ClockTimeline(minimumInterval: 1.0 / 60.0, paused: !animated) { now in
+            let t = now.timeIntervalSinceReferenceDate
             Canvas { context, size in
                 draw(in: &context, size: size, t: t)
             }
@@ -131,8 +131,8 @@ struct CodexGlyph: View {
     var mode: SparkMode = .thinking
 
     var body: some View {
-        TimelineView(.animation(minimumInterval: 1.0 / 60.0, paused: !mode.animates)) { timeline in
-            let t = timeline.date.timeIntervalSinceReferenceDate
+        ClockTimeline(minimumInterval: 1.0 / 60.0, paused: !mode.animates) { now in
+            let t = now.timeIntervalSinceReferenceDate
             let pulse = 0.5 + 0.5 * sin(t * 6)
             let flicker = mode == .error ? (sin(t * 23) * sin(t * 7.3) > 0.2 ? 0.35 : 1) : 1
             Canvas { context, size in
@@ -181,8 +181,8 @@ struct CursorGlyph: View {
     var mode: SparkMode = .thinking
 
     var body: some View {
-        TimelineView(.animation(minimumInterval: 1.0 / 60.0, paused: !mode.animates)) { timeline in
-            let t = timeline.date.timeIntervalSinceReferenceDate
+        ClockTimeline(minimumInterval: 1.0 / 60.0, paused: !mode.animates) { now in
+            let t = now.timeIntervalSinceReferenceDate
             let pulse = 0.5 + 0.5 * sin(t * 6)
             let flicker = mode == .error ? (sin(t * 23) * sin(t * 7.3) > 0.2 ? 0.4 : 1) : 1
             Canvas { context, size in

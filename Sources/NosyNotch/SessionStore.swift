@@ -65,7 +65,7 @@ final class SessionStore: ObservableObject {
         if let t = event.transcriptPath { s.transcriptPath = t }
         if let t = event.termProgram { s.termProgram = t }
         if let b = event.hostBundleID { s.hostBundleID = b }
-        s.lastUpdate = Date()
+        s.lastUpdate = Clock.now()
         let wasWaiting: Bool = { if case .waiting = s.state { return true }; return false }()
 
         var transition: Transition?
@@ -77,13 +77,13 @@ final class SessionStore: ObservableObject {
         case "UserPromptSubmit":
             s.unseenSince = nil
             s.state = .thinking
-            s.turnStartedAt = Date()
+            s.turnStartedAt = Clock.now()
             s.toolCount = 0
             s.lastSummary = nil
             transition = .started(s)
 
         case "PreToolUse":
-            if s.turnStartedAt == nil { s.turnStartedAt = Date() }
+            if s.turnStartedAt == nil { s.turnStartedAt = Clock.now() }
             s.state = .tool(ToolActivity(name: event.toolName ?? "Tool", input: event.toolInput))
             s.toolCount += 1
 
@@ -114,8 +114,8 @@ final class SessionStore: ObservableObject {
 
         case "Stop":
             s.state = .done
-            s.unseenSince = Date()
-            if let start = s.turnStartedAt { s.lastTurnDuration = Date().timeIntervalSince(start) }
+            s.unseenSince = Clock.now()
+            if let start = s.turnStartedAt { s.lastTurnDuration = Clock.now().timeIntervalSince(start) }
             s.turnStartedAt = nil
             s.lastSummary = event.lastAssistantMessage.map(Self.condense) ?? s.lastSummary
             transition = .finished(s)
@@ -123,7 +123,7 @@ final class SessionStore: ObservableObject {
         case "StopFailure":
             s.state = .error(message: APIErrorText.describe(code: event.error, details: event.errorDetails,
                                                             message: event.lastAssistantMessage))
-            if let start = s.turnStartedAt { s.lastTurnDuration = Date().timeIntervalSince(start) }
+            if let start = s.turnStartedAt { s.lastTurnDuration = Clock.now().timeIntervalSince(start) }
             s.turnStartedAt = nil
             transition = .failed(s)
 
@@ -149,7 +149,7 @@ final class SessionStore: ObservableObject {
 
         // Reminder bookkeeping: a new "waiting" or "done" gets its own reminder.
         let isWaiting: Bool = { if case .waiting = s.state { return true }; return false }()
-        if isWaiting && !wasWaiting { s.waitingSince = Date(); s.reminded = false }
+        if isWaiting && !wasWaiting { s.waitingSince = Clock.now(); s.reminded = false }
         if !isWaiting { s.waitingSince = nil }
         if event.name == "Stop" { s.reminded = false }
 
@@ -174,7 +174,7 @@ final class SessionStore: ObservableObject {
     func resume(_ id: String, allowed: Bool, tool: ToolActivity) {
         guard var s = sessions[id], case .waiting = s.state else { return }
         s.state = allowed ? .tool(tool) : .thinking
-        s.lastUpdate = Date()
+        s.lastUpdate = Clock.now()
         sessions[id] = s
     }
 
@@ -198,7 +198,7 @@ final class SessionStore: ObservableObject {
     /// Fire the 5-minute reminder for unseen "done" and unanswered "waiting" sessions.
     private func remind() {
         guard Preferences.remindAfterFiveMinutes else { return }
-        let now = Date()
+        let now = Clock.now()
         for (id, s) in sessions where !s.reminded {
             var due: Transition?
             if let since = s.unseenSince, s.state == .done, now.timeIntervalSince(since) >= Self.reminderDelay {
@@ -220,7 +220,7 @@ final class SessionStore: ObservableObject {
 
     /// Drop stale sessions and un-stick sessions whose turn was interrupted (Esc / Ctrl-C send no Stop hook).
     private func sweep() {
-        let now = Date()
+        let now = Clock.now()
         for (id, s) in sessions {
             let age = now.timeIntervalSince(s.lastUpdate)
             switch s.state {

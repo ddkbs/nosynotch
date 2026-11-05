@@ -308,8 +308,8 @@ struct UnseenDot: View {
     var count = 1
 
     var body: some View {
-        TimelineView(.animation(minimumInterval: 1.0 / 30.0)) { timeline in
-            let t = timeline.date.timeIntervalSinceReferenceDate
+        ClockTimeline(minimumInterval: 1.0 / 30.0) { now in
+            let t = now.timeIntervalSinceReferenceDate
             let breath = 0.5 + 0.5 * sin(t * 2.2)
             ZStack {
                 Circle()
@@ -356,7 +356,7 @@ struct CelebrationView: View {
     var onDismiss: () -> Void
 
     @State private var appeared = false
-    @State private var burstStart = Date().addingTimeInterval(0.2)
+    @State private var burstStart = Clock.now().addingTimeInterval(0.2)
 
     var body: some View {
         let session = live ?? celebration.session
@@ -430,8 +430,8 @@ struct FailureView: View {
             ZStack {
                 Circle()
                     .fill(Theme.danger.opacity(0.18))
-                TimelineView(.animation(minimumInterval: 1.0 / 60.0)) { timeline in
-                    let t = timeline.date.timeIntervalSinceReferenceDate
+                ClockTimeline(minimumInterval: 1.0 / 60.0) { now in
+                    let t = now.timeIntervalSinceReferenceDate
                     // A short "glitch" jitter every couple of seconds.
                     let cycle = t.truncatingRemainder(dividingBy: 2.2)
                     let jitter = cycle < 0.35 ? sin(cycle * 90) * 2.5 : 0
@@ -552,8 +552,8 @@ struct AttentionView: View {
             ZStack {
                 Circle()
                     .fill(Theme.amber.opacity(0.18))
-                TimelineView(.animation(minimumInterval: 1.0 / 60.0)) { timeline in
-                    let t = timeline.date.timeIntervalSinceReferenceDate
+                ClockTimeline(minimumInterval: 1.0 / 60.0) { now in
+                    let t = now.timeIntervalSinceReferenceDate
                     // Wave: a quick wiggle, then a short pause.
                     let cycle = t.truncatingRemainder(dividingBy: 1.4)
                     let angle = cycle < 0.6 ? sin(cycle / 0.6 * .pi * 4) * 14 * (1 - cycle / 0.6) : 0
@@ -771,7 +771,7 @@ struct UsageMeter: View {
     /// Hover a meter to see when it resets: "↻ 2h 5m" / "↻ 3d".
     private var resetText: String {
         guard let date = window?.resetsAt else { return percentText }
-        let s = max(0, Int(date.timeIntervalSinceNow))
+        let s = max(0, Int(date.timeIntervalSince(Clock.now())))
         if s >= 86_400 { return "↻ \(s / 86_400)d \((s % 86_400) / 3600)h" }
         if s >= 3600 { return "↻ \(s / 3600)h \((s % 3600) / 60)m" }
         return "↻ \(max(1, s / 60))m"

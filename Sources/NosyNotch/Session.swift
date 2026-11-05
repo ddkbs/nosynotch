@@ -162,7 +162,7 @@ struct Session: Identifiable, Equatable {
     var state: ActivityState = .idle
     var turnStartedAt: Date?
     var lastTurnDuration: TimeInterval?
-    var lastUpdate = Date()
+    var lastUpdate = Clock.now()
     var toolCount = 0
     var lastSummary: String?
     var transcriptPath: String?

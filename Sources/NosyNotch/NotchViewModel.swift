@@ -73,11 +73,9 @@ final class NotchViewModel: ObservableObject {
             recompute()
             // Looking at the session list for a moment counts as "seen".
             if isHovering, !store.unseen.isEmpty {
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) { [weak self] in
-                    MainActor.assumeIsolated {
-                        guard let self, self.isHovering, self.presentation == .expanded else { return }
-                        self.store.markAllSeen()
-                    }
+                Clock.after(0.8) { [weak self] in
+                    guard let self, self.isHovering, self.presentation == .expanded else { return }
+                    self.store.markAllSeen()
                 }
             }
         }
@@ -196,7 +194,7 @@ final class NotchViewModel: ObservableObject {
             celebration = nil
             failure = nil
             attention = session
-            attentionSince = Date()
+            attentionSince = Clock.now()
             shakes += 1
             flash(for: Preferences.notificationSeconds)
         case .failed(let session):
@@ -234,7 +232,7 @@ final class NotchViewModel: ObservableObject {
             }
         }
         quietWork = work
-        DispatchQueue.main.asyncAfter(deadline: .now() + 3, execute: work)
+        Clock.after(3, execute: work)
         recompute()
     }
 
@@ -335,7 +333,7 @@ final class NotchViewModel: ObservableObject {
                 // Keep Allow / Deny on screen for a while, then fold away and leave the question to the
                 // agent's own prompt (the compact notch keeps its amber bubble).
                 if let approval = self.attentionApproval {
-                    let open = Date().timeIntervalSince(self.attentionSince ?? .distantPast)
+                    let open = Clock.now().timeIntervalSince(self.attentionSince ?? .distantPast)
                     if open < Self.approvalCardSeconds { return self.flash(for: min(2, Self.approvalCardSeconds - open)) }
                     self.approvals.release(approval.id)
                 }
@@ -343,7 +341,7 @@ final class NotchViewModel: ObservableObject {
             }
         }
         flashWork = work
-        DispatchQueue.main.asyncAfter(deadline: .now() + seconds, execute: work)
+        Clock.after(seconds, execute: work)
     }
 
     private func endFlash() {

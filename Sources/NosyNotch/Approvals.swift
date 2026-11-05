@@ -37,7 +37,7 @@ struct PendingApproval: Identifiable, Equatable {
     let tool: ToolActivity
     /// Claude Code's "always allow" suggestions we can safely pass back (rules / directories, never mode switches).
     let alwaysRules: [[String: Any]]
-    let createdAt = Date()
+    let createdAt = Clock.now()
 
     var canAlwaysAllow: Bool { !alwaysRules.isEmpty }
 
@@ -84,7 +84,7 @@ final class ApprovalCenter: ObservableObject {
             MainActor.assumeIsolated { self?.finish(approval.id, output: nil) }
         }
         timeouts[approval.id] = work
-        DispatchQueue.main.asyncAfter(deadline: .now() + Self.waitTime(for: event.agent), execute: work)
+        Clock.after(Self.waitTime(for: event.agent), execute: work)
         pending.append(approval)
     }
 
