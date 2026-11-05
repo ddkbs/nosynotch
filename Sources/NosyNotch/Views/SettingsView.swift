@@ -656,8 +656,8 @@ private struct AgentCard: View {
         HStack(alignment: .top, spacing: 14) {
             ZStack {
                 Circle().fill(agent.color.opacity(0.12))
-                ClaudeSpark(mode: status == .connected ? .thinking : .idle, color: agent.color)
-                    .frame(width: 20, height: 20)
+                AgentGlyph(agent: agent, active: status == .connected)
+                    .frame(width: 22, height: 22)
             }
             .frame(width: 42, height: 42)
 
