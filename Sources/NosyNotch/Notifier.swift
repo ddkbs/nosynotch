@@ -17,15 +17,15 @@ enum Notifier {
     static func notify(_ transition: Transition) {
         switch transition {
         case .finished(let s):
-            play("Glass")
+            play("Glass", if: Preferences.soundDone)
             post(title: "\(s.projectName) – done",
                  body: s.lastSummary ?? s.statusDetail ?? "Claude is done.")
         case .needsAttention(let s):
-            play("Funk")
+            play("Funk", if: Preferences.soundAttention)
             post(title: "\(s.projectName) – Claude needs you",
                  body: { if case .waiting(let m) = s.state { return m }; return "Please check your terminal." }())
         case .failed(let s):
-            play("Basso")
+            play("Basso", if: Preferences.soundError)
             post(title: "\(s.projectName) – error",
                  body: { if case .error(let m) = s.state { return m }; return "The turn was aborted." }())
         case .started:
@@ -33,8 +33,8 @@ enum Notifier {
         }
     }
 
-    private static func play(_ name: String) {
-        guard Preferences.soundEnabled else { return }
+    private static func play(_ name: String, if enabled: Bool) {
+        guard enabled else { return }
         NSSound(named: NSSound.Name(name))?.play()
     }
 

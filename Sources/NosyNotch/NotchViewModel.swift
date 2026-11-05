@@ -115,19 +115,19 @@ final class NotchViewModel: ObservableObject {
             attention = nil
             failure = nil
             celebration = Celebration(session: session)
-            flash(for: 6)
+            flash(for: Preferences.notificationSeconds)
         case .needsAttention(let session):
             celebration = nil
             failure = nil
             attention = session
             shakes += 1
-            flash(for: 6)
+            flash(for: Preferences.notificationSeconds)
         case .failed(let session):
             celebration = nil
             attention = nil
             failure = session
             shakes += 1
-            flash(for: 8)
+            flash(for: Preferences.notificationSeconds + 2)
         case .started(let session):
             if celebration?.session.id == session.id { endFlash() }
             if attention?.id == session.id { endFlash() }
@@ -164,7 +164,7 @@ final class NotchViewModel: ObservableObject {
             next = .expanded
         } else if store.hasActivity || store.hasWaiting {
             next = .compact
-        } else if hasMedia && media.isPlaying {
+        } else if hasMedia && (media.isPlaying || Preferences.mediaShowWhenPaused) {
             next = .media
         } else {
             next = .hidden

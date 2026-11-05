@@ -6,6 +6,7 @@ import Network
 ///   POST /event   – body: hook stdin JSON
 ///   GET  /health  – returns "ok"
 ///   POST /quit    – terminates the app (used by `npx nosynotch stop`)
+///   POST /settings – opens the settings window (used by `npx nosynotch settings`)
 final class EventServer {
     static let defaultPort: UInt16 = 7823
 
@@ -14,6 +15,7 @@ final class EventServer {
     private let queue = DispatchQueue(label: "dev.davidkubus.nosynotch.server")
     private let onEvent: @Sendable (HookEvent) -> Void
     var onQuit: (@Sendable () -> Void)?
+    var onSettings: (@Sendable () -> Void)?
 
     private(set) var lastError: String?
 
@@ -89,6 +91,9 @@ final class EventServer {
         case ("POST", "/quit"):
             status = "200 OK"
             if let onQuit { queue.asyncAfter(deadline: .now() + 0.1) { onQuit() } }
+        case ("POST", "/settings"):
+            status = "200 OK"
+            onSettings?()
         default:
             status = "404 Not Found"
         }

@@ -9,6 +9,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private var server: EventServer?
     private var statusItem: NSStatusItem?
     private var serverError: String?
+    private lazy var settings = SettingsWindowController(actions: .init(
+        statusLine: { [weak self] in self?.statusLine ?? "" },
+        playDemo: { [weak self] in self?.playDemo() },
+        settingsChanged: { [weak self] in self?.model.recompute() }
+    ))
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         Preferences.register()
@@ -23,6 +28,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         startServer()
         setUpStatusItem()
         Notifier.requestAuthorizationIfNeeded()
+
+        // First launch: open the settings so the one button that matters ("Connect Claude Code") is right there.
+        if !UserDefaults.standard.bool(forKey: "didShowWelcome") {
+            UserDefaults.standard.set(true, forKey: "didShowWelcome")
+            if !HookInstaller.isInstalled { settings.show() }
+        }
     }
 
     func applicationWillTerminate(_ notification: Notification) {
@@ -37,6 +48,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         }
         server.onQuit = {
             Task { @MainActor in NSApp.terminate(nil) }
+        }
+        server.onSettings = { [weak self] in
+            Task { @MainActor in self?.settings.show() }
         }
         do {
             try server.start()
@@ -58,46 +72,27 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         statusItem = item
     }
 
-    /// Rebuild the menu every time it opens so checkmarks are current.
+    private var statusLine: String {
+        if let serverError { return "⚠︎ Server: \(serverError)" }
+        if let error = server?.lastError { return "⚠︎ Server: \(error)" }
+        let count = store.sessions.count
+        return "Listening on 127.0.0.1:\(Preferences.port) · \(count) session\(count == 1 ? "" : "s")"
+    }
+
+    /// Rebuild the menu every time it opens so the status line is current.
     func menuNeedsUpdate(_ menu: NSMenu) {
         menu.removeAllItems()
 
         let header = NSMenuItem(title: "Nosy Notch", action: nil, keyEquivalent: "")
         header.isEnabled = false
         menu.addItem(header)
-
-        let status: String
-        if let serverError {
-            status = "⚠︎ Server: \(serverError)"
-        } else if let error = server?.lastError {
-            status = "⚠︎ Server: \(error)"
-        } else {
-            status = "Listening on 127.0.0.1:\(Preferences.port) · \(store.sessions.count) Session(s)"
-        }
-        let statusLine = NSMenuItem(title: status, action: nil, keyEquivalent: "")
-        statusLine.isEnabled = false
-        menu.addItem(statusLine)
+        let status = NSMenuItem(title: statusLine, action: nil, keyEquivalent: "")
+        status.isEnabled = false
+        menu.addItem(status)
         menu.addItem(.separator())
 
-        let installed = HookInstaller.isInstalled
-        menu.addItem(item(installed ? "Claude-Code-Hooks entfernen" : "Claude-Code-Hooks installieren…",
-                          #selector(toggleHooks)))
-
-        let sound = item("Sounds for done / needs you / error", #selector(toggleSound))
-        sound.state = Preferences.soundEnabled ? .on : .off
-        menu.addItem(sound)
-
-        let media = item("Media player in the notch (Spotify / Music)", #selector(toggleMedia))
-        media.state = Preferences.mediaEnabled ? .on : .off
-        menu.addItem(media)
-
-        let notifications = item("macOS-Mitteilungen", #selector(toggleNotifications))
-        notifications.state = Preferences.systemNotifications ? .on : .off
-        menu.addItem(notifications)
-
-        menu.addItem(.separator())
+        menu.addItem(item("Settings…", #selector(openSettings), key: ","))
         menu.addItem(item("Play demo", #selector(playDemo), key: "d"))
-        menu.addItem(item("Show settings file", #selector(revealSettings)))
         menu.addItem(.separator())
         menu.addItem(item("Quit", #selector(quit), key: "q"))
     }
@@ -108,37 +103,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         return item
     }
 
-    @objc private func toggleHooks() {
-        do {
-            if HookInstaller.isInstalled {
-                try HookInstaller.uninstall()
-                alert("Hooks removed", "The hooks were removed from: \(HookInstaller.settingsSummary)")
-            } else {
-                try HookInstaller.install(port: Preferences.port)
-                alert("Hooks installed 🎉",
-                      "The hooks are now in: \(HookInstaller.settingsSummary) (settings.json each, backup: settings.json.nosynotch.bak).\n\nClaude Code sessions that are already running pick up the hooks after a restart.")
-            }
-        } catch {
-            alert("Error", error.localizedDescription)
-        }
-    }
-
-    @objc private func toggleSound() {
-        Preferences.soundEnabled.toggle()
-    }
-
-    @objc private func toggleMedia() {
-        Preferences.mediaEnabled.toggle()
-        model.recompute()
-    }
-
-    @objc private func toggleNotifications() {
-        Preferences.systemNotifications.toggle()
-        Notifier.requestAuthorizationIfNeeded()
-    }
-
-    @objc private func revealSettings() {
-        NSWorkspace.shared.activateFileViewerSelecting([HookInstaller.settingsURL])
+    @objc private func openSettings() {
+        settings.show()
     }
 
     @objc private func playDemo() {
@@ -147,13 +113,5 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
     @objc private func quit() {
         NSApp.terminate(nil)
-    }
-
-    private func alert(_ title: String, _ text: String) {
-        NSApp.activate(ignoringOtherApps: true)
-        let alert = NSAlert()
-        alert.messageText = title
-        alert.informativeText = text
-        alert.runModal()
     }
 }
