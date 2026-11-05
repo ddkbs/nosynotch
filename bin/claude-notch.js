@@ -29,8 +29,11 @@ const HOOK_EVENTS = [
   ['UserPromptSubmit', null],
   ['PreToolUse', '*'],
   ['PostToolUse', '*'],
+  ['PostToolUseFailure', '*'],
+  ['PermissionRequest', '*'],
   ['Notification', null],
   ['Stop', null],
+  ['StopFailure', null],
   ['SubagentStop', null],
   ['PreCompact', null],
 ];

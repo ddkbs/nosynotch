@@ -14,8 +14,11 @@ enum HookInstaller {
         ("UserPromptSubmit", nil),
         ("PreToolUse", "*"),
         ("PostToolUse", "*"),
+        ("PostToolUseFailure", "*"),
+        ("PermissionRequest", "*"),
         ("Notification", nil),
         ("Stop", nil),
+        ("StopFailure", nil),
         ("SubagentStop", nil),
         ("PreCompact", nil),
     ]

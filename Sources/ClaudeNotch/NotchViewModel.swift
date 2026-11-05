@@ -14,6 +14,8 @@ final class NotchViewModel: ObservableObject {
         case celebrating
         /// Claude needs permission / input.
         case attention
+        /// The turn ended with an API error.
+        case failed
     }
 
     struct Celebration: Equatable {
@@ -33,6 +35,7 @@ final class NotchViewModel: ObservableObject {
     @Published private(set) var presentation: Presentation = .hidden
     @Published private(set) var celebration: Celebration?
     @Published private(set) var attention: Session?
+    @Published private(set) var failure: Session?
     /// Incremented to trigger the shake animation.
     @Published private(set) var shakes: CGFloat = 0
     @Published var isHovering = false {
@@ -61,7 +64,7 @@ final class NotchViewModel: ObservableObject {
             return CGSize(width: wide, height: notchSize.height + 10 + rows * Self.rowHeight + 12)
         case .celebrating:
             return CGSize(width: wide, height: notchSize.height + 104)
-        case .attention:
+        case .attention, .failed:
             return CGSize(width: wide, height: notchSize.height + 88)
         }
     }
@@ -94,16 +97,25 @@ final class NotchViewModel: ObservableObject {
         switch transition {
         case .finished(let session):
             attention = nil
+            failure = nil
             celebration = Celebration(session: session)
             flash(for: 6)
         case .needsAttention(let session):
             celebration = nil
+            failure = nil
             attention = session
             shakes += 1
             flash(for: 6)
+        case .failed(let session):
+            celebration = nil
+            attention = nil
+            failure = session
+            shakes += 1
+            flash(for: 8)
         case .started(let session):
             if celebration?.session.id == session.id { endFlash() }
             if attention?.id == session.id { endFlash() }
+            if failure?.id == session.id { endFlash() }
         }
         recompute()
     }
@@ -119,12 +131,19 @@ final class NotchViewModel: ObservableObject {
             if let live = store.sessions[a.id], case .waiting = live.state { stillWaiting = true }
             if !stillWaiting { attention = nil }
         }
+        if let f = failure {
+            var stillFailed = false
+            if let live = store.sessions[f.id], case .error = live.state { stillFailed = true }
+            if !stillFailed { failure = nil }
+        }
 
         let next: Presentation
         if celebration != nil {
             next = .celebrating
         } else if attention != nil {
             next = .attention
+        } else if failure != nil {
+            next = .failed
         } else if isHovering && !store.sessions.isEmpty {
             next = .expanded
         } else if store.hasActivity || store.hasWaiting {
@@ -149,6 +168,7 @@ final class NotchViewModel: ObservableObject {
         flashWork = nil
         celebration = nil
         attention = nil
+        failure = nil
         recompute()
     }
 }

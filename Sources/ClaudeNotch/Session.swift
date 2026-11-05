@@ -8,6 +8,8 @@ enum ActivityState: Equatable {
     case waiting(message: String)
     case compacting
     case done
+    /// The turn ended because of an API error (rate limit, overload, auth …).
+    case error(message: String)
 
     var isActive: Bool {
         switch self {
@@ -124,13 +126,14 @@ struct Session: Identifiable, Equatable {
         case .waiting: return "Wartet auf dich"
         case .compacting: return "Komprimiert Kontext"
         case .done: return "Fertig"
+        case .error: return "Fehler"
         }
     }
 
     var statusDetail: String? {
         switch state {
         case .tool(let t): return t.detail ?? t.displayName
-        case .waiting(let message): return message
+        case .waiting(let message), .error(let message): return message
         case .done:
             var parts: [String] = []
             if toolCount > 0 { parts.append("\(toolCount) Tool-Aufrufe") }
@@ -145,7 +148,7 @@ struct Session: Identifiable, Equatable {
     /// Higher = more important to show in the compact notch.
     var priority: Int {
         switch state {
-        case .waiting: return 4
+        case .waiting, .error: return 4
         case .tool, .thinking, .compacting: return 3
         case .done: return 2
         case .idle: return 1
@@ -158,6 +161,7 @@ enum Theme {
     static let amber = Color(red: 0.961, green: 0.647, blue: 0.141)      // #F5A524
     static let success = Color(red: 0.290, green: 0.871, blue: 0.502)    // #4ADE80
     static let violet = Color(red: 0.655, green: 0.545, blue: 0.980)     // #A78BFA
+    static let danger = Color(red: 0.973, green: 0.443, blue: 0.443)     // #F87171
 
     static func color(for state: ActivityState) -> Color {
         switch state {
@@ -166,7 +170,33 @@ enum Theme {
         case .waiting: return amber
         case .compacting: return violet
         case .done: return success
+        case .error: return danger
         }
+    }
+}
+
+enum APIErrorText {
+    /// Human-readable text for the `error` field of a `StopFailure` hook.
+    static func describe(code: String?, details: String?, message: String?) -> String {
+        let known: [String: String] = [
+            "rate_limit": "Rate-Limit erreicht",
+            "overloaded": "API ist überlastet",
+            "authentication_failed": "Anmeldung fehlgeschlagen",
+            "oauth_org_not_allowed": "Organisation nicht freigegeben",
+            "account_on_hold": "Account gesperrt",
+            "billing_error": "Problem mit der Abrechnung",
+            "invalid_request": "Ungültige Anfrage",
+            "model_not_found": "Modell nicht gefunden",
+            "server_error": "Serverfehler bei der API",
+            "max_output_tokens": "Antwort hat das Token-Limit erreicht",
+            "cloud_credential_error": "Cloud-Zugangsdaten ungültig",
+        ]
+        let title = code.flatMap { known[$0] } ?? "API-Fehler"
+        let extra = [details, message].compactMap { $0?.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .first { !$0.isEmpty }
+        guard let extra else { return title }
+        let line = extra.split(whereSeparator: \.isNewline).first.map(String.init) ?? extra
+        return "\(title) · \(line.count > 90 ? String(line.prefix(89)) + "…" : line)"
     }
 }
 

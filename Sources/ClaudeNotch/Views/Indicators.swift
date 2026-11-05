@@ -26,6 +26,11 @@ struct StatusIndicator: View {
                     .font(.system(size: 12, weight: .semibold))
                     .foregroundStyle(session.accent)
                     .symbolEffect(.pulse)
+            case .error:
+                Image(systemName: "exclamationmark.triangle.fill")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(session.accent)
+                    .symbolEffect(.pulse)
             case .done:
                 Image(systemName: "checkmark")
                     .font(.system(size: 12, weight: .bold))

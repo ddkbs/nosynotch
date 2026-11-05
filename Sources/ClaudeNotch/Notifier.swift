@@ -24,6 +24,10 @@ enum Notifier {
             play("Funk")
             post(title: "\(s.projectName) – Claude braucht dich",
                  body: { if case .waiting(let m) = s.state { return m }; return "Bitte schau ins Terminal." }())
+        case .failed(let s):
+            play("Basso")
+            post(title: "\(s.projectName) – Fehler",
+                 body: { if case .error(let m) = s.state { return m }; return "Der Turn wurde abgebrochen." }())
         case .started:
             break
         }

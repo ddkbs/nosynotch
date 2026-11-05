@@ -34,6 +34,7 @@ struct NotchView: View {
     private var glowColor: Color {
         switch model.presentation {
         case .attention: return Theme.amber
+        case .failed: return Theme.danger
         case .celebrating: return Theme.success
         default: return store.primary?.accent ?? .clear
         }
@@ -41,7 +42,7 @@ struct NotchView: View {
 
     private var glowOpacity: Double {
         switch model.presentation {
-        case .attention, .celebrating: return 0.55
+        case .attention, .celebrating, .failed: return 0.55
         case .compact: return store.hasWaiting ? 0.45 : 0.18
         default: return 0
         }
@@ -70,6 +71,11 @@ struct NotchView: View {
             case .attention:
                 if let session = model.attention {
                     AttentionView(session: store.sessions[session.id] ?? session)
+                        .transition(.blurFade.combined(with: .scale(scale: 0.85, anchor: .top)))
+                }
+            case .failed:
+                if let session = model.failure {
+                    FailureView(session: store.sessions[session.id] ?? session)
                         .transition(.blurFade.combined(with: .scale(scale: 0.85, anchor: .top)))
                 }
             case .hidden, .compact:
@@ -287,6 +293,56 @@ struct CelebrationView: View {
 
     private func summaryFallback(_ s: Session) -> String {
         s.toolCount > 0 ? "\(s.toolCount) Tool-Aufrufe – Claude wartet auf deine nächste Nachricht." : "Claude wartet auf deine nächste Nachricht."
+    }
+}
+
+// MARK: - API error
+
+struct FailureView: View {
+    let session: Session
+
+    var body: some View {
+        HStack(spacing: 14) {
+            ZStack {
+                Circle()
+                    .fill(Theme.danger.opacity(0.18))
+                TimelineView(.animation(minimumInterval: 1.0 / 60.0)) { timeline in
+                    let t = timeline.date.timeIntervalSinceReferenceDate
+                    // A short "glitch" jitter every couple of seconds.
+                    let cycle = t.truncatingRemainder(dividingBy: 2.2)
+                    let jitter = cycle < 0.35 ? sin(cycle * 90) * 2.5 : 0
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .font(.system(size: 19, weight: .semibold))
+                        .foregroundStyle(Theme.danger)
+                        .offset(x: jitter)
+                        .opacity(cycle < 0.35 ? 0.65 + 0.35 * abs(sin(cycle * 40)) : 1)
+                }
+            }
+            .frame(width: 44, height: 44)
+
+            VStack(alignment: .leading, spacing: 3) {
+                HStack(spacing: 6) {
+                    Text("Claude ist gestolpert")
+                        .font(.system(size: 15, weight: .semibold, design: .rounded))
+                        .foregroundStyle(.white)
+                    Text(session.projectName)
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundStyle(Theme.danger)
+                }
+                .lineLimit(1)
+                if case .error(let message) = session.state {
+                    Text(message)
+                        .font(.system(size: 12))
+                        .foregroundStyle(.white.opacity(0.7))
+                        .lineLimit(2)
+                }
+            }
+            Spacer(minLength: 0)
+        }
+        .padding(.horizontal, 22)
+        .padding(.top, 12)
+        .contentShape(Rectangle())
+        .onTapGesture { TerminalActivator.activate(session) }
     }
 }
 

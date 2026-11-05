@@ -1,7 +1,7 @@
 import SwiftUI
 
 enum SparkMode: Equatable {
-    case idle, thinking, working, waiting, compacting, done
+    case idle, thinking, working, waiting, compacting, done, error
 
     init(_ state: ActivityState) {
         switch state {
@@ -11,6 +11,7 @@ enum SparkMode: Equatable {
         case .waiting: self = .waiting
         case .compacting: self = .compacting
         case .done: self = .done
+        case .error: self = .error
         }
     }
 }
@@ -37,6 +38,7 @@ struct ClaudeSpark: View {
         switch mode {
         case .waiting, .working, .thinking: return 0.7
         case .done: return 0.5
+        case .error: return 0.6
         default: return 0.2
         }
     }
@@ -71,6 +73,10 @@ struct ClaudeSpark: View {
                 scale = 0.45 + 0.25 * (0.5 + 0.5 * sin(t * 3 + phase))
             case .done:
                 scale = 0.95 + 0.05 * sin(t * 2)
+            case .error:
+                // Short rays that flicker unevenly, like a sputtering spark.
+                let flicker = sin(t * 23 + phase * 3) * sin(t * 7.3 + phase)
+                scale = 0.42 + 0.18 * max(0, flicker)
             }
 
             let inner = radius * 0.16

@@ -6,6 +6,7 @@ enum Transition {
     case started(Session)
     case finished(Session)
     case needsAttention(Session)
+    case failed(Session)
 }
 
 /// Turns the raw hook event stream into per-session state.
@@ -73,12 +74,22 @@ final class SessionStore: ObservableObject {
         case "PreCompact":
             s.state = .compacting
 
+        case "PermissionRequest":
+            // Fires the moment Claude Code shows a permission dialog (the Notification hook may lag behind).
+            let tool = ToolActivity(name: event.toolName ?? "Tool", input: event.toolInput)
+            let target = tool.detail.map { ": \($0)" } ?? ""
+            let alreadyWaiting: Bool = { if case .waiting = s.state { return true }; return false }()
+            s.state = .waiting(message: "Darf ich \(tool.displayName) nutzen\(target)?")
+            if !alreadyWaiting { transition = .needsAttention(s) }
+
         case "Notification":
             let message = event.message ?? "Claude braucht deine Aufmerksamkeit"
             // The "waiting for your input" reminder fires ~60s after a turn ended; that's not news.
             let isIdleReminder = event.notificationType == "idle_prompt"
                 || message.localizedCaseInsensitiveContains("waiting for your input")
             if isIdleReminder && !s.state.isActive { break }
+            // PermissionRequest already put us into "waiting" with a more specific message.
+            if case .waiting = s.state, event.notificationType == "permission_prompt" { break }
             s.state = .waiting(message: message)
             transition = .needsAttention(s)
 
@@ -88,6 +99,13 @@ final class SessionStore: ObservableObject {
             s.turnStartedAt = nil
             s.lastSummary = event.lastAssistantMessage.map(Self.condense)
             transition = .finished(s)
+
+        case "StopFailure":
+            s.state = .error(message: APIErrorText.describe(code: event.error, details: event.errorDetails,
+                                                            message: event.lastAssistantMessage))
+            if let start = s.turnStartedAt { s.lastTurnDuration = Date().timeIntervalSince(start) }
+            s.turnStartedAt = nil
+            transition = .failed(s)
 
         case "SubagentStop":
             break
@@ -132,7 +150,7 @@ final class SessionStore: ObservableObject {
                 updated.state = .idle
                 updated.turnStartedAt = nil
                 sessions[id] = updated
-            case .idle where age > 60 * 60, .done where age > 60 * 60:
+            case .idle where age > 60 * 60, .done where age > 60 * 60, .error where age > 60 * 60:
                 sessions[id] = nil
             default:
                 break

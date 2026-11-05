@@ -15,6 +15,9 @@ struct HookEvent {
     let notificationType: String?
     let prompt: String?
     let lastAssistantMessage: String?
+    /// `StopFailure`: error code (rate_limit, overloaded, …) and optional details.
+    let error: String?
+    let errorDetails: String?
 
     /// Value of `$TERM_PROGRAM` in the shell that ran the hook (e.g. "iTerm.app", "Apple_Terminal", "vscode").
     let termProgram: String?
@@ -37,6 +40,8 @@ struct HookEvent {
         self.notificationType = json["notification_type"] as? String
         self.prompt = json["prompt"] as? String
         self.lastAssistantMessage = json["last_assistant_message"] as? String
+        self.error = json["error"] as? String
+        self.errorDetails = json["error_details"] as? String
         self.termProgram = headers["x-term-program"].flatMap { $0.isEmpty ? nil : $0 }
         self.hostBundleID = headers["x-bundle-id"].flatMap { $0.isEmpty ? nil : $0 }
     }
@@ -44,7 +49,7 @@ struct HookEvent {
     /// Memberwise initializer used by the built-in demo.
     init(name: String, sessionID: String, cwd: String? = nil, toolName: String? = nil,
          toolInput: [String: Any] = [:], message: String? = nil, prompt: String? = nil,
-         lastAssistantMessage: String? = nil) {
+         lastAssistantMessage: String? = nil, error: String? = nil, errorDetails: String? = nil) {
         self.name = name
         self.sessionID = sessionID
         self.cwd = cwd
@@ -55,6 +60,8 @@ struct HookEvent {
         self.notificationType = nil
         self.prompt = prompt
         self.lastAssistantMessage = lastAssistantMessage
+        self.error = error
+        self.errorDetails = errorDetails
         self.termProgram = nil
         self.hostBundleID = nil
     }
