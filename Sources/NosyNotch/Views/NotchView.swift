@@ -191,7 +191,7 @@ struct SessionList: View {
         let sessions = Array(store.ordered.prefix(NotchViewModel.maxRows))
         VStack(spacing: 0) {
             if sessions.isEmpty {
-                Text("No active Claude Code sessions")
+                Text("No active Claude Code or Codex sessions")
                     .font(.system(size: 12))
                     .foregroundStyle(.white.opacity(0.5))
                     .frame(height: NotchViewModel.rowHeight)
@@ -223,6 +223,7 @@ struct SessionRow: View {
                     Text(session.projectName)
                         .font(.system(size: 13, weight: .semibold))
                         .foregroundStyle(.white)
+                    AgentBadge(agent: session.agent)
                     Text(session.statusTitle)
                         .font(.system(size: 12, weight: .medium))
                         .foregroundStyle(session.accent)
@@ -268,6 +269,21 @@ struct SessionRow: View {
     }
 }
 
+/// Tiny "Claude" / "Codex" label so mixed session lists stay readable.
+struct AgentBadge: View {
+    let agent: Agent
+
+    var body: some View {
+        Text(agent.name)
+            .font(.system(size: 9, weight: .semibold, design: .rounded))
+            .foregroundStyle(agent.color)
+            .padding(.horizontal, 5)
+            .padding(.vertical, 1.5)
+            .background(Capsule().fill(agent.color.opacity(0.16)))
+            .fixedSize()
+    }
+}
+
 // MARK: - Done
 
 struct CelebrationView: View {
@@ -299,6 +315,7 @@ struct CelebrationView: View {
                     Text(session.projectName)
                         .font(.system(size: 13, weight: .medium))
                         .foregroundStyle(Theme.success)
+                    if session.agent != .claude { AgentBadge(agent: session.agent) }
                     if let d = session.lastTurnDuration {
                         Text("· \(Format.duration(d))")
                             .font(.system(size: 12, design: .monospaced))
@@ -335,7 +352,8 @@ struct CelebrationView: View {
     }
 
     private func summaryFallback(_ s: Session) -> String {
-        s.toolCount > 0 ? "\(Format.toolCalls(s.toolCount)) – Claude is waiting for your next message." : "Claude is waiting for your next message."
+        let waiting = "\(s.agent.name) is waiting for your next message."
+        return s.toolCount > 0 ? "\(Format.toolCalls(s.toolCount)) – \(waiting)" : waiting
     }
 }
 
@@ -366,7 +384,7 @@ struct FailureView: View {
 
             VStack(alignment: .leading, spacing: 3) {
                 HStack(spacing: 6) {
-                    Text("Claude hit a snag")
+                    Text("\(session.agent.name) hit a snag")
                         .font(.system(size: 15, weight: .semibold, design: .rounded))
                         .foregroundStyle(.white)
                     Text(session.projectName)
@@ -419,7 +437,7 @@ struct AttentionView: View {
 
             VStack(alignment: .leading, spacing: 3) {
                 HStack(spacing: 6) {
-                    Text("Claude needs you")
+                    Text("\(session.agent.name) needs you")
                         .font(.system(size: 15, weight: .semibold, design: .rounded))
                         .foregroundStyle(.white)
                     Text(session.projectName)

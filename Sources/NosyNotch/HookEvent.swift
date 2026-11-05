@@ -1,11 +1,13 @@
 import Foundation
 
-/// A single event forwarded by a Claude Code hook (the hook's stdin JSON, posted to our local server).
+/// A single event forwarded by a Claude Code or Codex hook (the hook's stdin JSON, posted to our local server).
 ///
 /// See https://docs.claude.com/en/docs/claude-code/hooks for the payload shape. We decode leniently
 /// with `JSONSerialization` because fields differ per event and new ones get added over time.
 struct HookEvent {
     let name: String
+    /// Which agent sent it (`?agent=codex` in the hook URL; Claude Code hooks don't set it).
+    let agent: Agent
     let sessionID: String
     let cwd: String?
     let transcriptPath: String?
@@ -24,13 +26,14 @@ struct HookEvent {
     /// Value of `$__CFBundleIdentifier` — the bundle id of the app Claude Code runs in, if macOS set it.
     let hostBundleID: String?
 
-    init?(data: Data, headers: [String: String] = [:]) {
+    init?(data: Data, headers: [String: String] = [:], query: [String: String] = [:]) {
         guard let object = try? JSONSerialization.jsonObject(with: data),
               let json = object as? [String: Any],
               let name = json["hook_event_name"] as? String
         else { return nil }
 
         self.name = name
+        self.agent = Agent(query: query["agent"])
         self.sessionID = (json["session_id"] as? String) ?? "default"
         self.cwd = json["cwd"] as? String
         self.transcriptPath = json["transcript_path"] as? String
@@ -47,10 +50,11 @@ struct HookEvent {
     }
 
     /// Memberwise initializer used by the built-in demo.
-    init(name: String, sessionID: String, cwd: String? = nil, toolName: String? = nil,
+    init(name: String, sessionID: String, agent: Agent = .claude, cwd: String? = nil, toolName: String? = nil,
          toolInput: [String: Any] = [:], message: String? = nil, prompt: String? = nil,
          lastAssistantMessage: String? = nil, error: String? = nil, errorDetails: String? = nil) {
         self.name = name
+        self.agent = agent
         self.sessionID = sessionID
         self.cwd = cwd
         self.transcriptPath = nil

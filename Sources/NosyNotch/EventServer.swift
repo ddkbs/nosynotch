@@ -80,7 +80,7 @@ final class EventServer {
         let status: String
         switch (request.method, request.path) {
         case ("POST", "/event"):
-            if let event = HookEvent(data: request.body, headers: request.headers) {
+            if let event = HookEvent(data: request.body, headers: request.headers, query: request.query) {
                 onEvent(event)
                 status = "200 OK"
             } else {
@@ -109,6 +109,7 @@ final class EventServer {
 struct HTTPRequest {
     let method: String
     let path: String
+    let query: [String: String]
     let headers: [String: String]
     let body: Data
 
@@ -135,7 +136,13 @@ struct HTTPRequest {
 
         self.method = String(requestLine[0]).uppercased()
         let target = String(requestLine[1])
-        self.path = target.split(separator: "?", maxSplits: 1).first.map(String.init) ?? target
+        let parts = target.split(separator: "?", maxSplits: 1)
+        self.path = parts.first.map(String.init) ?? target
+        var query: [String: String] = [:]
+        if parts.count == 2 {
+            for item in URLComponents(string: "?" + parts[1])?.queryItems ?? [] { query[item.name] = item.value ?? "" }
+        }
+        self.query = query
         self.headers = headers
         self.body = Data(buffer[bodyStart..<bodyEnd])
     }

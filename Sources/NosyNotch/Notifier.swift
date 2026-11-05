@@ -19,10 +19,10 @@ enum Notifier {
         case .finished(let s):
             play("Glass", if: Preferences.soundDone)
             post(title: "\(s.projectName) – done",
-                 body: s.lastSummary ?? s.statusDetail ?? "Claude is done.")
+                 body: s.lastSummary ?? s.statusDetail ?? "\(s.agent.name) is done.")
         case .needsAttention(let s):
             play("Funk", if: Preferences.soundAttention)
-            post(title: "\(s.projectName) – Claude needs you",
+            post(title: "\(s.projectName) – \(s.agent.name) needs you",
                  body: { if case .waiting(let m) = s.state { return m }; return "Please check your terminal." }())
         case .failed(let s):
             play("Basso", if: Preferences.soundError)

@@ -43,7 +43,7 @@ final class SessionStore: ObservableObject {
     var hasWaiting: Bool { sessions.values.contains { if case .waiting = $0.state { return true }; return false } }
 
     func handle(_ event: HookEvent) {
-        var s = sessions[event.sessionID] ?? Session(id: event.sessionID)
+        var s = sessions[event.sessionID] ?? Session(id: event.sessionID, agent: event.agent)
         if let cwd = event.cwd { s.cwd = cwd }
         if let t = event.transcriptPath { s.transcriptPath = t }
         if let t = event.termProgram { s.termProgram = t }
@@ -83,7 +83,7 @@ final class SessionStore: ObservableObject {
             if !alreadyWaiting { transition = .needsAttention(s) }
 
         case "Notification":
-            let message = event.message ?? "Claude needs your attention"
+            let message = event.message ?? "\(s.agent.name) needs your attention"
             // The "waiting for your input" reminder fires ~60s after a turn ended; that's not news.
             let isIdleReminder = event.notificationType == "idle_prompt"
                 || message.localizedCaseInsensitiveContains("waiting for your input")
@@ -110,6 +110,11 @@ final class SessionStore: ObservableObject {
         case "SubagentStop":
             break
 
+        case "Interrupt":
+            // Codex only: the user stopped the turn (Esc). Claude Code has no such hook.
+            s.state = .idle
+            s.turnStartedAt = nil
+
         case "SessionEnd":
             sessions[event.sessionID] = nil
             return
@@ -122,9 +127,9 @@ final class SessionStore: ObservableObject {
         if let transition { onTransition?(transition) }
 
         // Pull a short summary of the final answer out of the transcript.
-        if event.name == "Stop", s.lastSummary == nil, let path = s.transcriptPath {
+        if event.name == "Stop", s.agent == .claude, s.lastSummary == nil, let path = s.transcriptPath {
             let id = s.id
-            DispatchQueue.global(qos: .utility).asyncAfter(deadline: .now() + 0.3) {
+            DispatchQueue.global(qos: .utility).asyncAfter(deadline: .now() + 0.3) { [weak self] in
                 let summary = Transcript.lastAssistantText(at: path).map(Self.condense)
                 Task { @MainActor [weak self] in
                     guard let self, let summary, var current = self.sessions[id], current.state == .done else { return }

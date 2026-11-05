@@ -1,6 +1,30 @@
 import SwiftUI
 
-/// What a Claude Code session is doing right now.
+/// Which coding agent a session belongs to.
+enum Agent: String, Equatable {
+    case claude, codex
+
+    init(query value: String?) {
+        self = Agent(rawValue: value?.lowercased() ?? "") ?? .claude
+    }
+
+    var name: String {
+        switch self {
+        case .claude: return "Claude"
+        case .codex: return "Codex"
+        }
+    }
+
+    /// Colour while the agent is thinking / working.
+    var color: Color {
+        switch self {
+        case .claude: return Theme.claude
+        case .codex: return Theme.codex
+        }
+    }
+}
+
+/// What a Claude Code / Codex session is doing right now.
 enum ActivityState: Equatable {
     case idle
     case thinking
@@ -35,7 +59,10 @@ struct ToolActivity: Equatable {
         case "WebFetch": return "globe"
         case "WebSearch": return "safari"
         case "Task", "Agent": return "person.2"
-        case "TodoWrite": return "checklist"
+        case "TodoWrite", "update_plan": return "checklist"
+        case "apply_patch": return "pencil"
+        case "web_search": return "safari"
+        case "view_image": return "photo"
         default:
             return name.hasPrefix("mcp__") ? "puzzlepiece.extension" : "wrench.and.screwdriver"
         }
@@ -51,7 +78,10 @@ struct ToolActivity: Equatable {
         case "WebFetch": return "Fetching"
         case "WebSearch": return "Researching"
         case "Task", "Agent": return "Delegating"
-        case "TodoWrite": return "Planning"
+        case "TodoWrite", "update_plan": return "Planning"
+        case "apply_patch": return "Editing"
+        case "web_search": return "Researching"
+        case "view_image": return "Looking"
         default: return "Using \(displayName)"
         }
     }
@@ -92,16 +122,33 @@ struct ToolActivity: Equatable {
         case "WebFetch": raw = str("url").flatMap { URL(string: $0)?.host } ?? str("url")
         case "WebSearch": raw = str("query")
         case "Task", "Agent": raw = str("description") ?? str("subagent_type")
+        case "apply_patch": raw = patchFiles(str("command") ?? str("input") ?? str("patch"))
         default: raw = str("description") ?? str("command") ?? str("query") ?? file("file_path")
         }
         guard let raw else { return nil }
+        if name == "apply_patch" { return raw }
         let firstLine = raw.split(whereSeparator: \.isNewline).first.map(String.init) ?? raw
         return firstLine.count > 80 ? String(firstLine.prefix(79)) + "…" : firstLine
     }
 }
 
+extension ToolActivity {
+    /// Codex `apply_patch`: "*** Update File: Sources/App.swift" → "App.swift" (+ "and 2 more").
+    fileprivate static func patchFiles(_ patch: String?) -> String? {
+        guard let patch else { return nil }
+        let prefixes = ["*** Update File: ", "*** Add File: ", "*** Delete File: "]
+        let files = patch.split(whereSeparator: \.isNewline).compactMap { line -> String? in
+            guard let prefix = prefixes.first(where: { line.hasPrefix($0) }) else { return nil }
+            return (String(line.dropFirst(prefix.count)) as NSString).lastPathComponent
+        }
+        guard let first = files.first else { return nil }
+        return files.count == 1 ? first : "\(first) and \(files.count - 1) more"
+    }
+}
+
 struct Session: Identifiable, Equatable {
     let id: String
+    var agent: Agent = .claude
     var cwd: String?
     var state: ActivityState = .idle
     var turnStartedAt: Date?
@@ -114,7 +161,7 @@ struct Session: Identifiable, Equatable {
     var hostBundleID: String?
 
     var projectName: String {
-        guard let cwd, !cwd.isEmpty else { return "Claude" }
+        guard let cwd, !cwd.isEmpty else { return agent.name }
         return (cwd as NSString).lastPathComponent
     }
 
@@ -143,7 +190,7 @@ struct Session: Identifiable, Equatable {
         }
     }
 
-    var accent: Color { Theme.color(for: state) }
+    var accent: Color { Theme.color(for: state, agent: agent) }
 
     /// Higher = more important to show in the compact notch.
     var priority: Int {
@@ -162,11 +209,12 @@ enum Theme {
     static let success = Color(red: 0.290, green: 0.871, blue: 0.502)    // #4ADE80
     static let violet = Color(red: 0.655, green: 0.545, blue: 0.980)     // #A78BFA
     static let danger = Color(red: 0.973, green: 0.443, blue: 0.443)     // #F87171
+    static let codex = Color(red: 0.502, green: 0.667, blue: 1.0)        // #80AAFF
 
-    static func color(for state: ActivityState) -> Color {
+    static func color(for state: ActivityState, agent: Agent = .claude) -> Color {
         switch state {
         case .idle: return .white.opacity(0.55)
-        case .thinking, .tool: return claude
+        case .thinking, .tool: return agent.color
         case .waiting: return amber
         case .compacting: return violet
         case .done: return success
