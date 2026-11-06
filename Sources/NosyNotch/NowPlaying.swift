@@ -48,7 +48,7 @@ final class NowPlaying: ObservableObject {
     @Published private(set) var accent: Color = .white
     /// Playback position at `positionDate`.
     @Published private(set) var positionAnchor: TimeInterval = 0
-    @Published private(set) var positionDate = Date()
+    @Published private(set) var positionDate = Clock.now()
 
     /// Called after the track or play state changed.
     var onChange: (() -> Void)?
@@ -84,7 +84,7 @@ final class NowPlaying: ObservableObject {
 
     // MARK: - Derived state
 
-    func position(at date: Date = Date()) -> TimeInterval {
+    func position(at date: Date = Clock.now()) -> TimeInterval {
         var p = positionAnchor
         if isPlaying { p += date.timeIntervalSince(positionDate) }
         if let d = track?.duration { p = min(p, d) }
@@ -127,7 +127,7 @@ final class NowPlaying: ObservableObject {
         self.track = track
         self.isPlaying = playing
         self.positionAnchor = position
-        self.positionDate = Date()
+        self.positionDate = Clock.now()
         setArtwork(artwork)
         onChange?()
     }
@@ -181,7 +181,7 @@ final class NowPlaying: ObservableObject {
     private func setPlaying(_ playing: Bool, position: TimeInterval) {
         isPlaying = playing
         positionAnchor = position
-        positionDate = Date()
+        positionDate = Clock.now()
     }
 
     private func clear() {

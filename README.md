@@ -141,8 +141,14 @@ Requires macOS 14+ and the free Xcode Command Line Tools (`xcode-select --instal
 ```bash
 swift run                      # run directly
 ./scripts/build-app.sh --open  # build and open build/Nosy Notch.app
-./scripts/record-gifs.sh       # re-record every GIF in docs/gifs (needs ffmpeg)
+./scripts/record-gifs.sh       # re-record the GIFs in docs/gifs and the website videos (needs ffmpeg)
+./scripts/record-gifs.sh done  # just one scene ("settings" = the settings window)
 ```
+
+The recorder renders on a virtual clock, so no frame is ever dropped – a slow Mac just takes longer. Each scene
+becomes a GIF for this README (30 fps, 840 px) and an MP4 + JPG poster in `website/public/demo/`. Options as
+environment variables: `FPS=60` capture rate, `SCALE=3` for sharper 1680 px frames (default 2), `GIF_WIDTH` /
+`GIF_FPS` / `GIF_COLORS`, `VIDEO=0` for GIFs only, `WEBM=1` for VP9 WebMs too, `STILLS=1` for PNG stills.
 
 Releases: bump the version in `package.json` and `Resources/Info.plist`, push a tag `vX.Y.Z`. GitHub Actions builds a
 universal binary, attaches it to the release and publishes to npm if the `NPM_TOKEN` secret is set.
@@ -167,7 +173,8 @@ Sources/NosyNotch/
 ├── Notifier.swift                   sounds, banners, mute, bringing the right app to the front
 ├── NotchViewModel.swift             what the notch shows and how big it is
 ├── NotchWindow.swift                transparent panel over the notch, hover without stealing clicks
-├── Recorder.swift                   GIF recorder (--record, --record-settings)
+├── Clock.swift                      wall clock, or a virtual one while recording
+├── Recorder.swift                   GIF / video recorder (--record, --record-settings)
 └── Views/                           notch shape, spark, confetti, media player, settings …
 ```
 </details>

@@ -42,8 +42,8 @@ struct EqualizerBars: View {
     }
 
     private var liveBars: some View {
-        TimelineView(.animation(minimumInterval: 1.0 / 60.0, paused: !playing)) { timeline in
-            let t = timeline.date.timeIntervalSinceReferenceDate
+        ClockTimeline(minimumInterval: 1.0 / 60.0, paused: !playing) { now in
+            let t = now.timeIntervalSinceReferenceDate
             let levels = playing ? spectrum?.levels : nil
             HStack(alignment: .center, spacing: 2.5) {
                 ForEach(0..<AudioSpectrum.bandCount, id: \.self) { (i: Int) in
@@ -75,8 +75,8 @@ struct EqualizerBars: View {
     }
 
     private var classicBars: some View {
-        TimelineView(.animation(minimumInterval: 1.0 / 30.0, paused: !playing)) { timeline in
-            let t = timeline.date.timeIntervalSinceReferenceDate
+        ClockTimeline(minimumInterval: 1.0 / 30.0, paused: !playing) { now in
+            let t = now.timeIntervalSinceReferenceDate
             HStack(alignment: .center, spacing: 2) {
                 ForEach(0..<4, id: \.self) { i in
                     let wave = 0.5 + 0.5 * sin(t * Self.speeds[i] + Self.offsets[i]) * sin(t * 2.3 + Double(i))
@@ -138,8 +138,8 @@ private struct ProgressRow: View {
     let duration: TimeInterval?
 
     var body: some View {
-        TimelineView(.periodic(from: .now, by: 0.5)) { timeline in
-            let position = media.position(at: timeline.date)
+        PeriodicClock(every: 0.5) { now in
+            let position = media.position(at: now)
             let progress = duration.map { $0 > 0 ? position / $0 : 0 } ?? 0
             HStack(spacing: 8) {
                 Text(Self.clock(position))

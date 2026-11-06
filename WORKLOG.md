@@ -13,6 +13,14 @@
 - Nod: läuft komplett über Motion-Springs (kein Re-Render pro Mausbewegung), AirPods mit Stiel, Fortschrittspunkte, Puls bei erkannter Geste.
 - `website/public/demo/*.mp4` wird von der Seite nicht mehr genutzt (Recorder-Session schreibt evtl. dorthin) → entscheiden, ob löschen.
 
+## 2026-11-06 (16)
+- **Recorder deterministisch**: neue `Clock.swift` (Wanduhr, beim Aufnehmen virtuelle Uhr + Zeitplan). Model-Zeitstempel/Timeouts über `Clock.now()` / `Clock.after()`, Views nutzen `ClockTimeline` / `PeriodicClock` statt `TimelineView`. SwiftUI-Animationen werden per `NSHostingView._renderForTest(interval:)` pro Frame weitergeschoben → Frame N = Zeitpunkt N/fps, keine verlorenen Frames (langsamer Mac = nur längere Aufnahme).
+- `FPS` (Standard 60) und `SCALE` (Standard 2, 3 = 1680 px) als Env-Variablen; PNGs parallel kodiert.
+- Farbfix: alte Frames hatten das Display-Profil eingebrannt (ffmpeg ignoriert ICC) → GIFs waren blass. Jetzt reines sRGB, MP4 als BT.709 getaggt.
+- `record-gifs.sh`: GIF 30 fps / 840 px / 256-Farben-Palette fürs ganze Video; dazu H.264-MP4 (60 fps, 1120 px) + JPG-Poster in `website/public/demo/`. `WEBM=1`, `VIDEO=0`, `GIF_WIDTH/GIF_FPS/GIF_COLORS`. Alles neu aufgenommen (GIFs ~17 MB statt 13 MB, MP4s ~4,5 MB).
+- Entscheidung: `_renderForTest` ist unterstrichene SwiftUI-API (stabil seit macOS 10.15, nur im Recorder benutzt) – Alternative wäre Echtzeit mit Drops gewesen.
+- Offen: Website nutzt die Poster (`/demo/<name>.jpg`) noch nicht (`poster=` im `<video>` in `Moments.tsx`); ggf. `SCALE=3` für die Website testen.
+
 ## 2026-11-05 (15)
 - **Website neu** (Version A gewählt; B und Docs entfernt, kein sketchy-Layout mehr): macOS-Menüleiste mit eigener Notch oben am Fenster (Hover „psst… get me“, Ring = Scrollfortschritt, öffnet die Install-Anfrage Deny / Download / Allow; Deny = „Fine. I'll just keep watching.“ bleibt). Hero mit Pfeil „psst, that's me“.
 - **Momente live statt GIF**: Notch in React nach den SwiftUI-Views nachgebaut (`website/src/notch/`: Maße 185×32, Flügel 46, 460 breit, Funke mit 10 Strahlen, Codex-Sechseck, Cursor-Würfel, Done/Needs-you/Sessions+Usage/Musik). „Needs you“ ist klickbar. Schalter zeigt alternativ die echte Aufnahme (`public/demo/*.mp4`).

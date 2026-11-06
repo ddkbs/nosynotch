@@ -48,8 +48,8 @@ struct WaveDots: View {
     var color: Color
 
     var body: some View {
-        TimelineView(.animation(minimumInterval: 1.0 / 60.0)) { timeline in
-            let t = timeline.date.timeIntervalSinceReferenceDate
+        ClockTimeline(minimumInterval: 1.0 / 60.0) { now in
+            let t = now.timeIntervalSinceReferenceDate
             HStack(spacing: 3) {
                 ForEach(0..<3, id: \.self) { i in
                     let wave = sin(t * 6 - Double(i) * 0.9)
@@ -72,8 +72,8 @@ struct Shimmer: ViewModifier {
     func body(content: Content) -> some View {
         if active {
             content.overlay {
-                TimelineView(.animation(minimumInterval: 1.0 / 30.0)) { timeline in
-                    let t = timeline.date.timeIntervalSinceReferenceDate
+                ClockTimeline(minimumInterval: 1.0 / 30.0) { now in
+                    let t = now.timeIntervalSinceReferenceDate
                     let progress = CGFloat((t.truncatingRemainder(dividingBy: 1.8)) / 1.8)
                     GeometryReader { geo in
                         LinearGradient(colors: [.clear, .white.opacity(0.85), .clear],
@@ -142,8 +142,8 @@ struct ConfettiBurst: View {
     private static let lifetime: TimeInterval = 1.4
 
     var body: some View {
-        TimelineView(.animation(minimumInterval: 1.0 / 60.0)) { timeline in
-            let elapsed = timeline.date.timeIntervalSince(start)
+        ClockTimeline(minimumInterval: 1.0 / 60.0) { now in
+            let elapsed = now.timeIntervalSince(start)
             Canvas { context, size in
                 guard elapsed >= 0, elapsed < Self.lifetime else { return }
                 let progress = elapsed / Self.lifetime
