@@ -120,7 +120,9 @@ so the error animation is Claude-only for now.
 
 **Cursor**'s agent (`~/.cursor/hooks.json`) shows up the same way with a silver spark: its `beforeSubmitPrompt`,
 `preToolUse` and `stop` hooks become thinking, tools and done; a `stop` with status `aborted` or `error` becomes
-*Ready* or the error animation.
+*Ready* or the error animation. Terminal and MCP commands that leave Cursor's sandbox wait for Allow / Deny in the notch
+(`beforeShellExecution` / `beforeMCPExecution`); ✕ or 45 s hand them back to Cursor's own prompt. The context ring comes
+from the token count in `afterAgentResponse`.
 
 ## Usage limits
 

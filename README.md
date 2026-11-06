@@ -67,7 +67,9 @@ npx nosynotch uninstall   # removes app, hooks and autostart
 |---|:---:|:---:|:---:|:---:|
 | **Claude Code** – terminal, VS Code, desktop app | ✓ | ✓ | ✓ Pro / Max | ✓ |
 | **Codex** – CLI and the ChatGPT app's Codex mode | ✓ | ✓ | ✓ | ✓ |
-| **Cursor** – Cursor's agent | ✓ | – | – | – |
+| **Cursor** – Cursor's agent | ✓ | ✓ commands outside its sandbox | – | ✓ |
+
+Cursor doesn't share its usage limits with any hook, so that column stays empty for now.
 
 Several sessions at once are no problem, mixed across agents. Each one gets a small badge and its own colour:
 orange for Claude, blue for Codex, silver for Cursor. Macs without a notch get a virtual one in the middle of the menu bar.
@@ -129,7 +131,7 @@ instantly and the agent carries on as if nothing happened – hooks never slow i
 |---|---|---|
 | Claude Code | `settings.json` in `~/.claude`, `$CLAUDE_CONFIG_DIR` and every `~/.claude-*` account folder | Usage limits and context via a silent status line – only if you don't have your own |
 | Codex | `~/.codex/hooks.json` | Limits and context from its session files |
-| Cursor | `~/.cursor/hooks.json` | Prints `{}` so Cursor never waits on it |
+| Cursor | `~/.cursor/hooks.json` | Prints `{}` so Cursor never waits on it – except `beforeShellExecution` for commands outside the sandbox, which waits for Allow / Deny |
 
 The permission hook is the one exception that waits: it holds the request until you click in the notch. Answer in the
 terminal instead, or let it time out, and the agent's own prompt takes over.
