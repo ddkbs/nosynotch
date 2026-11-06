@@ -104,9 +104,11 @@ const STATUS_LINE_COMMAND =
 const CURSOR_EVENTS = [
   'sessionStart', 'sessionEnd', 'beforeSubmitPrompt', 'preToolUse', 'postToolUse', 'postToolUseFailure',
   'afterAgentResponse', 'stop', 'subagentStop', 'preCompact',
+  'beforeShellExecution', 'beforeMCPExecution',
 ];
+const CURSOR_PERMISSION_EVENTS = new Set(['beforeShellExecution', 'beforeMCPExecution']);
 const cursorCommand = (event) =>
-  [
+  CURSOR_PERMISSION_EVENTS.has(event) ? cursorPermissionCommand() : [
     'curl -s -m 2 -X POST',
     "-H 'Content-Type: application/json'",
     "-H 'Expect:'",
@@ -116,6 +118,21 @@ const cursorCommand = (event) =>
     `'http://127.0.0.1:${PORT}/event?src=${MARKER}&agent=cursor'`,
     `>/dev/null 2>&1; printf '%s' '${event === 'beforeSubmitPrompt' ? '{"continue":true}' : '{}'}'`,
   ].join(' ');
+// Waits for Allow / Deny in the notch, prints `{}` when there's no decision. Must match HookInstaller.Cursor.
+function cursorPermissionCommand() {
+  const token = approvalToken();
+  return [
+    'r=$(curl -s -m 55 -X POST',
+    "-H 'Content-Type: application/json'",
+    "-H 'Expect:'",
+    '-H "X-Term-Program: ${TERM_PROGRAM:-}"',
+    '-H "X-Bundle-Id: ${__CFBundleIdentifier:-}"',
+    '--data-binary @-',
+    `'http://127.0.0.1:${PORT}/permission?src=${MARKER}&agent=cursor'`,
+    '2>/dev/null);',
+    `case "$r" in "${token} "*) printf '%s' "\${r#${token} }";; *) printf '%s' '{}';; esac`,
+  ].join(' ');
+}
 const cursorDir = () => path.join(HOME, '.cursor');
 const cursorAvailable = () => fs.existsSync(cursorDir()) || fs.existsSync('/Applications/Cursor.app');
 const cursorHooksFile = () => path.join(cursorDir(), 'hooks.json');
@@ -128,7 +145,7 @@ function installCursorHooks() {
   const file = cursorHooksFile();
   const settings = readSettings(file);
   const hooks = settings.hooks || {};
-  for (const name of CURSOR_EVENTS) hooks[name] = [...(hooks[name] || []).filter((e) => !ownEntry(e)), { command: cursorCommand(name), timeout: 5 }];
+  for (const name of CURSOR_EVENTS) hooks[name] = [...(hooks[name] || []).filter((e) => !ownEntry(e)), { command: cursorCommand(name), timeout: CURSOR_PERMISSION_EVENTS.has(name) ? 60 : 5 }];
   settings.version = settings.version ?? 1;
   settings.hooks = hooks;
   writeSettings(file, settings);
