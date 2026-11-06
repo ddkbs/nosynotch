@@ -20,6 +20,8 @@ final class NotchViewModel: ObservableObject {
         case limitReset
         /// Nothing from Claude – music is playing: cover on the left, equalizer on the right.
         case media
+        /// Nothing going on, but the pointer came close: Nosy peeks out of the notch.
+        case peek
     }
 
     struct Celebration: Equatable {
@@ -43,8 +45,28 @@ final class NotchViewModel: ObservableObject {
     private var wasPlaying = false
     /// Nod / shake with AirPods while a permission request is open (opt-in).
     let head = HeadGestures()
+    /// Where Nosy looks (the pointer).
+    let gaze = NosyGaze()
+    /// Energy, level and streak.
+    let pet: NosyPet
+
+    /// A short mood that wins over everything else for a moment (petting, waking up).
+    struct NosyBurst: Equatable {
+        let mood: NosyMood
+        let until: Date
+    }
+    @Published private(set) var nosyBurst: NosyBurst?
+    /// Nothing happened for a while – Nosy dozes off.
+    @Published private(set) var isAsleep = false
+    /// The pointer is close to the notch (Nosy peeks out).
+    @Published private(set) var pointerIsNear = false
+    private var lastActivity = Clock.now()
+    private var sleepTimer: Timer?
+    static let sleepAfter: TimeInterval = 10 * 60
+    static let sleepAfterAtNight: TimeInterval = 2 * 60
 
     static let usageRowHeight: CGFloat = 24
+    static let nosyCardHeight: CGFloat = 40
 
     /// Extra height for the Allow / Deny row.
     static let approvalRowHeight: CGFloat = 40
@@ -70,6 +92,7 @@ final class NotchViewModel: ObservableObject {
     @Published var isHovering = false {
         didSet {
             guard oldValue != isHovering else { return }
+            if isHovering { wakeUp(); noteActivity() }
             recompute()
             // Looking at the session list for a moment counts as "seen".
             if isHovering, !store.unseen.isEmpty {
@@ -87,9 +110,12 @@ final class NotchViewModel: ObservableObject {
     static let approvalCardSeconds: TimeInterval = 30
     private var quietWork: DispatchWorkItem?
 
-    init(store: SessionStore, media: NowPlaying, approvals: ApprovalCenter? = nil, usage: UsageStore? = nil) {
+    init(store: SessionStore, media: NowPlaying, approvals: ApprovalCenter? = nil, usage: UsageStore? = nil,
+         pet: NosyPet? = nil) {
         self.store = store
         self.media = media
+        let pet = pet ?? NosyPet(persist: false)
+        self.pet = pet
         let approvals = approvals ?? ApprovalCenter()
         self.approvals = approvals
         let usage = usage ?? UsageStore(load: false)
@@ -100,6 +126,9 @@ final class NotchViewModel: ObservableObject {
             self.decide(approval, gesture == .nod ? .allow : .deny)
         }
         media.onChange = { [weak self] in self?.recompute() }
+        sleepTimer = Timer.scheduledTimer(withTimeInterval: 15, repeats: true) { [weak self] _ in
+            MainActor.assumeIsolated { self?.updateSleep() }
+        }
         approvals.onChange = { [weak self] in
             guard let self else { return }
             self.objectWillChange.send()   // size depends on whether buttons are shown
@@ -126,8 +155,100 @@ final class NotchViewModel: ObservableObject {
         Preferences.usageEnabled ? usage.rows.filter { Preferences.showsUsage(for: $0.agent) } : []
     }
 
-    /// Whether the hover view lists Claude sessions (always, unless there are none but music is playing).
-    var showsSessionList: Bool { !store.sessions.isEmpty || !hasMedia }
+    /// Whether the hover view lists Claude sessions (always, unless there are none but something else fills it).
+    var showsSessionList: Bool { !store.sessions.isEmpty || (!hasMedia && !showsNosyCard) }
+
+    /// Nosy's energy / level / streak card at the top of the hover view.
+    var showsNosyCard: Bool { Preferences.nosyEnabled && Preferences.nosyPet }
+
+    // MARK: - Nosy
+
+    /// How Nosy feels right now.
+    var nosyMood: NosyMood {
+        if let burst = nosyBurst, burst.until > Clock.now() { return burst.mood }
+        switch presentation {
+        case .celebrating, .limitReset: return .happy
+        case .attention: return .needsYou
+        case .failed: return .shocked
+        default: break
+        }
+        if let session = compactSession {
+            let long = (session.turnStartedAt.map { Clock.now().timeIntervalSince($0) } ?? 0) > 180
+            switch session.state {
+            case .waiting: return .needsYou
+            case .compacting: return .dizzy
+            case .thinking: return long ? .sweating : .working
+            case .tool: return long ? .sweating : .typing
+            case .error: return .shocked
+            case .done where quietDone?.id == session.id: return .happy
+            default: break
+            }
+        }
+        if limitIsUsedUp { return .exhausted }
+        if hasMedia && media.isPlaying { return .grooving }
+        if isAsleep { return .sleeping }
+        if Preferences.nosyPet && pet.isLowOnEnergy { return .sleepy }
+        return .idle
+    }
+
+    /// A shown usage limit sits at 100 %.
+    var limitIsUsedUp: Bool {
+        usageRows.contains { row in
+            [row.usage.fiveHour?.current, row.usage.week?.current].contains { ($0?.usedPercent ?? 0) >= 100 }
+        }
+    }
+
+    /// The antenna / eye glow: the active agent's colour, or the sparkle's gold.
+    var nosyTint: Color {
+        if let session = compactSession, session.state.isActive || session.state != .idle { return session.accent }
+        return NosyPalette.spark
+    }
+
+    /// Show a mood for a moment (petting, waking up …).
+    func nosyReact(_ mood: NosyMood, for seconds: TimeInterval = 1.6) {
+        nosyBurst = NosyBurst(mood: mood, until: Clock.now().addingTimeInterval(seconds))
+        Clock.after(seconds + 0.05) { [weak self] in
+            guard let self, let burst = self.nosyBurst, burst.until <= Clock.now() else { return }
+            self.nosyBurst = nil
+        }
+    }
+
+    /// You poked Nosy.
+    func petNosy() {
+        noteActivity()
+        nosyReact(.giggle)
+    }
+
+    /// Called with every pointer move: where Nosy looks, and whether it peeks out.
+    func updateGaze(mouse: CGPoint, notchCenter: CGPoint) {
+        guard Preferences.nosyEnabled else { return }
+        gaze.update(mouse: mouse, notchCenter: notchCenter)
+        let near = gaze.nearness > (pointerIsNear ? 0.2 : 0.4)
+        if near != pointerIsNear {
+            pointerIsNear = near
+            if near { wakeUp() }
+            recompute()
+        }
+    }
+
+    private func noteActivity() {
+        lastActivity = Clock.now()
+        if isAsleep { isAsleep = false }
+    }
+
+    private func wakeUp() {
+        guard isAsleep else { return }
+        noteActivity()
+        nosyReact(.waking, for: 1.4)
+    }
+
+    private func updateSleep() {
+        if store.hasActivity || store.hasWaiting || isHovering || media.isPlaying { lastActivity = Clock.now() }
+        let hour = Calendar.current.component(.hour, from: Clock.now())
+        let limit = hour >= 23 || hour < 6 ? Self.sleepAfterAtNight : Self.sleepAfter
+        let asleep = Clock.now().timeIntervalSince(lastActivity) > limit
+        if asleep != isAsleep { isAsleep = asleep }
+    }
 
     // MARK: - Geometry
 
@@ -138,10 +259,11 @@ final class NotchViewModel: ObservableObject {
         switch presentation {
         case .hidden:
             return CGSize(width: notchSize.width + 2 * flare, height: hasPhysicalNotch ? notchSize.height : 0)
-        case .compact, .media:
+        case .compact, .media, .peek:
             return CGSize(width: compactWidth, height: notchSize.height)
         case .expanded:
             var height = notchSize.height + 12
+            if showsNosyCard { height += Self.nosyCardHeight }
             if hasMedia { height += 2 + Self.mediaCardHeight }
             if showsSessionList {
                 height += 10 + CGFloat(min(max(store.sessions.count, 1), Self.maxRows)) * Self.rowHeight
@@ -160,23 +282,23 @@ final class NotchViewModel: ObservableObject {
 
     /// Size of the window that hosts the notch – big enough for the largest state plus glow.
     var canvasSize: CGSize {
-        CGSize(width: Self.expandedWidth + 80,
-               height: notchSize.height + 10 + Self.mediaCardHeight + 10 + CGFloat(Self.maxRows) * Self.rowHeight
-                   + 8 + 2 * Self.usageRowHeight + 12 + 40)
+        // Room for the tallest hover view (sessions, music, usage, Nosy, shelf, calendar …), Nosy hanging below it
+        // and the glow. The window is transparent and ignores clicks outside the notch, so a bit too big is fine.
+        CGSize(width: Self.expandedWidth + 80, height: notchSize.height + 700)
     }
 
     var topRadius: CGFloat { Self.topRadius(for: presentation) }
 
     var bottomRadius: CGFloat {
         switch presentation {
-        case .hidden, .compact, .media: return min(12, notchSize.height * 0.38)
+        case .hidden, .compact, .media, .peek: return min(12, notchSize.height * 0.38)
         default: return 26
         }
     }
 
     private static func topRadius(for p: Presentation) -> CGFloat {
         switch p {
-        case .hidden, .compact, .media: return 6
+        case .hidden, .compact, .media, .peek: return 6
         default: return 14
         }
     }
@@ -184,6 +306,7 @@ final class NotchViewModel: ObservableObject {
     // MARK: - State
 
     func handle(_ transition: Transition) {
+        noteActivity()
         switch transition {
         case .finished(let session):
             attention = nil
@@ -311,7 +434,7 @@ final class NotchViewModel: ObservableObject {
             next = .failed
         } else if limitReset != nil {
             next = .limitReset
-        } else if isHovering && (!store.sessions.isEmpty || hasMedia) {
+        } else if isHovering && (!store.sessions.isEmpty || hasMedia || Preferences.nosyEnabled) {
             next = .expanded
         } else if store.hasActivity || store.hasWaiting || quietDone != nil {
             next = .compact
@@ -319,6 +442,8 @@ final class NotchViewModel: ObservableObject {
             next = .media
         } else if !store.unseen.isEmpty {
             next = .compact
+        } else if Preferences.nosyEnabled && pointerIsNear {
+            next = .peek
         } else {
             next = .hidden
         }

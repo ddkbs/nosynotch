@@ -6,7 +6,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private lazy var nowPlaying = NowPlaying()
     private lazy var approvals = ApprovalCenter()
     private lazy var usage = UsageStore()
-    private lazy var model = NotchViewModel(store: store, media: nowPlaying, approvals: approvals, usage: usage)
+    private lazy var pet = NosyPet()
+    private lazy var model = NotchViewModel(store: store, media: nowPlaying, approvals: approvals, usage: usage, pet: pet)
     private var windowController: NotchWindowController?
     private var server: EventServer?
     private var statusItem: NSStatusItem?

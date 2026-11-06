@@ -67,3 +67,42 @@ struct NosyLiveWingEyes: View {
             .animation(.spring(response: 0.35, dampingFraction: 0.7), value: gaze.look)
     }
 }
+
+/// Right wing while Nosy peeks: its energy as a tiny ring, or a "z" while it sleeps.
+struct NosyPeekBadge: View {
+    var asleep: Bool
+    var energy: Double
+    var showsEnergy: Bool
+
+    var body: some View {
+        if asleep {
+            Text("z")
+                .font(.system(size: 11, weight: .heavy, design: .rounded))
+                .foregroundStyle(.white.opacity(0.55))
+        } else if showsEnergy {
+            NosyEnergyRing(energy: energy)
+                .frame(width: 13, height: 13)
+        }
+    }
+}
+
+/// Energy as a small ring with a sparkle in the middle.
+struct NosyEnergyRing: View {
+    var energy: Double
+    var lineWidth: CGFloat = 2.5
+
+    var color: Color {
+        energy < 0.25 ? Theme.amber : NosyPalette.spark
+    }
+
+    var body: some View {
+        ZStack {
+            Circle().stroke(.white.opacity(0.12), lineWidth: lineWidth)
+            Circle()
+                .trim(from: 0, to: max(0.04, min(1, energy)))
+                .stroke(color, style: StrokeStyle(lineWidth: lineWidth, lineCap: .round))
+                .rotationEffect(.degrees(-90))
+        }
+        .animation(.easeOut(duration: 0.6), value: energy)
+    }
+}

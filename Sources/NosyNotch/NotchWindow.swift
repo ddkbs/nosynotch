@@ -103,6 +103,10 @@ final class NotchWindowController {
 
     private func updateHover() {
         let mouse = NSEvent.mouseLocation
+        if let screen {
+            model.updateGaze(mouse: mouse, notchCenter: CGPoint(x: screen.frame.midX,
+                                                                y: screen.frame.maxY - model.notchSize.height / 2))
+        }
         var rect = notchRect
         if rect.height < 1 { rect.size.height = model.notchSize.height; rect.origin.y -= model.notchSize.height }
         let inside = rect.insetBy(dx: -6, dy: -6).contains(mouse)

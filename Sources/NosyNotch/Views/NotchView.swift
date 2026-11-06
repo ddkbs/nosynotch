@@ -64,6 +64,9 @@ struct NotchView: View {
             switch model.presentation {
             case .expanded:
                 VStack(spacing: 0) {
+                    if model.showsNosyCard {
+                        NosyCard(pet: model.pet)
+                    }
                     if model.hasMedia {
                         MediaPlayerCard(media: media)
                             .padding(.top, 2)
@@ -107,7 +110,7 @@ struct NotchView: View {
                         .id(reset.id)
                         .transition(.blurFade.combined(with: .scale(scale: 0.85, anchor: .top)))
                 }
-            case .hidden, .compact, .media:
+            case .hidden, .compact, .media, .peek:
                 EmptyView()
             }
         }
@@ -153,7 +156,12 @@ struct NotchView: View {
         let visible = model.presentation != .hidden
         HStack(spacing: 0) {
             ZStack {
-                if visible, let primary {
+                if visible, Preferences.nosyEnabled {
+                    NosyLiveWingEyes(mood: model.nosyMood, gaze: model.gaze, tint: model.nosyTint)
+                        .frame(width: 30, height: 18)
+                        .transition(.scale(scale: 0.2, anchor: .top).combined(with: .opacity))
+                        .onTapGesture { model.petNosy() }
+                } else if visible, let primary {
                     AgentGlyph(agent: primary.agent,
                                mode: model.presentation == .celebrating ? .done : SparkMode(primary.state),
                                 color: model.presentation == .celebrating ? Theme.success : primary.accent)
@@ -166,7 +174,10 @@ struct NotchView: View {
             Spacer(minLength: model.notchSize.width)
 
             ZStack {
-                if visible, let primary {
+                if model.presentation == .peek {
+                    NosyPeekBadge(asleep: model.isAsleep, energy: model.pet.energy, showsEnergy: Preferences.nosyPet)
+                        .transition(.scale(scale: 0.2).combined(with: .opacity))
+                } else if visible, let primary {
                     if model.presentation == .expanded, store.sessions.count > 1 {
                         Text("\(store.sessions.count)")
                             .font(.system(size: 11, weight: .bold, design: .rounded))
