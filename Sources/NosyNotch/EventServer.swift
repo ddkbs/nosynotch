@@ -101,6 +101,11 @@ final class EventServer: @unchecked Sendable {
     }
 
     private func respond(to request: HTTPRequest, on connection: NWConnection) {
+        // Hooks and the CLI use curl / Node, which never send these headers. Browsers do, so a web page
+        // can't quit the app or show fake events with a `no-cors` request to localhost.
+        if request.isFromBrowser {
+            return send("403 Forbidden", body: "403 Forbidden", on: connection)
+        }
         if request.method == "POST", request.path == "/permission" {
             guard let event = HookEvent(data: request.body, headers: request.headers, query: request.query) else {
                 return send("400 Bad Request", body: "400 Bad Request", on: connection)
@@ -155,6 +160,12 @@ struct HTTPRequest {
     let headers: [String: String]
     let body: Data
 
+    /// Browsers send `Origin` and/or `Sec-Fetch-Site` with every cross-site request; curl and Node's fetch
+    /// (the hooks and the CLI) send neither. (Node does send `Sec-Fetch-Mode`, so that one isn't checked.)
+    var isFromBrowser: Bool {
+        headers["origin"] != nil || headers["sec-fetch-site"] != nil
+    }
+
     init?(parsing buffer: Data) {
         guard let headerEnd = buffer.range(of: Data("\r\n\r\n".utf8)) else { return nil }
         guard let head = String(data: buffer[buffer.startIndex..<headerEnd.lowerBound], encoding: .utf8) else { return nil }
@@ -171,7 +182,7 @@ struct HTTPRequest {
             headers[key] = value
         }
 
-        let length = headers["content-length"].flatMap(Int.init) ?? 0
+        let length = max(0, headers["content-length"].flatMap(Int.init) ?? 0)
         let bodyStart = headerEnd.upperBound
         guard buffer.distance(from: bodyStart, to: buffer.endIndex) >= length else { return nil }
         let bodyEnd = buffer.index(bodyStart, offsetBy: length)
