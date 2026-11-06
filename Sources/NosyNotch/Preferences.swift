@@ -22,6 +22,9 @@ enum Preferences {
         static let mutedUntil = "mutedUntil"
         static let liveEqualizer = "liveEqualizer"
         static let port = "port"
+        static let nosyEnabled = "nosyEnabled"
+        static let nosyPet = "nosyPet.enabled"
+        static let nosyAccessory = "nosyAccessory"
     }
 
     private static let defaults = UserDefaults.standard
@@ -50,6 +53,9 @@ enum Preferences {
             Key.cursorApprovals: true,
             Key.liveEqualizer: false,
             Key.port: Int(EventServer.defaultPort),
+            Key.nosyEnabled: true,
+            Key.nosyPet: true,
+            Key.nosyAccessory: NosyAccessory.none.rawValue,
         ])
     }
 
@@ -123,6 +129,16 @@ enum Preferences {
 
     /// Bigger equalizer that follows the actual music (needs the "audio recording" permission).
     static var liveEqualizer: Bool { defaults.bool(forKey: Key.liveEqualizer) }
+
+    /// Nosy lives in the notch (eyes in the wing, hanging below the open notch). Off = the classic glyphs.
+    static var nosyEnabled: Bool { defaults.object(forKey: Key.nosyEnabled) as? Bool ?? true }
+
+    /// Energy, level and streak.
+    static var nosyPet: Bool { defaults.object(forKey: Key.nosyPet) as? Bool ?? true }
+
+    static var nosyAccessory: NosyAccessory {
+        NosyAccessory(rawValue: defaults.string(forKey: Key.nosyAccessory) ?? "") ?? .none
+    }
 
     static var port: UInt16 {
         UInt16(clamping: defaults.integer(forKey: Key.port))
