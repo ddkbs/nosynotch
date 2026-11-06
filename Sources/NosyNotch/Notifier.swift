@@ -88,6 +88,14 @@ enum TerminalActivator {
         var candidates: [String] = []
         if let b = session.hostBundleID { candidates.append(b) }
         if let t = session.termProgram, let b = termProgramBundles[t] { candidates.append(b) }
+        // No hint from the hook's environment: the agent's own app (Cursor, the ChatGPT app for Codex).
+        if candidates.isEmpty {
+            switch session.agent {
+            case .cursor: candidates.append("com.todesktop.230313mzl4w4u92")
+            case .codex: candidates.append("com.openai.codex")
+            case .claude: candidates.append("com.anthropic.claudefordesktop")
+            }
+        }
         return candidates
     }
 
