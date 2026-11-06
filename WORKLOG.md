@@ -1,5 +1,11 @@
 # WORKLOG
 
+## 2026-11-06 (18)
+- Recorder-Branch in `main` gemergt (nur WORKLOG-Konflikt). `swift build` grün, Demo nicht live laufen gelassen.
+- **Website deployed**: Vercel-Projekt `nosynotch` (ddkbs-projects), Root `website/`, live unter https://nosynotch.vercel.app. Domain `nosynotch.davidkubus.dev` ist im Projekt eingetragen, aber **DNS fehlt**: bei Cloudflare CNAME `nosynotch` → `771b02c0492556e1.vercel-dns-017.com` (Proxy aus / DNS only) anlegen.
+- Erneut deployen: `cd website && vercel deploy --prod`.
+- Solange das Repo privat ist: GitHub-Links auf der Seite → 404 für Besucher, Sternzähler/Version kommen nicht (Fallback v0.2.0).
+
 ## 2026-11-06 (17)
 - Website-Notch verhält sich wie die App: exakte `NotchShape` (Quad-Flares), App-Feder (response 0.42 / damping 0.74 → 224/22.1), Glow r14 + schwarzer Schatten, Sinus-Shake, blurFade/move/scale-Übergänge; Hover öffnet sofort (Rect + 6 pt), Verlassen schließt sofort; offen 460 pt mit Flügel-Leiste.
 - „Welcome back“ entfernt; Hover verwandelt keine Nachricht mehr in die Install-Karte (Markier-Karte bleibt klickbar, Markierung bleibt beim Copy erhalten). Momente schalten immer weiter (auch nach Klick), Kicker „Interactive demo“, Versions-Pill im Hero weg.
