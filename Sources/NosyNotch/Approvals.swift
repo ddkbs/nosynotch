@@ -64,7 +64,7 @@ final class ApprovalCenter: ObservableObject {
     /// Claude Code shows its own dialog while the hook waits, so the notch can wait almost as long as the hook
     /// may run (600 s). Codex only shows its prompt once the hook returns – don't keep it hidden for long.
     static func waitTime(for agent: Agent) -> TimeInterval {
-        agent == .codex ? 45 : 570
+        agent == .claude ? 570 : 45   // Codex and Cursor only show their own prompt after the hook returns
     }
 
     func pending(for sessionID: String) -> PendingApproval? {
@@ -73,7 +73,8 @@ final class ApprovalCenter: ObservableObject {
 
     /// A `PermissionRequest` hook is waiting. `reply` sends the hook's stdout (nil = no decision).
     func add(_ event: HookEvent, reply: @escaping (String?) -> Void) {
-        guard Preferences.approvalsInNotch else { return reply(nil) }
+        guard Preferences.approvalsInNotch, event.name == "PermissionRequest" else { return reply(nil) }
+        if event.agent == .cursor && !Preferences.cursorApprovals { return reply(nil) }
 
         let rules = event.agent == .claude ? event.permissionSuggestions.filter(Self.isSafeAlwaysRule) : []
         let approval = PendingApproval(sessionID: event.sessionID, agent: event.agent,
@@ -90,6 +91,14 @@ final class ApprovalCenter: ObservableObject {
 
     func decide(_ id: UUID, _ decision: ApprovalDecision) {
         guard let approval = pending.first(where: { $0.id == id }) else { return }
+        if approval.agent == .cursor {
+            // Cursor's permission hooks: {"permission": "allow" | "deny"}.
+            let output: [String: Any] = decision == .deny
+                ? ["permission": "deny", "user_message": "Denied in Nosy Notch.", "agent_message": "The user denied this command."]
+                : ["permission": "allow"]
+            let json = (try? JSONSerialization.data(withJSONObject: output)).flatMap { String(data: $0, encoding: .utf8) }
+            return finish(id, output: json)
+        }
         var body: [String: Any]
         switch decision {
         case .allow:

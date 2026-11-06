@@ -131,8 +131,9 @@ final class SessionStore: ObservableObject {
             break
 
         case "AgentResponse":
-            // Cursor sends the answer text before its `stop` hook.
+            // Cursor sends the answer text (and its token count) before its `stop` hook.
             if let text = event.lastAssistantMessage { s.lastSummary = Self.condense(text) }
+            if let context = event.contextPercent { s.contextPercent = context }
 
         case "Interrupt":
             // Codex only: the user stopped the turn (Esc). Claude Code has no such hook.

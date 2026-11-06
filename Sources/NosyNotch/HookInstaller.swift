@@ -327,7 +327,11 @@ extension HookInstaller {
         static let events = [
             "sessionStart", "sessionEnd", "beforeSubmitPrompt", "preToolUse", "postToolUse", "postToolUseFailure",
             "afterAgentResponse", "stop", "subagentStop", "preCompact",
+            "beforeShellExecution", "beforeMCPExecution",
         ]
+
+        /// Hooks that may wait for Allow / Deny in the notch.
+        static let permissionEvents: Set<String> = ["beforeShellExecution", "beforeMCPExecution"]
 
         static var home: URL {
             FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(".cursor", isDirectory: true)
@@ -345,6 +349,21 @@ extension HookInstaller {
         }
 
         static func command(for event: String, port: UInt16) -> String {
+            if permissionEvents.contains(event) {
+                // Waits for the notch; prints the decision only if it carries our token, otherwise `{}` (Cursor decides).
+                let token = ApprovalToken.value
+                return [
+                    "r=$(curl -s -m 55 -X POST",
+                    "-H 'Content-Type: application/json'",
+                    "-H 'Expect:'",
+                    "-H \"X-Term-Program: ${TERM_PROGRAM:-}\"",
+                    "-H \"X-Bundle-Id: ${__CFBundleIdentifier:-}\"",
+                    "--data-binary @-",
+                    "'http://127.0.0.1:\(port)/permission?src=\(marker)&agent=cursor'",
+                    "2>/dev/null);",
+                    "case \"$r\" in \"\(token) \"*) printf '%s' \"${r#\(token) }\";; *) printf '%s' '{}';; esac",
+                ].joined(separator: " ")
+            }
             let reply = event == "beforeSubmitPrompt" ? #"{"continue":true}"# : "{}"
             return [
                 "curl -s -m 2 -X POST",
@@ -382,7 +401,7 @@ extension HookInstaller {
             var hooks = (file["hooks"] as? [String: Any]) ?? [:]
             for event in events {
                 var entries = ((hooks[event] as? [[String: Any]]) ?? []).filter { !isOurs($0) }
-                entries.append(["command": command(for: event, port: port), "timeout": 5])
+                entries.append(["command": command(for: event, port: port), "timeout": permissionEvents.contains(event) ? 60 : 5])
                 hooks[event] = entries
             }
             file["version"] = file["version"] ?? 1

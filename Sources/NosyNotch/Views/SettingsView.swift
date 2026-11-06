@@ -615,7 +615,7 @@ private struct AgentsPage: View {
             AgentCard(agent: .cursor, title: "Cursor",
                       detail: HookInstaller.Cursor.displayPath,
                       status: !HookInstaller.Cursor.isAvailable ? .missing : (cursor ? .connected : .disconnected),
-                      note: "Cursor's agent. Claude Code inside Cursor's terminal works through the Claude hooks anyway.") {
+                      note: "Cursor's agent: live status, context fill and Allow / Deny. Cursor doesn't share its usage limits.") {
                 toggle { cursor ? try HookInstaller.Cursor.uninstall() : try HookInstaller.Cursor.install(port: Preferences.port) }
             }
 
@@ -781,14 +781,21 @@ private struct MuteCard: View {
 private struct PermissionsPage: View {
     @AppStorage(Preferences.Key.approvalsInNotch) private var approvalsInNotch = true
     @AppStorage(Preferences.Key.headGestures) private var headGestures = false
+    @AppStorage(Preferences.Key.cursorApprovals) private var cursorApprovals = true
 
     var body: some View {
         VStack(alignment: .leading, spacing: 18) {
-            Card(footer: "Claude Code keeps its own dialog open meanwhile – answer wherever you like. Codex shows its prompt once you click ✕ or after 45 s. Your deny rules always win, and \"Always allow\" never switches the permission mode.") {
+            Card(footer: "Claude Code keeps its own dialog open meanwhile – answer wherever you like. Codex and Cursor show their own prompt once you click ✕ or after 45 s. Your deny rules always win, and \"Always allow\" never switches the permission mode.") {
                 Row(title: "Allow or deny right in the notch",
-                    subtitle: "Deny · Always allow · Allow, for Claude Code and Codex", divider: false) {
+                    subtitle: "Deny · Always allow · Allow, for Claude Code, Codex and Cursor") {
                     NotchToggle(isOn: $approvalsInNotch, tint: Theme.amber)
                 }
+                Row(title: "Cursor: commands outside the sandbox",
+                    subtitle: "Terminal and MCP commands Cursor would ask about wait for you in the notch", divider: false) {
+                    NotchToggle(isOn: $cursorApprovals, tint: Theme.cursor)
+                }
+                .opacity(approvalsInNotch ? 1 : 0.4)
+                .disabled(!approvalsInNotch)
             }
 
             Card(title: "Hands-free", footer: "Uses the head tracking of AirPods Pro / Max / 3rd gen and newer. Motion is only read while a request is open in the notch – macOS asks once for Motion & Fitness access.") {

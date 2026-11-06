@@ -18,6 +18,7 @@ enum Preferences {
         static let contextEnabled = "contextEnabled"
         static let headGestures = "headGestures"
         static let notifyLimitReset = "notifyLimitReset"
+        static let cursorApprovals = "cursorApprovals"
         static let mutedUntil = "mutedUntil"
         static let liveEqualizer = "liveEqualizer"
         static let port = "port"
@@ -46,6 +47,7 @@ enum Preferences {
             Key.contextEnabled: true,
             Key.headGestures: false,
             Key.notifyLimitReset: true,
+            Key.cursorApprovals: true,
             Key.liveEqualizer: false,
             Key.port: Int(EventServer.defaultPort),
         ])
@@ -109,6 +111,9 @@ enum Preferences {
     /// Tell me when a usage limit resets – only if it was at least `limitResetThreshold` % used.
     static var notifyLimitReset: Bool { defaults.object(forKey: Key.notifyLimitReset) as? Bool ?? true }
     static let limitResetThreshold: Double = 80
+
+    /// Cursor shell / MCP commands outside its sandbox wait for Allow / Deny in the notch.
+    static var cursorApprovals: Bool { defaults.object(forKey: Key.cursorApprovals) as? Bool ?? true }
 
     /// Context-window fill ring per session in the hover list.
     static var contextEnabled: Bool { defaults.object(forKey: Key.contextEnabled) as? Bool ?? true }

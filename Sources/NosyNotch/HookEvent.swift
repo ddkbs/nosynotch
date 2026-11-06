@@ -25,6 +25,8 @@ struct HookEvent {
     let errorDetails: String?
     /// `PermissionRequest` (Claude Code): the "always allow" options the terminal dialog offers.
     let permissionSuggestions: [[String: Any]]
+    /// Context-window fill (0–100) when the event tells it (Cursor's `afterAgentResponse`).
+    let contextPercent: Double?
 
     /// Value of `$TERM_PROGRAM` in the shell that ran the hook (e.g. "iTerm.app", "Apple_Terminal", "vscode").
     let termProgram: String?
@@ -44,7 +46,7 @@ struct HookEvent {
         self.isCursorViaClaudeHook = fromCursor && queried != .cursor
         if agent == .cursor {
             // Cursor names its hooks differently (camelCase) and keys sessions by conversation.
-            self.name = Self.cursorEventName(name, status: json["status"] as? String)
+            self.name = Self.cursorEventName(name, status: json["status"] as? String, sandboxed: json["sandbox"] as? Bool == true)
             self.sessionID = (json["conversation_id"] as? String) ?? (json["session_id"] as? String) ?? "cursor"
             self.cwd = (json["cwd"] as? String) ?? (json["workspace_roots"] as? [String])?.first
         } else {
@@ -53,8 +55,15 @@ struct HookEvent {
             self.cwd = json["cwd"] as? String
         }
         self.transcriptPath = json["transcript_path"] as? String
-        self.toolName = json["tool_name"] as? String
-        self.toolInput = (json["tool_input"] as? [String: Any]) ?? [:]
+        if agent == .cursor, name == "beforeShellExecution" {
+            // Same shape as Cursor's preToolUse / postToolUse for its Shell tool, so they match up.
+            self.toolName = "Shell"
+            self.toolInput = ["command": (json["command"] as? String) ?? ""]
+        } else {
+            self.toolName = json["tool_name"] as? String
+            self.toolInput = (json["tool_input"] as? [String: Any]) ?? [:]
+        }
+        self.contextPercent = agent == .cursor ? Self.cursorContext(json) : nil
         self.message = json["message"] as? String
         self.notificationType = json["notification_type"] as? String
         self.prompt = json["prompt"] as? String
@@ -68,8 +77,11 @@ struct HookEvent {
     }
 
     /// Cursor hook → the Claude Code name the store understands.
-    static func cursorEventName(_ name: String, status: String?) -> String {
+    static func cursorEventName(_ name: String, status: String?, sandboxed: Bool = false) -> String {
         switch name {
+        // A command that leaves Cursor's sandbox is the kind Cursor asks about – that one waits in the notch.
+        case "beforeShellExecution": return sandboxed ? "SandboxedShell" : "PermissionRequest"
+        case "beforeMCPExecution": return "PermissionRequest"
         case "sessionStart": return "SessionStart"
         case "sessionEnd": return "SessionEnd"
         case "beforeSubmitPrompt": return "UserPromptSubmit"
@@ -87,6 +99,17 @@ struct HookEvent {
             }
         default: return name
         }
+    }
+
+    /// `afterAgentResponse`: input tokens against the context size in `model_params` ("256k", "1m").
+    static func cursorContext(_ json: [String: Any]) -> Double? {
+        guard let tokens = (json["input_tokens"] as? NSNumber)?.doubleValue, tokens > 0,
+              let params = json["model_params"] as? [[String: Any]],
+              let raw = params.first(where: { $0["id"] as? String == "context" })?["value"] as? String else { return nil }
+        let value = raw.lowercased().trimmingCharacters(in: .whitespaces)
+        let factor: Double = value.hasSuffix("m") ? 1_000_000 : (value.hasSuffix("k") ? 1_000 : 1)
+        guard let number = Double(value.trimmingCharacters(in: CharacterSet.letters)), number > 0 else { return nil }
+        return min(100, tokens / (number * factor) * 100)
     }
 
     /// Memberwise initializer used by the built-in demo.
@@ -108,6 +131,7 @@ struct HookEvent {
         self.error = error
         self.errorDetails = errorDetails
         self.permissionSuggestions = []
+        self.contextPercent = nil
         self.termProgram = nil
         self.hostBundleID = nil
     }
