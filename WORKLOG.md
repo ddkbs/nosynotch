@@ -1,5 +1,17 @@
 # WORKLOG
 
+## 2026-11-06 (Fixes nach Security-Check)
+- `EventServer`: Requests mit `Origin`/`Sec-Fetch-Site` → 403 (Browser), `Content-Length` < 0 → 0. Nicht `Sec-Fetch-Mode` prüfen: Node-`fetch` (CLI) schickt `sec-fetch-mode: cors`. Getestet auf Port 7899 (`NosyNotch -port 7899`).
+- Workflow: `NPM_TOKEN` nur noch im Publish-Schritt.
+- GitHub: Beschreibung, Homepage `https://nosynotch.davidkubus.dev`, Topics gesetzt.
+- **Offen:** `main` + Tag `v0.2.0` pushen (CI baut Release); npm: `npm login` + `npm publish --access public` oder `NPM_TOKEN`-Secret. GitHub Code security (Secret Scanning, Push Protection, Dependabot, Private Vulnerability Reporting) selbst einschalten.
+
+## 2026-11-06 (Security-Check nach Public)
+- Git-Historie (133 Commits) sauber: keine Keys/Tokens/.env, Autoren nur noreply-Adressen.
+- **Offen (Code):** `EventServer` – (1) negativer `Content-Length` lässt die App abstürzen (Range-Trap in `HTTPRequest`, verifiziert); (2) jede Website kann per `fetch(…, {mode:'no-cors'})` an 127.0.0.1:7823 posten → App beenden (`/quit`), Fake-Events/-Freigabekarten zeigen. Fix-Idee: Requests mit `Origin`- bzw. `Sec-Fetch-*`-Header ablehnen (curl schickt keinen), Content-Length ≥ 0 prüfen.
+- **Offen (Repo):** npm-Name `nosynotch` noch nicht veröffentlicht (README sagt `npx nosynotch` → Name kann gesquattet werden); Release v0.2.0 fehlt (package.json 0.2.0, letztes Release v0.1.0); Secret Scanning / Push Protection / Dependabot / Private Vulnerability Reporting aus, `main` ungeschützt, keine SECURITY.md.
+- Kleinkram: Workflow `NPM_TOKEN` auf Job-Ebene statt nur im Publish-Schritt, `permissions: contents: write` für alle Läufe; Download im CLI ohne Checksumme.
+
 ## 2026-11-06 (Vercel-Fix)
 - Webseite war 404: Vercels Git-Integration baut bei jedem Push auf `main` aus dem Repo-Root (Root Directory nicht auf `website/`) → leerer Build hat die per CLI deployte Seite ersetzt. Fix: `vercel.json` im Repo-Root (install/build per `npm --prefix website`, Output `website/dist`). Seite wieder live auf nosynotch.davidkubus.dev und nosynotch.vercel.app.
 - Alternative (sauberer, nur David): im Vercel-Projekt Settings → Build & Deployment → Root Directory = `website`, dann kann die Root-`vercel.json` weg.
