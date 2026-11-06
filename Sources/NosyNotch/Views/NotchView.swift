@@ -64,6 +64,7 @@ struct NotchView: View {
     private var glowColor: Color {
         switch model.presentation {
         case .attention: return Theme.amber
+        case .dropZone: return NosyPalette.top
         case .failed: return Theme.danger
         case .limitReset: return model.limitReset?.agent.color ?? Theme.success
         case .media: return media.accent
@@ -74,7 +75,7 @@ struct NotchView: View {
 
     private var glowOpacity: Double {
         switch model.presentation {
-        case .attention, .celebrating, .failed, .limitReset: return 0.55
+        case .attention, .celebrating, .failed, .limitReset, .dropZone: return 0.55
         case .compact: return store.hasWaiting ? 0.45 : 0.18
         case .media: return 0.22
         default: return 0
@@ -101,6 +102,9 @@ struct NotchView: View {
                     }
                     if model.showsSessionList {
                         SessionList(store: store)
+                    }
+                    if model.showsShelf {
+                        ShelfRow(shelf: model.shelf)
                     }
                     let usageRows = model.usageRows
                     if !usageRows.isEmpty {
@@ -139,6 +143,10 @@ struct NotchView: View {
                         .id(reset.id)
                         .transition(.blurFade.combined(with: .scale(scale: 0.85, anchor: .top)))
                 }
+            case .dropZone:
+                DropZoneView(onShelf: { urls in model.shelf.add(urls); model.fileDragNear = false },
+                             onAirDrop: { urls in model.fileDragNear = false; AirDrop.send(urls) })
+                    .transition(.blurFade.combined(with: .scale(scale: 0.85, anchor: .top)))
             case .hidden, .compact, .media, .peek:
                 EmptyView()
             }

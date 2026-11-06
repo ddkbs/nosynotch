@@ -1,3 +1,4 @@
+import Combine
 import SwiftUI
 
 /// Decides how big the notch is and what it shows. Pure UI state – session data lives in `SessionStore`.
@@ -22,6 +23,8 @@ final class NotchViewModel: ObservableObject {
         case media
         /// Nothing going on, but the pointer came close: Nosy peeks out of the notch.
         case peek
+        /// Files are being dragged near the notch: Shelf and AirDrop targets.
+        case dropZone
     }
 
     struct Celebration: Equatable {
@@ -49,6 +52,12 @@ final class NotchViewModel: ObservableObject {
     let gaze = NosyGaze()
     /// Energy, level and streak.
     let pet: NosyPet
+    /// Files parked in the notch.
+    let shelf: Shelf
+    /// Files are being dragged and the pointer is near the notch.
+    @Published var fileDragNear = false {
+        didSet { if oldValue != fileDragNear { recompute() } }
+    }
 
     /// A short mood that wins over everything else for a moment (petting, waking up).
     struct NosyBurst: Equatable {
@@ -61,12 +70,14 @@ final class NotchViewModel: ObservableObject {
     /// The pointer is close to the notch (Nosy peeks out).
     @Published private(set) var pointerIsNear = false
     private var lastActivity = Clock.now()
+    private var shelfObserver: AnyCancellable?
     private var sleepTimer: Timer?
     static let sleepAfter: TimeInterval = 10 * 60
     static let sleepAfterAtNight: TimeInterval = 2 * 60
 
     static let usageRowHeight: CGFloat = 24
     static let nosyCardHeight: CGFloat = 40
+    static let shelfRowHeight: CGFloat = 46
 
     /// Extra height for the Allow / Deny row.
     static let approvalRowHeight: CGFloat = 40
@@ -111,16 +122,21 @@ final class NotchViewModel: ObservableObject {
     private var quietWork: DispatchWorkItem?
 
     init(store: SessionStore, media: NowPlaying, approvals: ApprovalCenter? = nil, usage: UsageStore? = nil,
-         pet: NosyPet? = nil) {
+         pet: NosyPet? = nil, shelf: Shelf? = nil) {
         self.store = store
         self.media = media
         let pet = pet ?? NosyPet(persist: false)
         self.pet = pet
+        let shelf = shelf ?? Shelf(persist: false)
+        self.shelf = shelf
         let approvals = approvals ?? ApprovalCenter()
         self.approvals = approvals
         let usage = usage ?? UsageStore(load: false)
         self.usage = usage
         usage.onChange = { [weak self] in self?.objectWillChange.send() }
+        shelfObserver = shelf.objectWillChange.sink { [weak self] _ in
+            DispatchQueue.main.async { MainActor.assumeIsolated { self?.objectWillChange.send() } }
+        }
         head.onGesture = { [weak self] gesture in
             guard let self, let approval = self.attentionApproval else { return }
             self.decide(approval, gesture == .nod ? .allow : .deny)
@@ -158,6 +174,9 @@ final class NotchViewModel: ObservableObject {
     /// Whether the hover view lists Claude sessions (always, unless there are none but something else fills it).
     var showsSessionList: Bool { !store.sessions.isEmpty || (!hasMedia && !showsNosyCard) }
 
+    /// Parked files in the hover view.
+    var showsShelf: Bool { Preferences.shelfEnabled && !shelf.isEmpty }
+
     /// Nosy's energy / level / streak card at the top of the hover view.
     var showsNosyCard: Bool { Preferences.nosyEnabled && Preferences.nosyPet }
 
@@ -170,6 +189,7 @@ final class NotchViewModel: ObservableObject {
         case .celebrating, .limitReset: return .happy
         case .attention: return .needsYou
         case .failed: return .shocked
+        case .dropZone: return .needsYou
         default: break
         }
         if let session = compactSession {
@@ -290,6 +310,7 @@ final class NotchViewModel: ObservableObject {
         case .expanded:
             var height = notchSize.height + 12
             if showsNosyCard { height += Self.nosyCardHeight }
+            if showsShelf { height += Self.shelfRowHeight }
             if hasMedia { height += 2 + Self.mediaCardHeight }
             if showsSessionList {
                 height += 10 + CGFloat(min(max(store.sessions.count, 1), Self.maxRows)) * Self.rowHeight
@@ -303,6 +324,8 @@ final class NotchViewModel: ObservableObject {
             return CGSize(width: wide, height: notchSize.height + 88 + (attentionApproval != nil ? Self.approvalRowHeight : 0))
         case .failed, .limitReset:
             return CGSize(width: wide, height: notchSize.height + 88)
+        case .dropZone:
+            return CGSize(width: wide, height: notchSize.height + 86)
         }
     }
 
@@ -452,7 +475,9 @@ final class NotchViewModel: ObservableObject {
         }
 
         let next: Presentation
-        if celebration != nil {
+        if fileDragNear && Preferences.shelfEnabled {
+            next = .dropZone
+        } else if celebration != nil {
             next = .celebrating
         } else if attention != nil {
             next = .attention
@@ -460,7 +485,7 @@ final class NotchViewModel: ObservableObject {
             next = .failed
         } else if limitReset != nil {
             next = .limitReset
-        } else if isHovering && (!store.sessions.isEmpty || hasMedia || Preferences.nosyEnabled) {
+        } else if isHovering && (!store.sessions.isEmpty || hasMedia || Preferences.nosyEnabled || showsShelf) {
             next = .expanded
         } else if store.hasActivity || store.hasWaiting || quietDone != nil {
             next = .compact

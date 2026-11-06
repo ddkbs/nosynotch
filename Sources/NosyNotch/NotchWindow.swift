@@ -51,6 +51,10 @@ final class NotchWindowController {
     private var globalMonitor: Any?
     private var hoverTimer: Timer?
     private var screenObserver: NSObjectProtocol?
+    private var dragMonitor: Any?
+    /// The drag pasteboard's change count when the mouse went down – a new drag changes it.
+    private var dragChangeCount = 0
+    private var draggingFiles = false
 
     init(model: NotchViewModel) {
         self.model = model
@@ -71,8 +75,14 @@ final class NotchWindowController {
             MainActor.assumeIsolated { self?.layout() }
         }
 
-        globalMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.mouseMoved, .leftMouseDragged]) { [weak self] _ in
-            MainActor.assumeIsolated { self?.updateHover() }
+        globalMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.mouseMoved, .leftMouseDragged]) { [weak self] event in
+            MainActor.assumeIsolated {
+                if event.type == .leftMouseDragged { self?.updateFileDrag() }
+                self?.updateHover()
+            }
+        }
+        dragMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDown, .leftMouseUp]) { [weak self] event in
+            MainActor.assumeIsolated { self?.mouseButton(down: event.type == .leftMouseDown) }
         }
     }
 
@@ -102,6 +112,35 @@ final class NotchWindowController {
                       height: size.height + hanging)
     }
 
+    private func mouseButton(down: Bool) {
+        if down {
+            dragChangeCount = NSPasteboard(name: .drag).changeCount
+        } else if draggingFiles {
+            draggingFiles = false
+            // Give a drop on the notch a moment to land before the targets fold away.
+            Clock.after(0.25) { [weak self] in
+                guard let self, !self.draggingFiles else { return }
+                self.model.fileDragNear = false
+            }
+        }
+    }
+
+    /// A drag with files started somewhere (Finder, Desktop, a browser download …).
+    private func updateFileDrag() {
+        guard Preferences.shelfEnabled, let screen else { return }
+        let pasteboard = NSPasteboard(name: .drag)
+        if !draggingFiles, pasteboard.changeCount != dragChangeCount,
+           pasteboard.canReadObject(forClasses: [NSURL.self], options: [.urlReadingFileURLsOnly: true]) {
+            draggingFiles = true
+        }
+        guard draggingFiles else { return }
+        let mouse = NSEvent.mouseLocation
+        let zone = NSRect(x: screen.frame.midX - NotchViewModel.expandedWidth / 2 - 60, y: screen.frame.maxY - 220,
+                          width: NotchViewModel.expandedWidth + 120, height: 220)
+        let near = zone.contains(mouse)
+        if near != model.fileDragNear { model.fileDragNear = near }
+    }
+
     private func updateHover() {
         let mouse = NSEvent.mouseLocation
         if let screen {
@@ -111,6 +150,15 @@ final class NotchWindowController {
         var rect = notchRect
         if rect.height < 1 { rect.size.height = model.notchSize.height; rect.origin.y -= model.notchSize.height }
         let inside = rect.insetBy(dx: -6, dy: -6).contains(mouse)
+
+        // A drag that ended over our own window never reaches the global monitor – the button state tells.
+        if model.fileDragNear, NSEvent.pressedMouseButtons & 1 == 0 {
+            draggingFiles = false
+            Clock.after(0.3) { [weak self] in
+                guard let self, NSEvent.pressedMouseButtons & 1 == 0 else { return }
+                self.model.fileDragNear = false
+            }
+        }
 
         if inside != model.isHovering {
             model.isHovering = inside

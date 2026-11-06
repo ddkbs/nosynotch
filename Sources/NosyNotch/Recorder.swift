@@ -33,6 +33,8 @@ final class Recorder {
         /// Seconds after which a nearly used-up 5-hour limit "resets".
         var limitResetAt: TimeInterval?
         let steps: [(TimeInterval, HookEvent)]
+        /// Anything else to do with the model at a given moment (drag files, plug in power, …).
+        var actions: [(TimeInterval, @MainActor (NotchViewModel) -> Void)] = []
     }
 
     static let fps: Double = environment("FPS", default: 60, in: 1...240)
@@ -81,7 +83,8 @@ final class Recorder {
         let clock = RecordingClock(date: start)
 
         let store = SessionStore()
-        let model = NotchViewModel(store: store, media: NowPlaying(observeSystem: false))
+        let model = NotchViewModel(store: store, media: NowPlaying(observeSystem: false), pet: SettingsRecorder.demoPet,
+                                   shelf: Shelf(persist: false))
         model.notchSize = CGSize(width: 185, height: 32)
         model.hasPhysicalNotch = true
         store.onChange = { model.recompute() }
@@ -120,6 +123,9 @@ final class Recorder {
         }
         if let t = scene.hoverAt {
             Clock.after(t) { model.isHovering = true }
+        }
+        for (t, action) in scene.actions {
+            Clock.after(t) { action(model) }
         }
 
         let size = CGSize(width: Self.width, height: scene.height)
@@ -214,6 +220,11 @@ final class Recorder {
         }
     }
 
+    /// Files that exist on every Mac, for the shelf scenes.
+    static let demoFiles: [URL] = ["/System/Library/CoreServices/Finder.app", "/etc/hosts",
+                                   "/System/Library/Desktop Pictures"]
+        .map { URL(fileURLWithPath: $0) }
+
     static var scenes: [Scene] {
         let cwd = "/Users/you/Projects/nosynotch"
         func ev(_ name: String, _ id: String = "rec", agent: Agent = .claude, cwd: String = cwd, tool: String? = nil,
@@ -307,6 +318,16 @@ final class Recorder {
                 (0.0, ev("UserPromptSubmit", "cx", agent: .codex, cwd: "/Users/you/Projects/api-server")),
             ]),
             Scene(name: "limit-reset", duration: 5.5, stillAt: 3.0, limitResetAt: 0.6, steps: []),
+            Scene(name: "drop-zone", duration: 5, stillAt: 2.0, steps: [], actions: [
+                (0.6, { $0.fileDragNear = true }),
+                (3.2, { model in
+                    model.shelf.add(Self.demoFiles)
+                    model.fileDragNear = false
+                }),
+            ]),
+            Scene(name: "shelf", duration: 5, height: 200, hoverAt: 0.8, stillAt: 3.0, steps: [], actions: [
+                (0.0, { $0.shelf.add(Self.demoFiles) }),
+            ]),
             Scene(name: "media", duration: 7, height: 170, hoverAt: 2.6, stillAt: 5.0, musicAt: 0.5, steps: []),
             Scene(name: "handoff", duration: 9, dismissFlashAt: 6.6, musicAt: 0.0, steps: [
                 (1.4, prompt),

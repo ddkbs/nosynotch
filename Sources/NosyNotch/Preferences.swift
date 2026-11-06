@@ -25,6 +25,7 @@ enum Preferences {
         static let nosyEnabled = "nosyEnabled"
         static let nosyPet = "nosyPet.enabled"
         static let nosyAccessory = "nosyAccessory"
+        static let shelfEnabled = "shelfEnabled"
     }
 
     private static let defaults = UserDefaults.standard
@@ -56,6 +57,7 @@ enum Preferences {
             Key.nosyEnabled: true,
             Key.nosyPet: true,
             Key.nosyAccessory: NosyAccessory.none.rawValue,
+            Key.shelfEnabled: true,
         ])
     }
 
@@ -139,6 +141,9 @@ enum Preferences {
     static var nosyAccessory: NosyAccessory {
         NosyAccessory(rawValue: defaults.string(forKey: Key.nosyAccessory) ?? "") ?? .none
     }
+
+    /// Drag files onto the notch: Shelf and AirDrop.
+    static var shelfEnabled: Bool { defaults.object(forKey: Key.shelfEnabled) as? Bool ?? true }
 
     static var port: UInt16 {
         UInt16(clamping: defaults.integer(forKey: Key.port))
