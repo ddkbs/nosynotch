@@ -5,6 +5,7 @@
 - Workflow: `NPM_TOKEN` nur noch im Publish-Schritt.
 - GitHub: Beschreibung, Homepage `https://nosynotch.davidkubus.dev`, Topics gesetzt.
 - **Release v0.2.0** (CI, universal binary, ad-hoc signiert) und **npm `nosynotch@0.2.0`** veröffentlicht (David per `npm publish`, Browser-Auth). `npx nosynotch --version`/`status` aus der Registry getestet; volle Installation per npx nicht getestet (hätte Davids Dev-Setup ersetzt). npm zeigt nach dem Publish einige Minuten nur `0.0.0-stage`.
+- Danach Dev-Build deinstalliert (`npx nosynotch uninstall`) und frisch per `npx nosynotch` installiert: Download aus dem Release klappt, App läuft aus `~/.nosynotch/`, Hooks überall, Browser-Request → 403. Autostart ist nach Neuinstallation aus.
 - Push/Tag/Publish macht der Auto-Modus nicht → David führt sie selbst aus.
 - **Offen:** GitHub Code security (Secret Scanning, Push Protection, Dependabot, Private Vulnerability Reporting) selbst einschalten; `NPM_TOKEN`-Secret für automatische Publishes (2FA-Bypass-Tokens werden bei npm eingeschränkt → evtl. Trusted Publishing); Actions auf Node-24-Versionen heben (`checkout`/`upload-artifact` v4 = Node 20).
 
