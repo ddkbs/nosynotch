@@ -1,5 +1,9 @@
 # WORKLOG
 
+## 2026-11-06 (Vercel-Fix)
+- Webseite war 404: Vercels Git-Integration baut bei jedem Push auf `main` aus dem Repo-Root (Root Directory nicht auf `website/`) → leerer Build hat die per CLI deployte Seite ersetzt. Fix: `vercel.json` im Repo-Root (install/build per `npm --prefix website`, Output `website/dist`). Seite wieder live auf nosynotch.davidkubus.dev und nosynotch.vercel.app.
+- Alternative (sauberer, nur David): im Vercel-Projekt Settings → Build & Deployment → Root Directory = `website`, dann kann die Root-`vercel.json` weg.
+
 ## 2026-11-06
 - **Cursor: Freigabe in der Notch** über `beforeShellExecution` / `beforeMCPExecution` (blockierender Hook mit Token wie bei Claude/Codex). Nur Befehle mit `sandbox: false` warten (das sind die, nach denen Cursor fragt), sandboxed → sofort `{}`. Antwort `{"permission":"allow"|"deny"}`; ✕/45 s/kein App → `{}` → Cursors eigener Dialog. Simuliert getestet (Warten, Freigabe nach postToolUse), Klick auf Allow mit echtem Cursor noch nicht. Settings → Permissions „Cursor: commands outside the sandbox“.
 - **Cursor: Kontext-Ring** aus `afterAgentResponse.input_tokens` / `model_params.context` ("256k").
