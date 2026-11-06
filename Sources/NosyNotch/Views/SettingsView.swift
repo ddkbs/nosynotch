@@ -10,6 +10,8 @@ final class SettingsWindowController {
         var playDemo: () -> Void
         var settingsChanged: () -> Void
         var muteChanged: () -> Void
+        /// Nosy's energy / level / streak (the settings show and reset them).
+        var pet: NosyPet?
     }
 
     private var window: NSWindow?
@@ -41,13 +43,14 @@ final class SettingsWindowController {
 }
 
 enum SettingsPage: String, CaseIterable, Identifiable {
-    case agents, alerts, permissions, usage, music, general
+    case agents, nosy, alerts, permissions, usage, music, general
 
     var id: String { rawValue }
 
     var title: String {
         switch self {
         case .agents: return "Agents"
+        case .nosy: return "Nosy"
         case .alerts: return "Alerts"
         case .permissions: return "Permissions"
         case .usage: return "Usage"
@@ -59,6 +62,7 @@ enum SettingsPage: String, CaseIterable, Identifiable {
     var symbol: String {
         switch self {
         case .agents: return "sparkles"
+        case .nosy: return "face.smiling"
         case .alerts: return "bell.badge"
         case .permissions: return "hand.raised"
         case .usage: return "gauge.with.dots.needle.50percent"
@@ -70,6 +74,7 @@ enum SettingsPage: String, CaseIterable, Identifiable {
     var tint: Color {
         switch self {
         case .agents: return Theme.claude
+        case .nosy: return NosyPalette.middle
         case .alerts: return Theme.success
         case .permissions: return Theme.amber
         case .usage: return Theme.codex
@@ -118,6 +123,7 @@ struct SettingsView: View {
     private var content: some View {
         switch page {
         case .agents: AgentsPage(actions: actions)
+        case .nosy: NosyPage(actions: actions)
         case .alerts: AlertsPage(actions: actions)
         case .permissions: PermissionsPage()
         case .usage: UsagePage(actions: actions)
@@ -963,6 +969,167 @@ private struct MusicPage: View {
 
     private func bind(_ value: Binding<Bool>) -> Binding<Bool> {
         Binding(get: { value.wrappedValue }, set: { value.wrappedValue = $0; actions.settingsChanged() })
+    }
+}
+
+// MARK: - Nosy
+
+private struct NosyPage: View {
+    let actions: SettingsWindowController.Actions
+
+    @AppStorage(Preferences.Key.nosyEnabled) private var nosyEnabled = true
+    @AppStorage(Preferences.Key.nosyPet) private var nosyPet = true
+    @AppStorage(Preferences.Key.nosyAccessory) private var accessory = NosyAccessory.none.rawValue
+    @State private var confirmReset = false
+
+    private let tint = SettingsPage.nosy.tint
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 18) {
+            NosyStage(level: actions.pet?.level ?? 1, accessory: NosyAccessory(rawValue: accessory) ?? .none)
+
+            Card(footer: "Nosy looks out of the notch, follows your pointer, works along with your agents, falls asleep when nothing happens and cheers when a task is done. Off = the classic agent symbols.") {
+                Row(title: "Nosy lives in the notch") {
+                    NotchToggle(isOn: bind($nosyEnabled), tint: tint)
+                }
+                Row(title: "Energy, levels and streaks", subtitle: "Finished tasks feed Nosy. No guilt: it never gets sad, a missed day just starts a new streak.",
+                    divider: false) {
+                    NotchToggle(isOn: bind($nosyPet), tint: tint)
+                }
+                .opacity(nosyEnabled ? 1 : 0.4)
+                .disabled(!nosyEnabled)
+            }
+
+            if let pet = actions.pet {
+                NosyStats(pet: pet, tint: tint, confirmReset: $confirmReset)
+                    .opacity(nosyEnabled && nosyPet ? 1 : 0.4)
+            }
+
+            Card(title: "Wardrobe", footer: "Unlocked with levels. Headphones go on by themselves while music plays.") {
+                HStack(spacing: 10) {
+                    ForEach(NosyAccessory.allCases) { item in
+                        WardrobeItem(item: item, level: actions.pet?.level ?? 1, selected: accessory == item.rawValue, tint: tint) {
+                            accessory = item.rawValue
+                            actions.settingsChanged()
+                        }
+                    }
+                }
+                .padding(12)
+            }
+        }
+        .alert("Start over with Nosy?", isPresented: $confirmReset) {
+            Button("Start over", role: .destructive) { actions.pet?.reset(); actions.settingsChanged() }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("Level, energy and streaks go back to the beginning.")
+        }
+    }
+
+    private func bind(_ value: Binding<Bool>) -> Binding<Bool> {
+        Binding(get: { value.wrappedValue }, set: { value.wrappedValue = $0; actions.settingsChanged() })
+    }
+}
+
+/// Nosy on a little black stage, cycling through a few moods.
+private struct NosyStage: View {
+    let level: Int
+    let accessory: NosyAccessory
+
+    private static let moods: [NosyMood] = [.idle, .happy, .typing, .giggle, .grooving, .sleeping, .needsYou]
+
+    var body: some View {
+        ClockTimeline(minimumInterval: 1) { now in
+            let index = Int(now.timeIntervalSinceReferenceDate / 2.4) % Self.moods.count
+            HStack(spacing: 20) {
+                NosyFigure(mood: Self.moods[index], look: CGSize(width: 0.3, height: 0.2), level: level, accessory: accessory)
+                    .frame(width: 70, height: 88)
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Hi, I'm Nosy.")
+                        .font(.system(size: 17, weight: .semibold, design: .rounded))
+                        .foregroundStyle(.white)
+                    Text("I live in your notch, keep an eye on your agents and jump into the black when I'm not needed.")
+                        .font(.system(size: 12))
+                        .foregroundStyle(.white.opacity(0.55))
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                Spacer(minLength: 0)
+            }
+        }
+        .padding(16)
+        .background(RoundedRectangle(cornerRadius: 16, style: .continuous).fill(Color.black))
+        .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).stroke(.white.opacity(0.07), lineWidth: 1))
+    }
+}
+
+private struct NosyStats: View {
+    @ObservedObject var pet: NosyPet
+    let tint: Color
+    @Binding var confirmReset: Bool
+
+    var body: some View {
+        Card(title: "Nosy's progress") {
+            Row(title: "Level \(pet.level)", subtitle: "\(Int(pet.levelProgress * 100)) % to level \(pet.level + 1)") {
+                ProgressBar(value: pet.levelProgress, tint: tint)
+            }
+            Row(title: "Energy", subtitle: pet.isLowOnEnergy ? "A bit sleepy – a finished task perks Nosy up." : "Fed by finished tasks") {
+                ProgressBar(value: pet.energy, tint: NosyPalette.spark)
+            }
+            Row(title: "Streak", subtitle: "Best: \(pet.state.bestStreak) days · \(pet.state.totalTasks) tasks in total") {
+                Text("\(pet.streak) days")
+                    .font(.system(size: 12, weight: .semibold, design: .rounded))
+                    .foregroundStyle(.white.opacity(0.8))
+            }
+            Row(title: "Start over", subtitle: "Back to level 1", divider: false) {
+                PillButton(title: "Reset", tint: Theme.danger, prominent: false) { confirmReset = true }
+            }
+        }
+    }
+}
+
+private struct ProgressBar: View {
+    let value: Double
+    let tint: Color
+
+    var body: some View {
+        ZStack(alignment: .leading) {
+            Capsule().fill(.white.opacity(0.1))
+            Capsule().fill(tint).frame(width: max(4, 120 * min(1, max(0, value))))
+        }
+        .frame(width: 120, height: 6)
+    }
+}
+
+private struct WardrobeItem: View {
+    let item: NosyAccessory
+    let level: Int
+    let selected: Bool
+    let tint: Color
+    let action: () -> Void
+
+    private var unlocked: Bool { level >= item.level }
+
+    var body: some View {
+        Button(action: action) {
+            VStack(spacing: 4) {
+                NosyFigure(mood: .idle, level: 1, accessory: unlocked ? item : .none)
+                    .frame(width: 40, height: 50)
+                    .opacity(unlocked ? 1 : 0.35)
+                    .overlay {
+                        if !unlocked {
+                            Image(systemName: "lock.fill").font(.system(size: 12)).foregroundStyle(.white.opacity(0.7))
+                        }
+                    }
+                Text(unlocked ? item.title : "Lv \(item.level)")
+                    .font(.system(size: 10, weight: .medium))
+                    .foregroundStyle(.white.opacity(selected ? 0.95 : 0.5))
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 8)
+            .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(.white.opacity(selected ? 0.09 : 0.03)))
+            .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).stroke(selected ? tint : .clear, lineWidth: 1.5))
+        }
+        .buttonStyle(.plain)
+        .disabled(!unlocked)
     }
 }
 

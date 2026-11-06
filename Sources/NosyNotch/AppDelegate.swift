@@ -19,7 +19,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             self?.model.objectWillChange.send()
             self?.model.recompute()
         },
-        muteChanged: { [weak self] in self?.updateStatusIcon() }
+        muteChanged: { [weak self] in self?.updateStatusIcon() },
+        pet: pet
     ))
 
     func applicationDidFinishLaunching(_ notification: Notification) {

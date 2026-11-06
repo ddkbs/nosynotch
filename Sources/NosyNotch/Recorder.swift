@@ -450,8 +450,9 @@ private struct Wallpaper: View {
 enum SettingsRecorder {
     static func run(output: URL) {
         let actions = SettingsWindowController.Actions(statusLine: { "Listening on 127.0.0.1:7823 · 3 sessions" },
-                                                       playDemo: {}, settingsChanged: {}, muteChanged: {})
-        let pages: [SettingsPage] = [.agents, .alerts, .permissions, .usage, .music]
+                                                       playDemo: {}, settingsChanged: {}, muteChanged: {},
+                                                       pet: Self.demoPet)
+        let pages: [SettingsPage] = [.agents, .nosy, .alerts, .permissions, .usage, .music]
         let dir = output.appendingPathComponent("settings", isDirectory: true)
         try? FileManager.default.removeItem(at: dir)
         try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
@@ -488,6 +489,24 @@ enum SettingsRecorder {
         FrameWriter.shared.wait()
         Clock.stopVirtual()
         window.orderOut(nil)
+    }
+
+    /// A Nosy that has been around for a while (level 6, a 5-day streak).
+    static var demoPet: NosyPet {
+        let pet = NosyPet(persist: false)
+        var state = NosyPet.State()
+        state.xp = 2_200
+        state.energy = 0.78
+        state.streak = 5
+        state.bestStreak = 12
+        state.totalTasks = 318
+        state.lastActiveDay = NosyPet.dayString(Date())
+        state.today = NosyPet.dayString(Date())
+        state.tasksToday = 14
+        state.secondsToday = 9_240
+        state.lastDecay = Date()
+        pet.set(state)
+        return pet
     }
 
     private struct SettingsStage<Content: View>: View {
