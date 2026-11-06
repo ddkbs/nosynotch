@@ -1,5 +1,12 @@
 # WORKLOG
 
+## 2026-11-06
+- **Cursor: Freigabe in der Notch** über `beforeShellExecution` / `beforeMCPExecution` (blockierender Hook mit Token wie bei Claude/Codex). Nur Befehle mit `sandbox: false` warten (das sind die, nach denen Cursor fragt), sandboxed → sofort `{}`. Antwort `{"permission":"allow"|"deny"}`; ✕/45 s/kein App → `{}` → Cursors eigener Dialog. Simuliert getestet (Warten, Freigabe nach postToolUse), Klick auf Allow mit echtem Cursor noch nicht. Settings → Permissions „Cursor: commands outside the sandbox“.
+- **Cursor: Kontext-Ring** aus `afterAgentResponse.input_tokens` / `model_params.context` ("256k").
+- **Cursor: Usage-Limits nicht möglich** – Cursor gibt keine Limits an Hooks; Daten nur im Web-Dashboard (bräuchte Login-Cookies, bewusst nicht).
+- **Leises Fertig auch für Cursor und ChatGPT-App**: ohne Bundle-Hinweis im Hook → Fallback auf die App des Agenten (`com.todesktop.230313mzl4w4u92`, `com.openai.codex` = ChatGPT.app).
+- Achtung beim Testen mit curl aus Claude: `__CFBundleIdentifier` der Claude-App wird mitgeschickt → leiser Modus greift.
+
 ## 2026-11-06 (18)
 - Recorder-Branch in `main` gemergt (nur WORKLOG-Konflikt). `swift build` grün, Demo nicht live laufen gelassen.
 - **Website deployed**: Vercel-Projekt `nosynotch` (ddkbs-projects), Root `website/`, live unter https://nosynotch.vercel.app. Domain `nosynotch.davidkubus.dev` ist im Projekt eingetragen, aber **DNS fehlt**: bei Cloudflare CNAME `nosynotch` → `771b02c0492556e1.vercel-dns-017.com` (Proxy aus / DNS only) anlegen.
