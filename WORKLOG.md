@@ -1,5 +1,12 @@
 # WORKLOG
 
+## 2026-11-06 (17)
+- Website-Notch verhält sich wie die App: exakte `NotchShape` (Quad-Flares), App-Feder (response 0.42 / damping 0.74 → 224/22.1), Glow r14 + schwarzer Schatten, Sinus-Shake, blurFade/move/scale-Übergänge; Hover öffnet sofort (Rect + 6 pt), Verlassen schließt sofort; offen 460 pt mit Flügel-Leiste.
+- „Welcome back“ entfernt; Hover verwandelt keine Nachricht mehr in die Install-Karte (Markier-Karte bleibt klickbar, Markierung bleibt beim Copy erhalten). Momente schalten immer weiter (auch nach Klick), Kicker „Interactive demo“, Versions-Pill im Hero weg.
+- Nach Copy/Download bleibt die Karte offen mit ① ② ③ (Tastenkappen, Spotlight → ⌘V → ↵ bzw. Downloads → Applications → öffnen) + Star-Button. Terminal direkt öffnen geht aus dem Browser nicht (keine URL-Schemes dafür, `.command`-Downloads verlieren Ausführrecht).
+- Stern: glänzender Goldstern (Verlauf, Lichtschweif, Funkeln) in Kachel + Karten; 45-s-Karte ist komplett ein Link zu GitHub. Neu: neue Sterne live feiern (Polling alle 90 s), Uhrzeit-Laune 1× pro Besuch (23–5 Uhr „still coding? me too.“, 5–10 Uhr „gm ☀“).
+- Recorder-Session (Branch `claude/awesome-einstein-7c9290`, 7 Commits, nicht gemergt): virtuelle Uhr, 60 fps, SCALE, neue GIFs/MP4s. David entscheidet übers Mergen.
+
 ## 2026-11-06 (16)
 - Website: nur noch TargetCursor (wie sketchy/davidkubus), Umschalter + „How it works“-Pipeline entfernt, Momente ohne Textzeile und ohne Live/Aufnahme-Schalter, Versions-Pill verlinkt das Release.
 - Top-Notch: öffnet schon beim Hover die neu gestaltete Install-Karte (App-Icon, tippende Terminalzeile, Kacheln Copy & install / Download / Star mit Zähler, Aurora + Punkteraster, „nah, not today“ → beleidigte Augen). Stern-Bitte nach Copy/Download und nach 45 s (1× pro Besuch, sessionStorage). Extras: „Welcome back“ nach Tab-Wechsel, Einschlafen nach 20 s (zzz) + „oh! hi.“, beim Markieren lustige Sprüche + Copy.
