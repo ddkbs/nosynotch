@@ -4,7 +4,9 @@
 - `EventServer`: Requests mit `Origin`/`Sec-Fetch-Site` → 403 (Browser), `Content-Length` < 0 → 0. Nicht `Sec-Fetch-Mode` prüfen: Node-`fetch` (CLI) schickt `sec-fetch-mode: cors`. Getestet auf Port 7899 (`NosyNotch -port 7899`).
 - Workflow: `NPM_TOKEN` nur noch im Publish-Schritt.
 - GitHub: Beschreibung, Homepage `https://nosynotch.davidkubus.dev`, Topics gesetzt.
-- **Offen:** `main` + Tag `v0.2.0` pushen (CI baut Release); npm: `npm login` + `npm publish --access public` oder `NPM_TOKEN`-Secret. GitHub Code security (Secret Scanning, Push Protection, Dependabot, Private Vulnerability Reporting) selbst einschalten.
+- **Release v0.2.0** (CI, universal binary, ad-hoc signiert) und **npm `nosynotch@0.2.0`** veröffentlicht (David per `npm publish`, Browser-Auth). `npx nosynotch --version`/`status` aus der Registry getestet; volle Installation per npx nicht getestet (hätte Davids Dev-Setup ersetzt). npm zeigt nach dem Publish einige Minuten nur `0.0.0-stage`.
+- Push/Tag/Publish macht der Auto-Modus nicht → David führt sie selbst aus.
+- **Offen:** GitHub Code security (Secret Scanning, Push Protection, Dependabot, Private Vulnerability Reporting) selbst einschalten; `NPM_TOKEN`-Secret für automatische Publishes (2FA-Bypass-Tokens werden bei npm eingeschränkt → evtl. Trusted Publishing); Actions auf Node-24-Versionen heben (`checkout`/`upload-artifact` v4 = Node 20).
 
 ## 2026-11-06 (Security-Check nach Public)
 - Git-Historie (133 Commits) sauber: keine Keys/Tokens/.env, Autoren nur noreply-Adressen.
