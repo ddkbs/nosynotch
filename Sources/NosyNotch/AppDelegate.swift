@@ -27,6 +27,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
         store.onChange = { [weak self] in self?.model.recompute() }
         store.onTransition = { [weak self] transition in
+            self?.feedNosy(transition)
             // Done / needs you while you're looking at that very app (Claude, terminal, Codex …):
             // stay in the small notch, no sound.
             if let session = transition.quietCandidate, Self.isLookingAt(session) {
@@ -73,6 +74,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         if !UserDefaults.standard.bool(forKey: "didShowWelcome") {
             UserDefaults.standard.set(true, forKey: "didShowWelcome")
             if !HookInstaller.isInstalled { settings.show() }
+        }
+    }
+
+    /// Every finished task feeds Nosy (not the built-in demo).
+    private func feedNosy(_ transition: Transition) {
+        guard Preferences.nosyEnabled, Preferences.nosyPet, case .finished(let session) = transition,
+              !session.id.hasPrefix("demo-") else { return }
+        if let level = pet.feed(duration: session.lastTurnDuration) {
+            model.celebrateLevel(level)
         }
     }
 

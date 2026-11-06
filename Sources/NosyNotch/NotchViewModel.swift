@@ -228,6 +228,17 @@ final class NotchViewModel: ObservableObject {
         }
     }
 
+    /// Nosy just reached a new level – shown on the "done" card for its duration.
+    @Published private(set) var levelUp: Int?
+
+    func celebrateLevel(_ level: Int) {
+        levelUp = level
+        nosyReact(.happy, for: 3)
+        Clock.after(max(Preferences.notificationSeconds, 4) + 1) { [weak self] in
+            if self?.levelUp == level { self?.levelUp = nil }
+        }
+    }
+
     /// You poked Nosy.
     func petNosy() {
         noteActivity()

@@ -113,6 +113,7 @@ struct NotchView: View {
                 if let celebration = model.celebration {
                     CelebrationView(celebration: celebration,
                                     live: store.sessions[celebration.session.id],
+                                    levelUp: model.levelUp,
                                     onTap: { model.dismissFlash() },
                                     onDismiss: { model.dismissFlash() })
                         .id(celebration.id)
@@ -391,6 +392,8 @@ struct CelebrationView: View {
     let celebration: NotchViewModel.Celebration
     /// Latest state of the session (the summary may arrive a moment after the Stop event).
     let live: Session?
+    /// Nosy reached this level with this task.
+    var levelUp: Int?
     var onTap: () -> Void
     var onDismiss: () -> Void
 
@@ -421,6 +424,10 @@ struct CelebrationView: View {
                         Text("· \(Format.duration(d))")
                             .font(.system(size: 12, design: .monospaced))
                             .foregroundStyle(.white.opacity(0.5))
+                    }
+                    if let levelUp {
+                        LevelUpPill(level: levelUp)
+                            .transition(.scale(scale: 0.4).combined(with: .opacity))
                     }
                 }
                 .lineLimit(1)
@@ -455,6 +462,29 @@ struct CelebrationView: View {
     private func summaryFallback(_ s: Session) -> String {
         let waiting = "\(s.agent.name) is waiting for your next message."
         return s.toolCount > 0 ? "\(Format.toolCalls(s.toolCount)) – \(waiting)" : waiting
+    }
+}
+
+/// "✦ Level 4" – Nosy levelled up with this task.
+struct LevelUpPill: View {
+    let level: Int
+    @State private var shine = false
+
+    var body: some View {
+        HStack(spacing: 4) {
+            SparkleShape().fill(NosyPalette.spark).frame(width: 9, height: 9)
+                .rotationEffect(.degrees(shine ? 180 : 0))
+            Text("Level \(level)")
+                .font(.system(size: 11, weight: .bold, design: .rounded))
+        }
+        .foregroundStyle(.black)
+        .padding(.horizontal, 7)
+        .padding(.vertical, 2)
+        .background(Capsule().fill(LinearGradient(colors: [NosyPalette.top, NosyPalette.bottom],
+                                                  startPoint: .leading, endPoint: .trailing)))
+        .shadow(color: NosyPalette.middle.opacity(0.6), radius: shine ? 8 : 2)
+        .onAppear { withAnimation(.easeInOut(duration: 0.9).repeatCount(3, autoreverses: true)) { shine = true } }
+        .fixedSize()
     }
 }
 
