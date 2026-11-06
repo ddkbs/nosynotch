@@ -111,7 +111,7 @@ private struct NosyPose: View {
 
     private var arms: some View {
         let (left, right) = armAngles
-        let shoulder = hanging ? CGPoint(x: 15, y: -8) : CGPoint(x: 19, y: 4)
+        let shoulder = hanging ? CGPoint(x: 17, y: -6) : CGPoint(x: 19, y: 4)
         return ZStack {
             arm(left).offset(x: -shoulder.x, y: shoulder.y)
             arm(right).offset(x: shoulder.x, y: shoulder.y)
@@ -120,17 +120,27 @@ private struct NosyPose: View {
 
     /// One arm, rotated around its shoulder (the top of its frame).
     private func arm(_ angle: Double) -> some View {
-        Ellipse().fill(NosyPalette.limb)
-            .frame(width: 9, height: 14)
-            .offset(y: 4)
-            .rotationEffect(.degrees(angle), anchor: .top)
+        ZStack(alignment: .bottom) {
+            Ellipse().fill(NosyPalette.limb)
+                .frame(width: 9, height: hanging ? 12 : 14)
+            // Hanging: round little paws that grip the edge.
+            if hanging {
+                Circle().fill(NosyPalette.limb)
+                    .overlay(Circle().fill(.white.opacity(0.25)).frame(width: 4, height: 4).offset(x: -1, y: 1))
+                    .frame(width: 10, height: 10)
+                    .offset(y: 3)
+            }
+        }
+        .frame(width: 10, height: 15, alignment: .top)
+        .offset(y: 4)
+        .rotationEffect(.degrees(angle), anchor: .top)
     }
 
     /// Rotation of each arm around its shoulder: 0 = hanging down, 180 = straight up.
     private var armAngles: (Double, Double) {
         if hanging {
             let pull = mood == .happy ? sin(t * 7) * 8 : 0
-            return (172 + pull, -172 - pull)
+            return (166 + pull, -166 - pull)
         }
         switch mood {
         case .happy, .charging: return (135 + sin(t * 10) * 12, -135 - sin(t * 10) * 12)

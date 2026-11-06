@@ -6,6 +6,7 @@ struct NotchView: View {
     @ObservedObject var media: NowPlaying
 
     private var spring: Animation { .spring(response: 0.42, dampingFraction: 0.74) }
+    @State private var splashAt: Date?
 
     var body: some View {
         let size = model.size
@@ -20,6 +21,8 @@ struct NotchView: View {
             content
                 .frame(width: size.width, height: size.height, alignment: .top)
                 .clipShape(shape)
+
+            nosyLayer(size: size)
         }
         .frame(width: size.width, height: size.height)
         .opacity(model.presentation == .hidden && !model.hasPhysicalNotch ? 0 : 1)
@@ -29,6 +32,31 @@ struct NotchView: View {
         .animation(spring, value: store.sessions.count)
         .animation(spring, value: media.track == nil)
         .animation(.linear(duration: 0.55), value: model.shakes)
+    }
+
+    // MARK: - Nosy
+
+    /// Nosy hanging from the bottom edge, and the tar splash when it dives back in.
+    @ViewBuilder
+    private func nosyLayer(size: CGSize) -> some View {
+        let x = model.hangerX
+        ZStack(alignment: .top) {
+            if model.nosyOutside {
+                NosyHanger(mood: model.nosyMood, gaze: model.gaze, pet: model.pet, tint: model.nosyTint,
+                           onPet: { model.petNosy() })
+                    .offset(x: x, y: size.height - 11)
+                    .transition(.nosyTar)
+            }
+            if let splash = splashAt {
+                NosySplash(start: splash)
+                    .offset(x: x, y: size.height)
+                    .id(splash)
+            }
+        }
+        .frame(width: size.width, height: size.height, alignment: .top)
+        .onChange(of: model.nosyOutside) { _, outside in
+            if !outside { splashAt = Clock.now().addingTimeInterval(0.16) }
+        }
     }
 
     // MARK: - Glow

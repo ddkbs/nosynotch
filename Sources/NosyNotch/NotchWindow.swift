@@ -95,10 +95,11 @@ final class NotchWindowController {
     private var notchRect: NSRect {
         guard let screen else { return .zero }
         let size = model.size
+        let hanging = model.hangingHeight
         return NSRect(x: screen.frame.midX - size.width / 2,
-                      y: screen.frame.maxY - size.height,
+                      y: screen.frame.maxY - size.height - hanging,
                       width: size.width,
-                      height: size.height)
+                      height: size.height + hanging)
     }
 
     private func updateHover() {

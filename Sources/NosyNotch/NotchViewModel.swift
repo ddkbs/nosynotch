@@ -191,6 +191,21 @@ final class NotchViewModel: ObservableObject {
         return .idle
     }
 
+    /// Nosy hangs below the open notch (and dives back in when it closes).
+    var nosyOutside: Bool {
+        guard Preferences.nosyEnabled else { return false }
+        switch presentation {
+        case .hidden, .compact, .media, .peek: return false
+        default: return true
+        }
+    }
+
+    /// Extra room below the notch shape that belongs to the notch (Nosy hanging there).
+    var hangingHeight: CGFloat { nosyOutside ? NosyHanger.size.height - 12 : 0 }
+
+    /// Where Nosy hangs, measured from the notch's centre line.
+    var hangerX: CGFloat { -size.width / 2 + topRadius + 52 }
+
     /// A shown usage limit sits at 100 %.
     var limitIsUsedUp: Bool {
         usageRows.contains { row in
