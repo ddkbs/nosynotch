@@ -13,7 +13,7 @@ Ready-to-copy posts (English) for the v0.3 launch with Nosy, the chat in the not
 - [ ] GitHub description, e.g.: *"A tiny helper in your MacBook notch: watches Claude Code, Codex and Cursor, plays your music, holds your files. Free, local, MIT."*
 - [ ] ⚠ Check feature status: reply from the notch (how exactly: Accessibility / typing into the app?), calendar + AirPods opt-in, Nosy accessories and level names, timer mutes agent sounds
 - [ ] Clips recorded (see 1.)
-- [ ] Reddit karma: r/ClaudeAI needs **≥ 50 total karma** for a feed post (otherwise megathread), r/macapps **10 sub karma** + 1 dev post per 30 days. Comment helpfully in the subs a few days before posting.
+- [ ] Reddit karma: r/ClaudeAI needs **≥ 50 total karma** for a feed post (otherwise megathread). Comment helpfully in the subs a few days before posting.
 - [ ] Have the first comment of your own (section 4) ready to paste
 
 ## 1. Clips you need
@@ -22,13 +22,13 @@ Upload MP4s, not GIFs (sharper, smaller; Reddit turns GIFs into video anyway). A
 
 | File (suggestion) | Content | Length | Main clip for |
 |---|---|---|---|
-| `nosy-hero.mp4` | **Hero:** Nosy stands under the notch → hops → dives in like a tar puddle (splash, ripple) → only his eyes look out and follow the cursor. Then an agent finishes: he drips back out, jumps for joy, confetti. | 8–12 s, loopable | r/ClaudeAI, r/vibecoding, r/SideProject, r/MacOS |
+| `nosy-hero.mp4` | **Hero:** Nosy stands under the notch → hops → dives in like a tar puddle (splash, ripple) → only his eyes look out and follow the cursor. Then an agent finishes: he drips back out, jumps for joy, confetti. | 8–12 s, loopable | r/ClaudeAI, r/vibecoding, r/SideProject |
 | `nosy-moods.mp4` | Montage: working (focused, sweat drop) → needs you (waves, Allow/Deny) → done (happy) → sleeping (zzz) → "oh! hi" | 10 s | r/ClaudeCode, extra |
 | `nosy-levelup.mp4` | Task done → energy bar fills → "Level 4" → antenna grows / headphones unlocked, streak flame | 5 s | extra, r/vibecoding |
-| `chat.mp4` | Hover → the answer in the notch → type a reply → send → the agent works again | 8 s | r/ClaudeCode, r/cursor, r/codex |
-| `shelf-airdrop.mp4` | Drag a file onto the notch → the "Shelf / AirDrop" targets open → drop → the AirDrop dialog opens | 6 s | r/macapps, r/MacOS |
-| `calendar.mp4` | "Standup in 10 min" slides out, Join button | 4 s | r/macapps extra |
-| `charging.mp4` | Plug in the charger → charging animation, Nosy plugs himself in | 3 s | r/macbookpro, extra |
+| `chat.mp4` | Hover → the answer in the notch → type a reply → send → the agent works again | 8 s | r/ClaudeCode, r/codex |
+| `shelf-airdrop.mp4` | Drag a file onto the notch → the "Shelf / AirDrop" targets open → drop → the AirDrop dialog opens | 6 s | extra (later r/macapps) |
+| `calendar.mp4` | "Standup in 10 min" slides out, Join button | 4 s | extra |
+| `charging.mp4` | Plug in the charger → charging animation, Nosy plugs himself in | 3 s | extra |
 | `airpods.mp4` | AirPods connect → name + L/R/case battery | 3 s | extra |
 | `timer.mp4` | Focus timer runs, Nosy holds his ears shut, timer done | 4 s | extra |
 | Existing: `attention.mp4`, `usage.mp4`, `limit-reset.mp4`, `media.mp4` | from `website/public/demo/` | | extras |
@@ -42,11 +42,13 @@ US prime time: **Tuesday–Thursday, 8–10 am ET = 2–4 pm German time.** 3–
 | Day | Subs | Why |
 |---|---|---|
 | 1 (Tue) | r/ClaudeAI, r/ClaudeCode | Core audience, biggest lever. Two different texts (story vs. tech). |
-| 2 (Wed) | r/macapps (if eligible, otherwise megathread), r/SideProject | Mac audience for shelf/calendar/music, builder audience |
-| 3 (Thu) | r/vibecoding, r/cursor | Casual + Cursor users |
-| 4 (Fri) | r/codex, r/ChatGPTCoding, r/OpenAI (only in the project thread) | Codex audience |
-| 5–6 (weekend) | r/MacOS, r/opensource, r/coolgithubprojects | Broad reach, weekend browsers |
-| +1 week | r/swift / r/SwiftUI (technical post), r/macbookpro, Show HN, email to Korben | Second wave with a "how I built it" angle |
+| 2 (Wed) | r/SideProject, r/vibecoding | Builder audience + casual vibe coders |
+| 3 (Thu) | r/codex, r/ChatGPTCoding, r/OpenAI (only in the project thread) | Codex audience |
+| 4–5 (weekend) | r/opensource, r/coolgithubprojects | Broad reach, weekend browsers |
+| +1 week | r/swift / r/SwiftUI (technical post), Show HN, email to Korben | Second wave with a "how I built it" angle |
+| at 100 ★ | r/macapps (post parked in 3b) | Only once the repo has 100 stars |
+
+Deliberately left out: r/MacOS, r/cursor, r/macbookpro, r/macbookair.
 
 ---
 
@@ -80,7 +82,7 @@ Free and open source (MIT), everything stays on your Mac. Also works with Codex 
 Try it: npx nosynotch (macOS 14+)
 GitHub: https://github.com/ddkbs/nosynotch
 
-What should Nosy unlock at level 10?
+Feel free to try it out and leave your feedback.
 ```
 
 ### r/ClaudeCode
@@ -107,60 +109,9 @@ New: hover a session to read the conversation, and reply right from the notch. F
 Every hook is one curl to 127.0.0.1; if the app isn't running, curl fails instantly and Claude carries on. Installs into ~/.claude, $CLAUDE_CONFIG_DIR and every ~/.claude-* account folder. Usage + context come from a silent status line, only if you don't have your own.
 
 npx nosynotch · https://github.com/ddkbs/nosynotch
-Free, MIT, local. Which state would you want him to show that he doesn't yet?
-```
+Free, MIT, local.
 
-### r/macapps
-**Format:** "AppName — descriptor" · disclosure as the first line · **Media:** gallery `shelf-airdrop`, `nosy-hero`, `calendar`, `media` (or video `shelf-airdrop.mp4`)
-> Only if you're eligible (1 dev post / 30 days, 10 sub karma). Otherwise as a comment in the monthly megathread "The App Pile", shortened.
-
-**Title**
-```
-Nosy Notch — free, open-source notch app with a file shelf, AirDrop, calendar, music and a tiny resident helper
-```
-
-**Text**
-```
-Disclosure: I'm the developer. Free, open source (MIT), no account, no tracking.
-
-Nosy Notch turns the MacBook notch into a small dynamic area:
-
-- Shelf + AirDrop: drag a file onto the notch, drop it on "Shelf" to park it or on "AirDrop" to send it. Drag it back out later.
-- Calendar: next meeting on hover, a heads-up 10 minutes before with a Join button for Zoom / Meet / Teams links (opt-in, asks for calendar access).
-- Battery: charging animation when you plug in, a warning at 20 %. AirPods: name and battery when they connect (opt-in).
-- Focus timer right in the notch.
-- Music: Spotify / Apple Music cover and an equalizer that follows the actual music, full player on hover.
-- Nosy: a little helper who lives in the notch – he dives in like a tar puddle, looks out with his eyes, falls asleep when nothing happens and wakes up when you come by.
-- If you code with AI agents (Claude Code, Codex, Cursor): live status, approve commands from the notch, usage limits.
-
-Native Swift / SwiftUI, macOS 14+, Apple Silicon and Intel. Macs without a notch get a virtual one. Everything runs locally; the only network requests are album covers.
-
-Install: npx nosynotch, or download from the GitHub release.
-https://github.com/ddkbs/nosynotch
-
-Happy to hear what you'd want on the shelf next.
-```
-
-### r/MacOS
-**Flair:** Apps (if there is one) · **Media:** `nosy-hero.mp4`
-
-**Title**
-```
-I gave my notch a tiny resident: he dives into it like a tar puddle and keeps an eye on things
-```
-
-**Text**
-```
-The notch is always there, so I made it a home for a small helper called Nosy.
-
-When the notch closes he hops in with a splash and peeks out with just his eyes, which follow your cursor. When something happens he drips back out: a file you drag onto the notch (park it on the shelf or AirDrop it), a meeting in 10 minutes, your charger, your AirPods connecting, a focus timer finishing. When music plays he bobs along next to the cover and a live equalizer. Leave him alone long enough and he falls asleep.
-
-If you code with AI tools (Claude Code, Codex, Cursor), he also shows what they're doing and waves when they need you.
-
-Free, open source, native SwiftUI, macOS 14+. Macs without a notch get a virtual one.
-https://github.com/ddkbs/nosynotch
-
-What would you want him to react to?
+Feel free to try it out and leave your feedback.
 ```
 
 ### r/SideProject
@@ -184,7 +135,7 @@ Stack: Swift / SwiftUI, the agents' own hooks talking to a tiny loopback HTTP se
 npx nosynotch
 https://github.com/ddkbs/nosynotch
 
-What's the one thing that would make you install it?
+Feel free to try it out and leave your feedback.
 ```
 
 ### r/opensource
@@ -208,29 +159,8 @@ Privacy by design: a loopback-only HTTP server that rejects browser requests, ap
 
 https://github.com/ddkbs/nosynotch
 Issues and PRs welcome, especially support for more agents and new Nosy accessories.
-```
 
-### r/cursor
-**Flair:** Showcase / Resources · **Media:** `chat.mp4` (or `nosy-moods.mp4`)
-
-**Title**
-```
-Cursor's agent in the MacBook notch: live status, Allow/Deny for sandbox-escaping commands, and now a reply box
-```
-
-**Text**
-```
-Dev here. Nosy Notch hooks into ~/.cursor/hooks.json and shows what Cursor's agent is doing in the MacBook notch.
-
-- A small helper (Nosy) concentrates while the agent works; the notch shows the tool and context fill.
-- Terminal / MCP commands that leave Cursor's sandbox wait in the notch with Allow / Deny. ✕ or 45 s and Cursor's own prompt takes over.
-- When it's done, Nosy jumps out with the first lines of the answer, and you can reply right there.
-- Already looking at Cursor? Then it stays small and silent.
-
-All other hooks never block Cursor (they print {} immediately). Claude Code and Codex sessions show up side by side if you use them too. Bonus for everyone: file shelf + AirDrop, calendar, music in the notch.
-
-npx nosynotch · https://github.com/ddkbs/nosynotch
-Free, MIT, local. Tell me if anything looks off with your setup.
+Feel free to try it out and leave your feedback.
 ```
 
 ### r/codex (also r/ChatGPTCoding, r/OpenAI only in the project thread)
@@ -255,6 +185,8 @@ Works with the Codex CLI and the ChatGPT app's Codex mode, side by side with Cla
 
 npx nosynotch · https://github.com/ddkbs/nosynotch
 Free, MIT, everything stays on your Mac.
+
+Feel free to try it out and leave your feedback.
 ```
 
 ### r/vibecoding
@@ -280,6 +212,8 @@ I can read and answer the agent right from the notch too, and when I'm not codin
 Works with Claude Code, Codex and Cursor. Free, open source, built mostly with Claude Code.
 npx nosynotch
 https://github.com/ddkbs/nosynotch
+
+Feel free to try it out and leave your feedback.
 ```
 
 ### r/coolgithubprojects
@@ -310,22 +244,43 @@ I've been building Nosy Notch, a free notch app, and gave it an animated residen
 
 Code (MIT): https://github.com/ddkbs/nosynotch
 Happy to go deeper on any of these.
+
+Feel free to try it out and leave your feedback.
 ```
 > ⚠ Adjust the technical details to what the main session actually builds (morph technique, drag detection, key handling).
 
-### r/macbookpro / r/macbookair (short)
-**Media:** `charging.mp4` or `nosy-hero.mp4`
+## 3b. Parked
+
+### r/macapps (parked until 100 ★)
+**Format:** "AppName — descriptor" · disclosure as the first line · **Media:** gallery `shelf-airdrop`, `nosy-hero`, `calendar`, `media` (or video `shelf-airdrop.mp4`)
+> Only once the repo has **100 stars**. Then also check: 1 dev post / 30 days, 10 sub karma, otherwise the monthly megathread "The App Pile".
 
 **Title**
 ```
-Finally something lives in my notch
+Nosy Notch — free, open-source notch app with a file shelf, AirDrop, calendar, music and a tiny resident helper
 ```
 
 **Text**
 ```
-Made a small free app: a little helper called Nosy lives in the notch. He jumps out when I plug in my charger, when my AirPods connect, when a meeting is coming up or when I drag a file onto the notch (shelf or AirDrop), bobs along to Spotify, and falls asleep when nothing's happening. Takes no space the rest of the time.
+Disclosure: I'm the developer. Free, open source (MIT), no account, no tracking.
 
+Nosy Notch turns the MacBook notch into a small dynamic area:
+
+- Shelf + AirDrop: drag a file onto the notch, drop it on "Shelf" to park it or on "AirDrop" to send it. Drag it back out later.
+- Calendar: next meeting on hover, a heads-up 10 minutes before with a Join button for Zoom / Meet / Teams links (opt-in, asks for calendar access).
+- Battery: charging animation when you plug in, a warning at 20 %. AirPods: name and battery when they connect (opt-in).
+- Focus timer right in the notch.
+- Music: Spotify / Apple Music cover and an equalizer that follows the actual music, full player on hover.
+- Nosy: a little helper who lives in the notch – he dives in like a tar puddle, looks out with his eyes, falls asleep when nothing happens and wakes up when you come by.
+- If you code with AI agents (Claude Code, Codex, Cursor): live status, approve commands from the notch, usage limits.
+
+Native Swift / SwiftUI, macOS 14+, Apple Silicon and Intel. Macs without a notch get a virtual one. Everything runs locally; the only network requests are album covers.
+
+Install: npx nosynotch, or download from the GitHub release.
 https://github.com/ddkbs/nosynotch
+
+
+Feel free to try it out and leave your feedback.
 ```
 
 ---
@@ -339,6 +294,8 @@ Some details for the curious:
 - Nosy's energy and streak are stored locally. He never dies – I wanted the cozy part of a tamagotchi without the guilt.
 - Not signed with an Apple Developer ID yet (ad-hoc signed), so macOS may ask once.
 Repo + every animation explained: https://github.com/ddkbs/nosynotch
+
+Feel free to try it out and leave your feedback.
 ```
 
 ## 5. Replies to expected questions
@@ -355,6 +312,24 @@ Repo + every animation explained: https://github.com/ddkbs/nosynotch
   "The app is MIT and stays free. If I ever do extras, the core stays open."
 - **"Does it read my code?"**
   "No. It only sees the hook events (tool name, short description) and, for the chat, the session's transcript file on your Mac. Nothing leaves the machine."
+
+## 7. Automation: Claude posts, you only confirm
+
+Goal: you hardly have to do anything. Proposed setup, ready to set up as soon as v0.3 is out:
+
+1. **One scheduled Claude task per posting day** (Claude Desktop "scheduled tasks", 2 pm German time, following the plan in section 2). It uses **Claude in Chrome** with your logged-in Reddit account:
+   - opens the subreddit, reads the current sidebar rules (karma, flair, megathread) and skips the sub if the post would break them,
+   - fills in title, text, flair and the clip from `website/public/demo/` / `docs/gifs/`,
+   - **stops before "Post" and asks you once** (also works from your phone). You reply "yes", and it posts the thread plus the first comment of your own (section 4).
+2. **Check-ins after 1 h and 24 h:** Claude reads the new comments, writes reply drafts in your style (ending with "Feel free to try it out and leave your feedback." where it fits), and posts them after your OK. Bug reports go straight into a list for the main session.
+3. **Logbook** in `promo/POSTED.md`: sub, time, link, upvotes, comments, stars before/after.
+
+**Why not fully without you:**
+- Reddit only allows bots with an approved API app.
+- Most subs remove self-promotion posted automatically, and the account can get banned.
+- Claude may only publish something in your name with your explicit OK for each post.
+
+One "yes" per post is the minimum. Everything else (filling in, timing, uploading, logbook, reply drafts) runs automatically.
 
 ## 6. Beyond Reddit (short)
 
