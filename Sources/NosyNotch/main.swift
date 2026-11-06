@@ -29,6 +29,13 @@ if arguments.contains("--install-hooks") || arguments.contains("--uninstall-hook
     }
 }
 
+// `NosyNotch --nosy-sheet <file.png>`: every Nosy mood on one image.
+if let index = arguments.firstIndex(of: "--nosy-sheet") {
+    let output = URL(fileURLWithPath: arguments.dropFirst(index + 1).first ?? "nosy.png")
+    MainActor.assumeIsolated { NosySheet.render(to: output) }
+    exit(0)
+}
+
 // `NosyNotch --record-settings <out-dir>`: the settings window, page by page.
 if let index = arguments.firstIndex(of: "--record-settings") {
     let output = URL(fileURLWithPath: arguments.dropFirst(index + 1).first ?? "docs/frames", isDirectory: true)
