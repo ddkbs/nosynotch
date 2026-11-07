@@ -13,7 +13,7 @@ Ready-to-copy posts (English) for the v0.3 launch with Nosy, the chat in the not
 - [ ] GitHub description, e.g.: *"A tiny helper in your MacBook notch: watches Claude Code, Codex and Cursor, plays your music, holds your files. Free, local, MIT."*
 - [ ] ⚠ Check feature status: reply from the notch (how exactly: Accessibility / typing into the app?), calendar + AirPods opt-in, Nosy accessories and level names, timer mutes agent sounds
 - [ ] Clips recorded (see 1.)
-- [ ] Reddit karma: r/ClaudeAI needs **≥ 50 total karma** for a feed post (otherwise megathread). Comment helpfully in the subs a few days before posting.
+- [ ] Reddit karma: r/ClaudeAI needs **> 100 karma** for a feed post (otherwise megathread). Comment helpfully in the subs a few days before posting.
 - [ ] Have the first comment of your own (section 4) ready to paste
 
 ## 1. Clips you need
@@ -56,33 +56,40 @@ Deliberately left out: r/MacOS, r/cursor, r/macbookpro, r/macbookair.
 
 ### r/ClaudeAI
 **Flair:** Built with Claude · **Media:** `nosy-hero.mp4`
+> Sub rules (as of now): built with/for Claude **by you**, detailed description of how Claude helped, **say it's free to try**, minimal promo language, no referral links. **Feed posts need > 100 karma**, otherwise the megathread.
 
 **Title**
 ```
-I built a tiny helper that lives in my MacBook notch, works along with Claude Code and jumps for joy when it's done
+I built a free Mac app with Claude Code: a tiny helper in the MacBook notch that shows what Claude Code is doing
 ```
 
 **Text**
 ```
-I'm the developer, and I built this almost entirely with Claude Code.
+I built Nosy Notch, a free and open-source macOS app, almost entirely with Claude Code. It's free to try, no paid tier.
 
-Claude Code often works on its own for minutes, then sits there waiting for a "yes" I never saw. So my notch app Nosy Notch got a resident: Nosy, a small egg-shaped helper with big eyes and a little ✦ antenna.
+**What it does**
+Claude Code often works on its own for minutes, then waits for a "yes" I never saw. Nosy Notch shows every Claude Code session in the MacBook notch, with a small helper called Nosy living in it:
+- While Claude works, the notch shows the tool it's running and Nosy concentrates. When the context compacts, he gets dizzy.
+- When Claude asks for permission, Nosy waves and the notch shows Deny / Always allow / Allow. Claude's own dialog stays open too.
+- When a turn is done, he drips out of the notch and jumps for joy, with the first lines of the answer. You can read the conversation and reply right from the notch.
+- Hover for all sessions, context fill and your 5-hour / weekly limits. When nothing runs, he falls asleep in the notch.
+- Finished tasks give him energy, levels and a streak. He never dies and never guilt-trips you.
+- Also: music player, file shelf with AirDrop, calendar heads-ups, battery and AirPods status, focus timer. Works with Codex and Cursor too.
 
-- When the notch closes, Nosy jumps into it like a tar puddle and looks out with just his eyes (they follow your cursor).
-- While Claude works he concentrates; on long runs he sweats, when the context compacts he gets dizzy.
-- When Claude needs permission he waves – you click Allow / Deny right in the notch (or nod with AirPods).
-- When it's done he drips back out and jumps for joy. Nothing going on for a while? He falls asleep.
-- Every finished task feeds him: energy, levels, a daily streak, unlockable accessories. And on purpose: he never dies and never guilt-trips you. Worst case he's sleepy.
+**How Claude Code helped**
+Claude Code wrote the Swift/SwiftUI app, the local hook server, the npx installer and the website. My part was the idea, the character design and testing on my Mac. Some things it did on its own:
+- It read the hooks docs, then ran real Claude Code sessions with a test PermissionRequest hook. That's how it found out Claude's dialog stays open while the hook waits, which is what makes approving from the notch possible. It also saw that one "always allow" suggestion switches the session mode, so it filters that out.
+- When the app froze on launch, it profiled the process with `sample` and found an Apple Events permission check blocking the main thread.
+- For Nosy, it drew several rounds of sketches in the chat until we had the character, then built the "jumps into the notch like a tar puddle" animation in SwiftUI.
+- It built a recorder that renders the animations frame by frame on a virtual clock, which made the clips in this post.
+- A security pass it ran found that a website could post to the local server, so the server now rejects browser requests.
 
-New in this version: read Claude's answer and reply right from the notch, plus a file shelf with AirDrop, calendar heads-ups, battery and AirPods status and a focus timer.
-
-How Claude helped: it wrote the Swift/SwiftUI app, the hook server and the npx installer, tested the PermissionRequest hook against real sessions, and built the frame-by-frame recorder for the clips. My part: the idea, the character, and a lot of "cuter, calmer, bigger".
-
-Free and open source (MIT), everything stays on your Mac. Also works with Codex and Cursor.
-Try it: npx nosynotch (macOS 14+)
+**Try it (free)**
+macOS 14+ and Node: `npx nosynotch` installs the app, connects the hooks and starts it. `npx nosynotch uninstall` removes everything. Everything stays on your Mac, MIT licensed.
+Website: https://nosynotch.davidkubus.dev
 GitHub: https://github.com/ddkbs/nosynotch
 
-Feel free to try it out and leave your feedback.
+Feel free to try it out and leave your feedback!
 ```
 
 ### r/ClaudeCode
@@ -109,9 +116,10 @@ New: hover a session to read the conversation, and reply right from the notch. F
 Every hook is one curl to 127.0.0.1; if the app isn't running, curl fails instantly and Claude carries on. Installs into ~/.claude, $CLAUDE_CONFIG_DIR and every ~/.claude-* account folder. Usage + context come from a silent status line, only if you don't have your own.
 
 npx nosynotch · https://github.com/ddkbs/nosynotch
+https://nosynotch.davidkubus.dev
 Free, MIT, local.
 
-Feel free to try it out and leave your feedback.
+Feel free to try it out and leave your feedback!
 ```
 
 ### r/SideProject
@@ -134,8 +142,9 @@ Stack: Swift / SwiftUI, the agents' own hooks talking to a tiny loopback HTTP se
 
 npx nosynotch
 https://github.com/ddkbs/nosynotch
+https://nosynotch.davidkubus.dev
 
-Feel free to try it out and leave your feedback.
+Feel free to try it out and leave your feedback!
 ```
 
 ### r/opensource
@@ -158,9 +167,10 @@ Nosy Notch is a native Swift / SwiftUI app (macOS 14+, MIT) for the MacBook notc
 Privacy by design: a loopback-only HTTP server that rejects browser requests, approvals signed with a local secret, no telemetry, no account. Everything that needs a macOS permission is off until you turn it on.
 
 https://github.com/ddkbs/nosynotch
+https://nosynotch.davidkubus.dev
 Issues and PRs welcome, especially support for more agents and new Nosy accessories.
 
-Feel free to try it out and leave your feedback.
+Feel free to try it out and leave your feedback!
 ```
 
 ### r/codex (also r/ChatGPTCoding, r/OpenAI only in the project thread)
@@ -184,9 +194,10 @@ Codex has hooks now, so my notch app Nosy Notch supports it fully:
 Works with the Codex CLI and the ChatGPT app's Codex mode, side by side with Claude Code and Cursor. Note: trust the hooks once in Codex (Settings → Hooks or /hooks).
 
 npx nosynotch · https://github.com/ddkbs/nosynotch
+https://nosynotch.davidkubus.dev
 Free, MIT, everything stays on your Mac.
 
-Feel free to try it out and leave your feedback.
+Feel free to try it out and leave your feedback!
 ```
 
 ### r/vibecoding
@@ -212,8 +223,9 @@ I can read and answer the agent right from the notch too, and when I'm not codin
 Works with Claude Code, Codex and Cursor. Free, open source, built mostly with Claude Code.
 npx nosynotch
 https://github.com/ddkbs/nosynotch
+https://nosynotch.davidkubus.dev
 
-Feel free to try it out and leave your feedback.
+Feel free to try it out and leave your feedback!
 ```
 
 ### r/coolgithubprojects
@@ -243,9 +255,10 @@ I've been building Nosy Notch, a free notch app, and gave it an animated residen
 - Live equalizer: a Core Audio process tap on just the player's processes + vDSP FFT with per-band auto gain.
 
 Code (MIT): https://github.com/ddkbs/nosynotch
+Website: https://nosynotch.davidkubus.dev
 Happy to go deeper on any of these.
 
-Feel free to try it out and leave your feedback.
+Feel free to try it out and leave your feedback!
 ```
 > ⚠ Adjust the technical details to what the main session actually builds (morph technique, drag detection, key handling).
 
@@ -278,9 +291,10 @@ Native Swift / SwiftUI, macOS 14+, Apple Silicon and Intel. Macs without a notch
 
 Install: npx nosynotch, or download from the GitHub release.
 https://github.com/ddkbs/nosynotch
+https://nosynotch.davidkubus.dev
 
 
-Feel free to try it out and leave your feedback.
+Feel free to try it out and leave your feedback!
 ```
 
 ---
@@ -294,8 +308,9 @@ Some details for the curious:
 - Nosy's energy and streak are stored locally. He never dies – I wanted the cozy part of a tamagotchi without the guilt.
 - Not signed with an Apple Developer ID yet (ad-hoc signed), so macOS may ask once.
 Repo + every animation explained: https://github.com/ddkbs/nosynotch
+Website: https://nosynotch.davidkubus.dev
 
-Feel free to try it out and leave your feedback.
+Feel free to try it out and leave your feedback!
 ```
 
 ## 5. Replies to expected questions
@@ -321,7 +336,7 @@ Goal: you hardly have to do anything. Proposed setup, ready to set up as soon as
    - opens the subreddit, reads the current sidebar rules (karma, flair, megathread) and skips the sub if the post would break them,
    - fills in title, text, flair and the clip from `website/public/demo/` / `docs/gifs/`,
    - **stops before "Post" and asks you once** (also works from your phone). You reply "yes", and it posts the thread plus the first comment of your own (section 4).
-2. **Check-ins after 1 h and 24 h:** Claude reads the new comments, writes reply drafts in your style (ending with "Feel free to try it out and leave your feedback." where it fits), and posts them after your OK. Bug reports go straight into a list for the main session.
+2. **Check-ins after 1 h and 24 h:** Claude reads the new comments, writes reply drafts in your style (ending with "Feel free to try it out and leave your feedback!" where it fits), and posts them after your OK. Bug reports go straight into a list for the main session.
 3. **Logbook** in `promo/POSTED.md`: sub, time, link, upvotes, comments, stars before/after.
 
 **Why not fully without you:**

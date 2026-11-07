@@ -47,7 +47,7 @@ Always phrase this comparison politely and only in comments (e.g. "I love boring
 
 | Sub | Self-promo | Requirements / notes |
 |---|---|---|
-| r/ClaudeAI | yes, "Built with Claude" showcase (Rule 7) | **≥ 50 total karma** for a feed post, otherwise the "Built with Claude Project Showcase Megathread". Say that you built it, how Claude helped, and that it's free to try. New accounts are blocked for ~3 days. |
+| r/ClaudeAI | yes, "Built with Claude" showcase (Rule 7) | **> 100 karma** for a feed post (raised from 50), otherwise the "Built with Claude Project Showcase Megathread". Say that you built it, how Claude helped, and that it's free to try. New accounts are blocked for ~3 days. |
 | r/ClaudeCode | yes | Project / Showcase flair. Technical depth is welcome. |
 | r/macapps | yes, strictly regulated | Disclose that you're the dev. **1 dev post per 30 days** (trusted devs: 1 per app), otherwise the monthly megathread ("The App Pile"). 10 r/macapps karma to self-promote in comments. Title "AppName — short descriptor". Include pricing, privacy and OS requirements. Ask the mods via modmail first if unsure. |
 | r/MacOS | unclear (relaxed in Dec 2025) | Read the sidebar. Use an "Apps" flair if there is one. No duplicates within a week. |
