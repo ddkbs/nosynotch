@@ -11,6 +11,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private lazy var model = NotchViewModel(store: store, media: nowPlaying, approvals: approvals, usage: usage, pet: pet,
                                             shelf: shelf)
     private var windowController: NotchWindowController?
+    private let power = PowerMonitor()
+    private let headphones = HeadphoneMonitor()
     private var server: EventServer?
     private var statusItem: NSStatusItem?
     private var serverError: String?
@@ -18,6 +20,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         statusLine: { [weak self] in self?.statusLine ?? "" },
         playDemo: { [weak self] in self?.playDemo() },
         settingsChanged: { [weak self] in
+            if Preferences.bluetoothEnabled { self?.headphones.start() } else { self?.headphones.stop() }
             self?.model.objectWillChange.send()
             self?.model.recompute()
         },
@@ -62,6 +65,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         }
 
         windowController = NotchWindowController(model: model)
+        power.onNotice = { [weak self] in self?.model.showNotice($0) }
+        power.start()
+        headphones.onNotice = { [weak self] in self?.model.showNotice($0) }
+        headphones.start()
         startServer()
         setUpStatusItem()
         Notifier.requestAuthorizationIfNeeded()

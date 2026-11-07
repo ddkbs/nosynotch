@@ -65,6 +65,7 @@ struct NotchView: View {
         switch model.presentation {
         case .attention: return Theme.amber
         case .dropZone: return NosyPalette.top
+        case .notice: return model.noticeGlow
         case .failed: return Theme.danger
         case .limitReset: return model.limitReset?.agent.color ?? Theme.success
         case .media: return media.accent
@@ -76,6 +77,7 @@ struct NotchView: View {
     private var glowOpacity: Double {
         switch model.presentation {
         case .attention, .celebrating, .failed, .limitReset, .dropZone: return 0.55
+        case .notice: return 0.45
         case .compact: return store.hasWaiting ? 0.45 : 0.18
         case .media: return 0.22
         default: return 0
@@ -141,6 +143,13 @@ struct NotchView: View {
                 if let reset = model.limitReset {
                     LimitResetView(reset: reset, onDismiss: { model.dismissFlash() })
                         .id(reset.id)
+                        .transition(.blurFade.combined(with: .scale(scale: 0.85, anchor: .top)))
+                }
+            case .notice:
+                if let item = model.notice {
+                    NoticeView(notice: item.notice, onAction: model.noticeAction(for: item.notice),
+                               onDismiss: { model.dismissNotice() })
+                        .id(item.id)
                         .transition(.blurFade.combined(with: .scale(scale: 0.85, anchor: .top)))
                 }
             case .dropZone:

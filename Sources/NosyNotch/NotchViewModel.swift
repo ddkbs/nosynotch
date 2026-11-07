@@ -25,6 +25,8 @@ final class NotchViewModel: ObservableObject {
         case peek
         /// Files are being dragged near the notch: Shelf and AirDrop targets.
         case dropZone
+        /// A small system moment: power, headphones, focus timer, meeting.
+        case notice
     }
 
     struct Celebration: Equatable {
@@ -90,6 +92,59 @@ final class NotchViewModel: ObservableObject {
     @Published private(set) var failure: Session?
     /// "Claude is ready again – 5-hour limit reset".
     @Published private(set) var limitReset: LimitReset?
+
+    struct NoticeItem: Equatable {
+        let id = UUID()
+        let notice: Notice
+    }
+    @Published private(set) var notice: NoticeItem?
+    private var noticeWork: DispatchWorkItem?
+
+    /// Show a system moment for its few seconds – unless an agent has something more important to say.
+    func showNotice(_ notice: Notice) {
+        guard celebration == nil, attention == nil, failure == nil else { return }
+        let item = NoticeItem(notice: notice)
+        self.notice = item
+        noticeWork?.cancel()
+        let work = DispatchWorkItem { [weak self] in
+            MainActor.assumeIsolated {
+                guard let self, self.notice?.id == item.id else { return }
+                self.notice = nil
+                self.recompute()
+            }
+        }
+        noticeWork = work
+        Clock.after(notice.seconds, execute: work)
+        recompute()
+    }
+
+    /// The glow around a notice card.
+    var noticeGlow: Color {
+        switch notice?.notice {
+        case .charging: return Theme.success
+        case .lowBattery: return Theme.amber
+        case .meeting(let m): return m.color
+        case .timerDone: return NosyPalette.top
+        default: return .white
+        }
+    }
+
+    /// The button on a notice card (Join a meeting, start the break …).
+    var onNoticeAction: ((Notice) -> Void)?
+
+    func noticeAction(for notice: Notice) -> (() -> Void)? {
+        guard let onNoticeAction else { return nil }
+        return { [weak self] in
+            onNoticeAction(notice)
+            self?.dismissNotice()
+        }
+    }
+
+    func dismissNotice() {
+        noticeWork?.cancel()
+        notice = nil
+        recompute()
+    }
 
     struct LimitReset: Equatable {
         let id = UUID()
@@ -190,6 +245,15 @@ final class NotchViewModel: ObservableObject {
         case .attention: return .needsYou
         case .failed: return .shocked
         case .dropZone: return .needsYou
+        case .notice:
+            switch notice?.notice {
+            case .charging: return .charging
+            case .lowBattery: return .sleepy
+            case .device: return .grooving
+            case .timerDone: return .happy
+            case .meeting: return .needsYou
+            case nil: break
+            }
         default: break
         }
         if let session = compactSession {
@@ -326,6 +390,8 @@ final class NotchViewModel: ObservableObject {
             return CGSize(width: wide, height: notchSize.height + 88)
         case .dropZone:
             return CGSize(width: wide, height: notchSize.height + 86)
+        case .notice:
+            return CGSize(width: wide, height: notchSize.height + 76)
         }
     }
 
@@ -485,6 +551,8 @@ final class NotchViewModel: ObservableObject {
             next = .failed
         } else if limitReset != nil {
             next = .limitReset
+        } else if notice != nil {
+            next = .notice
         } else if isHovering && (!store.sessions.isEmpty || hasMedia || Preferences.nosyEnabled || showsShelf) {
             next = .expanded
         } else if store.hasActivity || store.hasWaiting || quietDone != nil {

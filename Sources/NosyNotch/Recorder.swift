@@ -318,6 +318,14 @@ final class Recorder {
                 (0.0, ev("UserPromptSubmit", "cx", agent: .codex, cwd: "/Users/you/Projects/api-server")),
             ]),
             Scene(name: "limit-reset", duration: 5.5, stillAt: 3.0, limitResetAt: 0.6, steps: []),
+            Scene(name: "charging", duration: 4.5, stillAt: 2.0, steps: [], actions: [
+                (0.5, { $0.showNotice(.charging(percent: 64)) }),
+            ]),
+            Scene(name: "airpods", duration: 4.5, stillAt: 2.0, steps: [], actions: [
+                (0.5, { $0.showNotice(.device(name: "David's AirPods Pro", symbol: "airpodspro",
+                                              batteries: [.init(label: "L", percent: 82), .init(label: "R", percent: 79),
+                                                          .init(label: "Case", percent: 46)])) }),
+            ]),
             Scene(name: "drop-zone", duration: 5, stillAt: 2.0, steps: [], actions: [
                 (0.6, { $0.fileDragNear = true }),
                 (3.2, { model in

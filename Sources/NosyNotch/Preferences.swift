@@ -27,6 +27,8 @@ enum Preferences {
         static let nosyAccessory = "nosyAccessory"
         static let shelfEnabled = "shelfEnabled"
         static let nosyColor = "nosyColor"
+        static let batteryEnabled = "batteryEnabled"
+        static let bluetoothEnabled = "bluetoothEnabled"
     }
 
     private static let defaults = UserDefaults.standard
@@ -60,6 +62,8 @@ enum Preferences {
             Key.nosyAccessory: NosyAccessory.none.rawValue,
             Key.shelfEnabled: true,
             Key.nosyColor: NosyColor.obsidian.rawValue,
+            Key.batteryEnabled: true,
+            Key.bluetoothEnabled: false,
         ])
     }
 
@@ -147,6 +151,12 @@ enum Preferences {
     static var nosyColor: NosyColor {
         NosyColor(rawValue: defaults.string(forKey: Key.nosyColor) ?? "") ?? .obsidian
     }
+
+    /// Charging animation when plugged in, heads-up at 20 %.
+    static var batteryEnabled: Bool { defaults.object(forKey: Key.batteryEnabled) as? Bool ?? true }
+
+    /// Headphones connecting via Bluetooth (needs the Bluetooth permission, so off until you turn it on).
+    static var bluetoothEnabled: Bool { defaults.bool(forKey: Key.bluetoothEnabled) }
 
     /// Drag files onto the notch: Shelf and AirDrop.
     static var shelfEnabled: Bool { defaults.object(forKey: Key.shelfEnabled) as? Bool ?? true }
