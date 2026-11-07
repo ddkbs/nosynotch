@@ -980,13 +980,15 @@ private struct NosyPage: View {
     @AppStorage(Preferences.Key.nosyEnabled) private var nosyEnabled = true
     @AppStorage(Preferences.Key.nosyPet) private var nosyPet = true
     @AppStorage(Preferences.Key.nosyAccessory) private var accessory = NosyAccessory.none.rawValue
+    @AppStorage(Preferences.Key.nosyColor) private var colorName = NosyColor.obsidian.rawValue
     @State private var confirmReset = false
 
     private let tint = SettingsPage.nosy.tint
 
     var body: some View {
         VStack(alignment: .leading, spacing: 18) {
-            NosyStage(level: actions.pet?.level ?? 1, accessory: NosyAccessory(rawValue: accessory) ?? .none)
+            NosyStage(level: actions.pet?.level ?? 1, accessory: NosyAccessory(rawValue: accessory) ?? .none,
+                      color: NosyColor(rawValue: colorName) ?? .obsidian)
 
             Card(footer: "Nosy looks out of the notch, follows your pointer, works along with your agents, falls asleep when nothing happens and cheers when a task is done. Off = the classic agent symbols.") {
                 Row(title: "Nosy lives in the notch") {
@@ -1005,10 +1007,23 @@ private struct NosyPage: View {
                     .opacity(nosyEnabled && nosyPet ? 1 : 0.4)
             }
 
+            Card(title: "Colour", footer: "Obsidian takes on the colour of the agent that's working.") {
+                HStack(spacing: 8) {
+                    ForEach(NosyColor.allCases) { option in
+                        ColorSwatch(option: option, selected: colorName == option.rawValue) {
+                            colorName = option.rawValue
+                            actions.settingsChanged()
+                        }
+                    }
+                }
+                .padding(12)
+            }
+
             Card(title: "Wardrobe", footer: "Unlocked with levels. Headphones go on by themselves while music plays.") {
                 HStack(spacing: 10) {
                     ForEach(NosyAccessory.allCases) { item in
-                        WardrobeItem(item: item, level: actions.pet?.level ?? 1, selected: accessory == item.rawValue, tint: tint) {
+                        WardrobeItem(item: item, level: actions.pet?.level ?? 1, selected: accessory == item.rawValue, tint: tint,
+                                     color: NosyColor(rawValue: colorName) ?? .obsidian) {
                             accessory = item.rawValue
                             actions.settingsChanged()
                         }
@@ -1034,6 +1049,7 @@ private struct NosyPage: View {
 private struct NosyStage: View {
     let level: Int
     let accessory: NosyAccessory
+    let color: NosyColor
 
     private static let moods: [NosyMood] = [.idle, .happy, .typing, .giggle, .grooving, .sleeping, .needsYou]
 
@@ -1041,7 +1057,8 @@ private struct NosyStage: View {
         ClockTimeline(minimumInterval: 1) { now in
             let index = Int(now.timeIntervalSinceReferenceDate / 2.4) % Self.moods.count
             HStack(spacing: 20) {
-                NosyFigure(mood: Self.moods[index], look: CGSize(width: 0.3, height: 0.2), level: level, accessory: accessory)
+                NosyFigure(mood: Self.moods[index], look: CGSize(width: 0.3, height: 0.2), level: level, accessory: accessory,
+                           tint: Theme.claude, color: color)
                     .frame(width: 70, height: 88)
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Hi, I'm Nosy.")
@@ -1104,6 +1121,7 @@ private struct WardrobeItem: View {
     let level: Int
     let selected: Bool
     let tint: Color
+    let color: NosyColor
     let action: () -> Void
 
     private var unlocked: Bool { level >= item.level }
@@ -1111,7 +1129,7 @@ private struct WardrobeItem: View {
     var body: some View {
         Button(action: action) {
             VStack(spacing: 4) {
-                NosyFigure(mood: .idle, level: 1, accessory: unlocked ? item : .none)
+                NosyFigure(mood: .idle, level: 1, accessory: unlocked ? item : .none, tint: Theme.claude, color: color)
                     .frame(width: 40, height: 50)
                     .opacity(unlocked ? 1 : 0.35)
                     .overlay {
@@ -1130,6 +1148,30 @@ private struct WardrobeItem: View {
         }
         .buttonStyle(.plain)
         .disabled(!unlocked)
+    }
+}
+
+private struct ColorSwatch: View {
+    let option: NosyColor
+    let selected: Bool
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            VStack(spacing: 4) {
+                NosyFigure(mood: selected ? .happy : .idle, tint: Theme.claude, color: option)
+                    .frame(width: 34, height: 43)
+                Text(option.title)
+                    .font(.system(size: 9, weight: .medium))
+                    .foregroundStyle(.white.opacity(selected ? 0.95 : 0.5))
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 6)
+            .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(.white.opacity(selected ? 0.09 : 0.03)))
+            .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .stroke(selected ? (option.rim ?? Theme.claude) : .clear, lineWidth: 1.5))
+        }
+        .buttonStyle(.plain)
     }
 }
 

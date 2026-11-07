@@ -64,6 +64,88 @@ enum NosyAccessory: String, CaseIterable, Identifiable {
     }
 }
 
+/// Nosy's colour (Settings → Nosy → Wardrobe). Obsidian takes the active agent's colour as its rim light.
+enum NosyColor: String, CaseIterable, Identifiable {
+    case obsidian, midnight, plum, lavender, peach, mint, pearl, jelly
+
+    var id: String { rawValue }
+    var title: String { rawValue.prefix(1).uppercased() + rawValue.dropFirst() }
+
+    var top: Color {
+        switch self {
+        case .obsidian: return Color(white: 0.2)
+        case .midnight: return Color(red: 0.25, green: 0.28, blue: 0.62)
+        case .plum: return Color(red: 0.46, green: 0.25, blue: 0.62)
+        case .lavender: return Color(red: 0.82, green: 0.77, blue: 1)
+        case .peach: return Color(red: 1, green: 0.8, blue: 0.68)
+        case .mint: return Color(red: 0.82, green: 0.97, blue: 0.89)
+        case .pearl: return .white
+        case .jelly: return Color(red: 1, green: 0.55, blue: 0.78).opacity(0.78)
+        }
+    }
+
+    var bottom: Color {
+        switch self {
+        case .obsidian: return Color(white: 0.03)
+        case .midnight: return Color(red: 0.06, green: 0.07, blue: 0.22)
+        case .plum: return Color(red: 0.13, green: 0.05, blue: 0.22)
+        case .lavender: return Color(red: 0.56, green: 0.47, blue: 0.95)
+        case .peach: return Color(red: 1, green: 0.52, blue: 0.44)
+        case .mint: return Color(red: 0.38, green: 0.8, blue: 0.62)
+        case .pearl: return Color(red: 0.82, green: 0.81, blue: 0.9)
+        case .jelly: return Color(red: 0.5, green: 0.38, blue: 1).opacity(0.88)
+        }
+    }
+
+    /// nil = the active agent's colour.
+    var rim: Color? {
+        switch self {
+        case .obsidian: return nil
+        case .midnight: return Color(red: 0.56, green: 0.66, blue: 1)
+        case .plum: return Color(red: 0.88, green: 0.55, blue: 1)
+        case .peach: return Color(red: 1, green: 0.85, blue: 0.5)
+        case .pearl: return Color(red: 0.72, green: 0.68, blue: 1)
+        case .lavender, .mint, .jelly: return .white
+        }
+    }
+
+    var isDark: Bool { self == .obsidian || self == .midnight || self == .plum }
+
+    /// Mouth and closed-eye strokes.
+    var ink: Color {
+        switch self {
+        case .obsidian, .midnight, .plum: return .white.opacity(0.85)
+        case .mint: return Color(red: 0.1, green: 0.25, blue: 0.18)
+        default: return NosyPalette.ink
+        }
+    }
+
+    var jelly: Bool { self == .jelly }
+}
+
+/// A soft bean: narrow, round top, fuller and flatter towards the bottom.
+struct BeanShape: Shape {
+    func path(in rect: CGRect) -> Path {
+        let w = rect.width, h = rect.height, x = rect.minX, y = rect.minY
+        var p = Path()
+        p.move(to: CGPoint(x: x + w / 2, y: y))
+        p.addCurve(to: CGPoint(x: x + w, y: y + h * 0.66),
+                   control1: CGPoint(x: x + w * 0.88, y: y),
+                   control2: CGPoint(x: x + w, y: y + h * 0.34))
+        p.addCurve(to: CGPoint(x: x + w / 2, y: y + h),
+                   control1: CGPoint(x: x + w, y: y + h * 0.94),
+                   control2: CGPoint(x: x + w * 0.78, y: y + h))
+        p.addCurve(to: CGPoint(x: x, y: y + h * 0.66),
+                   control1: CGPoint(x: x + w * 0.22, y: y + h),
+                   control2: CGPoint(x: x, y: y + h * 0.94))
+        p.addCurve(to: CGPoint(x: x + w / 2, y: y),
+                   control1: CGPoint(x: x, y: y + h * 0.34),
+                   control2: CGPoint(x: x + w * 0.12, y: y))
+        p.closeSubpath()
+        return p
+    }
+}
+
 enum NosyPalette {
     static let top = Color(red: 0.70, green: 0.64, blue: 1.0)       // lavender
     static let middle = Color(red: 0.88, green: 0.63, blue: 0.90)   // pink

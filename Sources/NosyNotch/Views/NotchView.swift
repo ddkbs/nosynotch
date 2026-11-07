@@ -44,7 +44,7 @@ struct NotchView: View {
             if model.nosyOutside {
                 NosyHanger(mood: model.nosyMood, gaze: model.gaze, pet: model.pet, tint: model.nosyTint,
                            onPet: { model.petNosy() })
-                    .offset(x: x, y: size.height - 11)
+                    .offset(x: x, y: size.height - 9)
                     .transition(.nosyTar)
             }
             if let splash = splashAt {

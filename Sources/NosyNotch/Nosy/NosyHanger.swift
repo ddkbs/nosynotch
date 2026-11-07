@@ -12,7 +12,7 @@ struct NosyHanger: View {
 
     var body: some View {
         NosyFigure(mood: mood, look: gaze.look, level: Preferences.nosyPet ? pet.level : 1,
-                   accessory: Preferences.nosyAccessory, hanging: true, tint: tint)
+                   accessory: Preferences.nosyAccessory, hanging: true, tint: tint, color: Preferences.nosyColor)
             .frame(width: Self.size.width, height: Self.size.height)
             .contentShape(Rectangle())
             .onTapGesture(perform: onPet)
