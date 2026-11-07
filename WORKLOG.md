@@ -1,5 +1,15 @@
 # WORKLOG
 
+## 2026-11-07 (Nosy + Extras, v0.3.0 vorbereitet)
+- **Nosy** (`Sources/NosyNotch/Nosy/`): Figur in SwiftUI (Bohnen-Körper, Stummelarme, Füßchen, ✦-Antenne, 15 Stimmungen, Accessoires), 8 Farben (Standard Obsidian = Randlicht in Agentenfarbe). Design in 3 Runden mit David abgestimmt (`--nosy-sheet <png>` rendert alle Stimmungen/Farben). Augen im linken Flügel statt Agent-Glyphe, folgen der Maus; Peek bei Maus in der Nähe; schläft nach 10 min (nachts 2 min); hängt unter offener Notch, taucht beim Schließen wie in Teer ein (Splash). Klick = kichern.
+- **Tamagotchi** (`NosyPet`): Energie/XP/Level/Streak in UserDefaults, fertige Tasks füttern (Demo nicht), Energie-Boden 0,12, keine Schuldgefühle. Level-up-Pill auf der Done-Karte. Settings-Seite „Nosy“ (an/aus, Fortschritt + Reset, Farbe, Garderobe).
+- **Extras**: Shelf + AirDrop (Datei-Drag an die Notch), Notices (Laden, 20 %, Bluetooth-Kopfhörer mit L/R/Case – opt-in), Fokus-Timer (Hover-Button, Menüleiste, stummt Agent-Sounds), Kalender (EventKit, opt-in, Heads-up 10 min, Join-Links), **Chat in der Notch** (Transcript lesen, Antwort per ⌘V+Return in die App – braucht Bedienungshilfen – oder `claude --resume -p` / `codex exec resume`). Settings-Seite „Extras“. Info.plist: Kalender- und Bluetooth-Texte.
+- Recorder: neue Szenen nosy, level-up, chat, drop-zone, shelf, meeting, focus, charging, airpods; Szenen höher (Nosy hängt unten). Farbige SF-Symbole verlieren im Recorder (`cacheDisplay`) ihre Farbe → `TintedSymbol` (Bitmap) in Notice-/Drop-Karten.
+- Website: Sektionen „Meet Nosy“ (SVG-Nosy, Farben, Stimmungen, Teer-Sprung) und „Not just agents“ (MP4s aus `public/demo`). README + `docs/animations.md` aktualisiert, Version 0.3.0.
+- Promo-Session hat `promo/REDDIT.md` geschrieben (eigene Commits).
+- **Nicht getestet** (keine echte Interaktion möglich, kein Bildschirm-Recht für Screenshots): echter Datei-Drag aus dem Finder, AirDrop-Dialog, Antwort per Eintippen, Kalender-/Bluetooth-Berechtigungen, Akku-Events. Alles nur offscreen gerendert bzw. gebaut.
+- **Offen:** nichts gepusht, kein Tag, Website nicht deployed (Vercel baut bei Push auf `main`). Für Release: pushen, Tag `v0.3.0`.
+
 ## 2026-11-06 (Fixes nach Security-Check)
 - `EventServer`: Requests mit `Origin`/`Sec-Fetch-Site` → 403 (Browser), `Content-Length` < 0 → 0. Nicht `Sec-Fetch-Mode` prüfen: Node-`fetch` (CLI) schickt `sec-fetch-mode: cors`. Getestet auf Port 7899 (`NosyNotch -port 7899`).
 - Workflow: `NPM_TOKEN` nur noch im Publish-Schritt.
