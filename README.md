@@ -1,7 +1,7 @@
 <h1 align="center">Nosy Notch</h1>
 
 <p align="center">
-  <b>Your MacBook notch keeps an eye on Claude Code, Codex and Cursor –<br>and plays your music while they take a break.</b>
+  <b>Your MacBook notch keeps an eye on Claude Code, Codex and Cursor –<br>with Nosy, a tiny helper who lives in it.</b>
 </p>
 
 <p align="center">
@@ -15,7 +15,9 @@
 Coding agents spend a lot of time working on their own – and then sit there waiting for a "yes" you never saw.
 Nosy Notch turns the black notch of your MacBook into a tiny status display: it slides open while an agent thinks,
 shows which tool it's running, waves when it needs you, and throws confetti when it's done. You can approve a command
-right there, with a click or a nod of your head. And when nothing is going on, the notch becomes a mini music player.
+right there, with a click or a nod of your head – or read the conversation and reply without leaving what you're doing.
+Living in the notch is **Nosy**, a little helper who works along, cheers when a task is done and falls asleep when
+nothing happens. And in between, the notch is your music player, file shelf, focus timer and meeting reminder.
 
 <table>
   <tr>
@@ -29,6 +31,14 @@ right there, with a click or a nod of your head. And when nothing is going on, t
   <tr>
     <td align="center"><img src="docs/gifs/usage.gif" alt="Usage"><br><b>Every session, every limit</b><br><sub>Hover for all sessions, context fill and usage limits</sub></td>
     <td align="center"><img src="docs/gifs/media.gif" alt="Music"><br><b>Music in between</b><br><sub>Spotify / Apple Music, with an equalizer that follows the beat</sub></td>
+  </tr>
+  <tr>
+    <td align="center"><img src="docs/gifs/nosy.gif" alt="Nosy"><br><b>Meet Nosy</b><br><sub>Peeks out, follows your pointer, dives back into the notch</sub></td>
+    <td align="center"><img src="docs/gifs/chat.gif" alt="Chat"><br><b>Reply from the notch</b><br><sub>The conversation and a reply field, right there</sub></td>
+  </tr>
+  <tr>
+    <td align="center"><img src="docs/gifs/drop-zone.gif" alt="Shelf and AirDrop"><br><b>Shelf and AirDrop</b><br><sub>Drag files onto the notch</sub></td>
+    <td align="center"><img src="docs/gifs/meeting.gif" alt="Meeting"><br><b>Your next meeting</b><br><sub>A heads-up 10 minutes before, Join in one click</sub></td>
   </tr>
 </table>
 
@@ -90,8 +100,41 @@ and a head shake denies.
 green dot stays in the notch until you switch to that app or hover the list, and after five minutes you get one gentle
 reminder. Already looking at the app? Then everything stays small and silent.
 
+**Want to answer?** Click **Reply** on the done card (or the bubble next to a session) and the notch shows the
+conversation with a reply field. Your reply is pasted into the session's app and sent – or, if you prefer, run in the
+background with `claude --resume` / `codex exec resume`.
+
 **When nothing's running**, Spotify or Apple Music takes over: cover on the left, equalizer on the right, a full player
 on hover. The agents always win – the music comes back as soon as they're done.
+
+## Meet Nosy
+
+<img src="docs/gifs/nosy.gif" alt="Nosy peeks out, gets petted and dives back into the notch" width="560" align="right">
+
+Nosy is a tiny helper who lives in your notch. Only its eyes look out of the black – they follow your pointer, and
+they change with your agents: focused while one thinks, looking down while it types, a sweat drop on long turns,
+spiral eyes while it compacts, wide eyes and a wave when it needs you, ^^ and a jump when it's done.
+
+When the notch opens, Nosy drips out of the edge and hangs from it by its paws; when it closes, Nosy dives back in
+like into a puddle of tar – splash included. Bring the pointer close and it peeks out; leave it alone for a while
+and it falls asleep (sooner at night). Click it and it giggles.
+
+**Energy, levels and streaks** – every finished task feeds Nosy, days with tasks make a streak, XP unlock a little
+wardrobe (headphones, glasses, cap, bow). Deliberately guilt-free: Nosy never gets sad or sick, a missed day just
+starts a new streak. Eight colours to pick from – Obsidian, the default, glows in the colour of the agent that's
+working. All of it stays in your Mac's settings, and you can turn Nosy off for the classic agent symbols.
+
+<br clear="right">
+
+## More in the notch
+
+- **Shelf and AirDrop** – drag files onto the notch: park them on the shelf and drag them out later, or AirDrop them.
+- **Focus timer** – 15 / 25 / 50 minutes from the hover view or the menu bar, a ring in the notch, agent sounds stay
+  quiet until the break.
+- **Calendar** – your next meeting in the hover view and a heads-up 10 minutes before, with Join for Zoom, Meet,
+  Teams, Webex and FaceTime links. *(Opt-in.)*
+- **Charging and AirPods** – a little animation when you plug in, a heads-up at 20 %, and your headphones with
+  left / right / case battery when they connect. *(Headphones are opt-in.)*
 
 ## Settings
 
@@ -100,13 +143,16 @@ on hover. The agents always win – the music comes back as soon as they're done
 Click the ✦ in the menu bar → **Settings…**
 
 - **Agents** – connect Claude Code, Codex and Cursor
+- **Nosy** – Nosy on or off, energy / levels / streaks, colour and wardrobe
 - **Alerts** – sounds, mute for 1 h / 8 h / ∞, reminders
 - **Permissions** – the notch buttons and head gestures
 - **Usage** – which limits to show, a heads-up when a limit resets, context rings
+- **Extras** – Shelf and AirDrop, how replies are sent, focus timer, battery, headphones, calendar
 - **Music** – player and the live equalizer
 
-Mute is also right in the menu bar menu. Everything that needs a macOS permission (controlling your player, the live
-equalizer, head gestures) is off until you turn it on – or asks only the first time you use it.
+Mute and the focus timer are also right in the menu bar menu. Everything that needs a macOS permission (controlling
+your player, the live equalizer, head gestures, headphones, the calendar, replying by typing into an app) is off until
+you turn it on – or asks only the first time you use it.
 
 <br clear="right">
 
@@ -114,8 +160,11 @@ equalizer, head gestures) is off until you turn it on – or asks only the first
 
 Everything stays on your Mac. The hooks talk to `127.0.0.1` only and nothing is uploaded. The only network requests
 are for album covers (Spotify's public oEmbed with the track ID, Apple's iTunes Search with artist and title). The live equalizer analyses the
-player's audio in memory and records nothing; head gestures only read motion while a request is open. Approvals are
-protected by a secret in `~/.nosynotch/approval-token`, so no other process can answer in your name.
+player's audio in memory and records nothing; head gestures only read motion while a request is open. The calendar,
+headphone batteries and the conversation in the notch are read locally and never sent anywhere; Nosy's progress and the
+shelf live in the app's settings. A reply typed in the notch goes to the session's own app (pasted with ⌘V, your
+clipboard is put back) or to the agent's own CLI. Approvals are protected by a secret in
+`~/.nosynotch/approval-token`, so no other process can answer in your name.
 
 ## How it works
 
@@ -170,6 +219,12 @@ Sources/NosyNotch/
 ├── Approvals.swift                  permission requests waiting for Allow / Deny
 ├── HeadGestures.swift               nod / shake with AirPods
 ├── Usage.swift                      usage limits and context fill
+├── Nosy/                            Nosy: drawing, moods, energy / levels / streaks, hanging + tar dive
+├── Chat.swift                       transcripts → conversation, sending replies
+├── Shelf.swift                      parked files, AirDrop
+├── Notices.swift                    charging, low battery, headphones, meetings
+├── FocusTimer.swift                 Pomodoro timer
+├── CalendarMonitor.swift            next meeting (EventKit)
 ├── NowPlaying.swift                 Spotify / Apple Music: track, cover, controls
 ├── AudioSpectrum.swift              live equalizer: Core Audio tap + FFT
 ├── Notifier.swift                   sounds, banners, mute, bringing the right app to the front

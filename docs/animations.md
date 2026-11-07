@@ -5,7 +5,8 @@ Each animation with the Claude Code hook that triggers it (Codex sends the same 
 
 [Thinking](#thinking) · [Working](#working) · [Needs you](#needs-you) · [Done](#done) · [Error](#error) ·
 [Compacting](#compacting) · [Unseen](#unseen) · [All sessions](#all-sessions-hover) · [Codex & Cursor](#codex--cursor) · [Usage](#usage-limits) · [Music](#music) · [Back to music](#back-to-music) ·
-[Full run](#full-run)
+[Nosy](#nosy) · [Level up](#level-up) · [Reply](#reply-from-the-notch) · [Shelf & AirDrop](#shelf--airdrop) · [Meeting](#meeting) · [Focus](#focus-timer) ·
+[Charging](#charging) · [AirPods](#airpods) · [Full run](#full-run)
 
 ## Thinking
 
@@ -161,6 +162,66 @@ they dance a bouncier made-up beat.
 
 Music plays → Claude gets a prompt and takes over the notch → "Done" → click ✕ → the notch shows the music again.
 Without a click the same happens after 6 seconds.
+
+## Nosy
+
+<img src="gifs/nosy.gif" alt="Nosy" width="560">
+
+**Trigger:** the pointer, hover, a click – and every agent state above
+
+Nosy's eyes sit in the left wing and follow the pointer. Close to the notch Nosy peeks out (energy ring on the right);
+when the notch opens it drips out and hangs from the edge, a click makes it giggle, and when the notch closes it turns
+black, squeezes and dives back in with a splash of tar drops. After 10 minutes without anything (2 at night) it sleeps.
+
+## Level up
+
+<img src="gifs/level-up.gif" alt="Level up" width="560">
+
+**Trigger:** `Stop` with enough XP
+
+Every finished task feeds Nosy. Reaching a level shows a shiny "✦ Level N" on the done card and Nosy cheers.
+
+## Reply from the notch
+
+<img src="gifs/chat.gif" alt="Reply" width="560">
+
+**Trigger:** "Reply" on the done card or the bubble next to a session
+
+The conversation from the session's transcript, refreshed while open, and a reply field.
+
+## Shelf & AirDrop
+
+<img src="gifs/drop-zone.gif" alt="Shelf and AirDrop" width="560">
+
+**Trigger:** dragging files near the notch
+
+Two drop targets. Parked files show in the hover view:
+
+<img src="gifs/shelf.gif" alt="Shelf" width="560">
+
+## Meeting
+
+<img src="gifs/meeting.gif" alt="Meeting" width="560">
+
+**Trigger:** 10 minutes before a calendar event (opt-in)
+
+## Focus timer
+
+<img src="gifs/focus.gif" alt="Focus timer" width="560">
+
+**Trigger:** "25m" in the hover view or the menu bar
+
+## Charging
+
+<img src="gifs/charging.gif" alt="Charging" width="560">
+
+**Trigger:** plugging in (and a heads-up at 20 %)
+
+## AirPods
+
+<img src="gifs/airpods.gif" alt="AirPods" width="560">
+
+**Trigger:** Bluetooth headphones connecting (opt-in)
 
 ## Full run
 
