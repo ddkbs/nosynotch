@@ -37,7 +37,8 @@ jobs:
             --data '{"hook_event_name":"UserPromptSubmit","session_id":"ci","cwd":"/tmp"}' \
             http://127.0.0.1:7823/event
           curl -sf -X POST http://127.0.0.1:7823/quit
-          sleep 1
+          # Give a busy runner up to 5 s to finish quitting.
+          for i in $(seq 1 20); do pgrep -x NosyNotch >/dev/null || break; sleep 0.25; done
           ! pgrep -x NosyNotch
 
       - name: Check npm CLI
