@@ -100,10 +100,33 @@ enum TerminalActivator {
         return candidates
     }
 
+    /// The app instance the session runs in: walk up from the agent's process to the first regular app. Finds the
+    /// right one even with two copies of the same app open (e.g. two Claude accounts).
+    static func hostApp(for session: Session) -> NSRunningApplication? {
+        var pid = session.hostPID
+        for _ in 0..<24 {
+            guard let current = pid, current > 1 else { return nil }
+            if let app = NSRunningApplication(processIdentifier: current), app.activationPolicy == .regular { return app }
+            pid = parentPID(of: current)
+        }
+        return nil
+    }
+
+    private static func parentPID(of pid: pid_t) -> pid_t? {
+        var info = kinfo_proc()
+        var size = MemoryLayout<kinfo_proc>.stride
+        var mib: [Int32] = [CTL_KERN, KERN_PROC, KERN_PROC_PID, pid]
+        guard sysctl(&mib, u_int(mib.count), &info, &size, nil, 0) == 0, size > 0 else { return nil }
+        let parent = info.kp_eproc.e_ppid
+        return parent > 1 ? parent : nil
+    }
+
     /// The app the session runs in (Claude desktop app, terminal, VS Code, ChatGPT …) is the frontmost app.
     static func isFrontmost(_ session: Session) -> Bool {
-        guard let front = NSWorkspace.shared.frontmostApplication?.bundleIdentifier else { return false }
-        return candidates(for: session).contains(front)
+        guard let front = NSWorkspace.shared.frontmostApplication else { return false }
+        if let host = hostApp(for: session) { return host.processIdentifier == front.processIdentifier }
+        guard let bundleID = front.bundleIdentifier else { return false }
+        return candidates(for: session).contains(bundleID)
     }
 
     static func runs(_ session: Session, in bundleID: String) -> Bool {
@@ -111,6 +134,10 @@ enum TerminalActivator {
     }
 
     static func activate(_ session: Session) {
+        if let host = hostApp(for: session) {
+            host.activate()
+            return
+        }
         let candidates = candidates(for: session)
 
         for bundleID in candidates {

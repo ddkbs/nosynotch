@@ -168,6 +168,8 @@ struct Session: Identifiable, Equatable {
     var transcriptPath: String?
     var termProgram: String?
     var hostBundleID: String?
+    /// The agent's process id (from the hook) – leads to the exact app instance.
+    var hostPID: Int32?
     /// Finished while you weren't looking – shown as a green dot until you look at it.
     var unseenSince: Date?
     /// When the session started waiting for you (for the 5-minute reminder).
