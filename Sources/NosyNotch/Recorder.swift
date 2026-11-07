@@ -227,6 +227,13 @@ final class Recorder {
                 location: "Zoom", joinURL: URL(string: "https://zoom.us/j/123"))
     }
 
+    static let demoChat: [ChatMessage] = [
+        ChatMessage(id: "1", role: .user, text: "the login redirect loops after a token refresh – can you fix it?"),
+        ChatMessage(id: "2", role: .assistant, text: "Found it: `AuthGuard` checked the old token before the refresh finished. I moved the refresh in front of the guard and added a regression test."),
+        ChatMessage(id: "3", role: .user, text: "nice. run the whole test suite once more"),
+        ChatMessage(id: "4", role: .assistant, text: "All **214 tests** pass. Ready to commit when you are."),
+    ]
+
     /// Files that exist on every Mac, for the shelf scenes.
     static let demoFiles: [URL] = ["/System/Library/CoreServices/Finder.app", "/etc/hosts",
                                    "/System/Library/Desktop Pictures"]
@@ -342,6 +349,17 @@ final class Recorder {
             ]),
             Scene(name: "meeting", duration: 5, stillAt: 2.2, steps: [], actions: [
                 (0.5, { $0.showNotice(.meeting(Self.demoMeeting)) }),
+            ]),
+            Scene(name: "chat", duration: 6, height: 330, stillAt: 4.0, steps: [
+                (0.0, ev("SessionStart", "chat", cwd: "/Users/you/Projects/api-server")),
+                (0.2, ev("UserPromptSubmit", "chat", cwd: "/Users/you/Projects/api-server")),
+                (0.6, ev("Stop", "chat", cwd: "/Users/you/Projects/api-server",
+                         last: "Fixed the login redirect – the token refresh now runs before the guard.")),
+            ], actions: [
+                (2.0, { model in
+                    guard let session = model.store.sessions["chat"] else { return }
+                    model.previewChat(session, messages: Self.demoChat)
+                }),
             ]),
             Scene(name: "drop-zone", duration: 5, stillAt: 2.0, steps: [], actions: [
                 (0.6, { $0.fileDragNear = true }),

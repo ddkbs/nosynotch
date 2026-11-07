@@ -33,6 +33,7 @@ enum Preferences {
         static let breakMinutes = "breakMinutes"
         static let focusMutesAlerts = "focusMutesAlerts"
         static let calendarEnabled = "calendarEnabled"
+        static let replyMode = "replyMode"
     }
 
     private static let defaults = UserDefaults.standard
@@ -72,6 +73,7 @@ enum Preferences {
             Key.breakMinutes: 5,
             Key.focusMutesAlerts: true,
             Key.calendarEnabled: false,
+            Key.replyMode: "type",
         ])
     }
 
@@ -174,6 +176,10 @@ enum Preferences {
 
     /// Next meeting in the hover view, heads-up 10 minutes before (needs calendar access, so off until you turn it on).
     static var calendarEnabled: Bool { defaults.bool(forKey: Key.calendarEnabled) }
+
+    /// How a reply from the notch reaches the session: "type" = paste it into the session's app (needs
+    /// Accessibility), "background" = `claude --resume` / `codex exec resume`.
+    static var replyMode: String { defaults.string(forKey: Key.replyMode) ?? "type" }
 
     /// Drag files onto the notch: Shelf and AirDrop.
     static var shelfEnabled: Bool { defaults.object(forKey: Key.shelfEnabled) as? Bool ?? true }

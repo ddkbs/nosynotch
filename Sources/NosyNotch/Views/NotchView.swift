@@ -106,7 +106,7 @@ struct NotchView: View {
                             .padding(.top, 2)
                     }
                     if model.showsSessionList {
-                        SessionList(store: store)
+                        SessionList(store: store, onChat: { model.openChat($0) })
                     }
                     if model.showsShelf {
                         ShelfRow(shelf: model.shelf)
@@ -123,6 +123,7 @@ struct NotchView: View {
                     CelebrationView(celebration: celebration,
                                     live: store.sessions[celebration.session.id],
                                     levelUp: model.levelUp,
+                                    onReply: { model.openChat($0) },
                                     onTap: { model.dismissFlash() },
                                     onDismiss: { model.dismissFlash() })
                         .id(celebration.id)
@@ -147,6 +148,15 @@ struct NotchView: View {
                     LimitResetView(reset: reset, onDismiss: { model.dismissFlash() })
                         .id(reset.id)
                         .transition(.blurFade.combined(with: .scale(scale: 0.85, anchor: .top)))
+                }
+            case .chat:
+                if let session = model.chatSession {
+                    ChatView(session: session, messages: model.chatMessages, status: model.chatStatus,
+                             onSend: { model.sendReply($0) },
+                             onOpenApp: { TerminalActivator.activate(session) },
+                             onClose: { model.closeChat() })
+                        .id(session.id)
+                        .transition(.blurFade.combined(with: .scale(scale: 0.9, anchor: .top)))
                 }
             case .notice:
                 if let item = model.notice {
@@ -275,6 +285,7 @@ struct ElapsedText: View {
 
 struct SessionList: View {
     @ObservedObject var store: SessionStore
+    var onChat: ((Session) -> Void)?
 
     var body: some View {
         let sessions = Array(store.ordered.prefix(NotchViewModel.maxRows))
@@ -286,7 +297,7 @@ struct SessionList: View {
                     .frame(height: NotchViewModel.rowHeight)
             }
             ForEach(sessions) { session in
-                SessionRow(session: session, onDismiss: { store.dismiss(session.id) })
+                SessionRow(session: session, onDismiss: { store.dismiss(session.id) }, onChat: { onChat?(session) })
                     .frame(height: NotchViewModel.rowHeight)
                     .transition(.opacity.combined(with: .move(edge: .top)))
             }
@@ -300,6 +311,7 @@ struct SessionList: View {
 struct SessionRow: View {
     let session: Session
     var onDismiss: () -> Void
+    var onChat: (() -> Void)?
     @State private var hovering = false
 
     var body: some View {
@@ -340,6 +352,16 @@ struct SessionRow: View {
                 ContextRing(percent: context)
             }
 
+            if hovering, let onChat {
+                Button(action: onChat) {
+                    Image(systemName: "bubble.left.and.text.bubble.right.fill")
+                        .font(.system(size: 12))
+                        .foregroundStyle(.white.opacity(0.55))
+                }
+                .buttonStyle(.plain)
+                .help("Open the conversation")
+                .transition(.opacity)
+            }
             if hovering {
                 Button(action: onDismiss) {
                     Image(systemName: "xmark.circle.fill")
@@ -417,6 +439,7 @@ struct CelebrationView: View {
     let live: Session?
     /// Nosy reached this level with this task.
     var levelUp: Int?
+    var onReply: ((Session) -> Void)?
     var onTap: () -> Void
     var onDismiss: () -> Void
 
@@ -476,6 +499,14 @@ struct CelebrationView: View {
         }
         .overlay(alignment: .topTrailing) {
             DismissButton(action: onDismiss).padding(.top, 8).padding(.trailing, 14)
+        }
+        .overlay(alignment: .bottomTrailing) {
+            if let onReply {
+                NotchButton(title: "Reply", style: .quiet) { onReply(session) }
+                    .padding(.trailing, 18)
+                    .padding(.bottom, 2)
+                    .opacity(appeared ? 1 : 0)
+            }
         }
         .onAppear {
             withAnimation(.spring(response: 0.45, dampingFraction: 0.8).delay(0.15)) { appeared = true }

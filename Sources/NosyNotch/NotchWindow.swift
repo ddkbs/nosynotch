@@ -1,3 +1,4 @@
+import Combine
 import AppKit
 import SwiftUI
 
@@ -19,7 +20,9 @@ final class NotchPanel: NSPanel {
         collectionBehavior = [.canJoinAllSpaces, .stationary, .fullScreenAuxiliary, .ignoresCycle]
     }
 
-    override var canBecomeKey: Bool { false }
+    /// Only while the chat is open – the reply field needs the keyboard. Non-activating, so the app you're in stays active.
+    var acceptsKeyboard = false
+    override var canBecomeKey: Bool { acceptsKeyboard }
     override var canBecomeMain: Bool { false }
 
     /// Allow the window to overlap the menu bar.
@@ -52,6 +55,7 @@ final class NotchWindowController {
     private var hoverTimer: Timer?
     private var screenObserver: NSObjectProtocol?
     private var dragMonitor: Any?
+    private var chatObserver: AnyCancellable?
     /// The drag pasteboard's change count when the mouse went down – a new drag changes it.
     private var dragChangeCount = 0
     private var draggingFiles = false
@@ -68,6 +72,15 @@ final class NotchWindowController {
 
         layout()
         panel.orderFrontRegardless()
+
+        chatObserver = model.$chatSessionID.sink { [weak self] id in
+            guard let self else { return }
+            self.panel.acceptsKeyboard = id != nil
+            if id == nil, self.panel.isKeyWindow { self.panel.resignKey() }
+            if id != nil {
+                DispatchQueue.main.async { self.panel.makeKey() }
+            }
+        }
 
         screenObserver = NotificationCenter.default.addObserver(
             forName: NSApplication.didChangeScreenParametersNotification, object: nil, queue: .main

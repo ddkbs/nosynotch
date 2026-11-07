@@ -29,6 +29,8 @@ final class NotchViewModel: ObservableObject {
         case notice
         /// Nothing else going on, the focus timer runs: Nosy on the left, the ring on the right.
         case timer
+        /// A session's conversation with a reply field.
+        case chat
     }
 
     struct Celebration: Equatable {
@@ -85,6 +87,7 @@ final class NotchViewModel: ObservableObject {
     static let nosyCardHeight: CGFloat = 40
     static let shelfRowHeight: CGFloat = 46
     static let calendarRowHeight: CGFloat = 34
+    static let chatListHeight: CGFloat = 170
 
     /// Extra height for the Allow / Deny row.
     static let approvalRowHeight: CGFloat = 40
@@ -97,6 +100,84 @@ final class NotchViewModel: ObservableObject {
     @Published private(set) var failure: Session?
     /// "Claude is ready again – 5-hour limit reset".
     @Published private(set) var limitReset: LimitReset?
+
+    // MARK: - Chat
+
+    @Published private(set) var chatSessionID: String?
+    @Published private(set) var chatMessages: [ChatMessage] = []
+    @Published private(set) var chatStatus: String?
+    private var chatTimer: Timer?
+    private var pendingReply: ChatMessage?
+
+    /// The session whose conversation is open (gone when the session ended).
+    var chatSession: Session? { chatSessionID.flatMap { store.sessions[$0] } }
+
+    func openChat(_ session: Session) {
+        store.markSeen(session.id)
+        flashWork?.cancel()
+        celebration = nil
+        chatSessionID = session.id
+        chatStatus = nil
+        pendingReply = nil
+        loadChat()
+        chatTimer?.invalidate()
+        chatTimer = Timer.scheduledTimer(withTimeInterval: 1.5, repeats: true) { [weak self] _ in
+            MainActor.assumeIsolated { self?.loadChat() }
+        }
+        recompute()
+    }
+
+    /// For the recorder: a conversation without a transcript file.
+    func previewChat(_ session: Session, messages: [ChatMessage], status: String? = nil) {
+        celebration = nil
+        chatSessionID = session.id
+        chatMessages = messages
+        chatStatus = status
+        recompute()
+    }
+
+    func closeChat() {
+        chatTimer?.invalidate()
+        chatTimer = nil
+        chatSessionID = nil
+        chatMessages = []
+        recompute()
+    }
+
+    func sendReply(_ text: String) {
+        guard let session = chatSession else { return }
+        pendingReply = ChatMessage(id: "pending-\(UUID().uuidString)", role: .user, text: text)
+        chatMessages.append(pendingReply!)
+        chatStatus = "Sending…"
+        ReplySender.send(text, to: session) { [weak self] result in
+            self?.chatStatus = result.message
+            if case .needsAccessibility = result { self?.pendingReply = nil; self?.loadChat() }
+        }
+    }
+
+    private func loadChat() {
+        guard let session = chatSession else { return closeChat() }
+        let path = session.transcriptPath
+        let fallback = session.lastSummary
+        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+            var messages = path.map { ChatTranscript.messages(at: $0) } ?? []
+            if messages.isEmpty, let fallback { messages = [ChatMessage(id: "summary", role: .assistant, text: fallback)] }
+            DispatchQueue.main.async {
+                MainActor.assumeIsolated {
+                    guard let self, self.chatSessionID == session.id else { return }
+                    // Keep showing a just-sent reply until the transcript has it.
+                    if let pending = self.pendingReply {
+                        if messages.contains(where: { $0.role == .user && $0.text == pending.text }) {
+                            self.pendingReply = nil
+                        } else {
+                            messages.append(pending)
+                        }
+                    }
+                    if messages != self.chatMessages { self.chatMessages = messages }
+                }
+            }
+        }
+    }
 
     struct NoticeItem: Equatable {
         let id = UUID()
@@ -408,6 +489,8 @@ final class NotchViewModel: ObservableObject {
             return CGSize(width: wide, height: notchSize.height + 86)
         case .notice:
             return CGSize(width: wide, height: notchSize.height + 76)
+        case .chat:
+            return CGSize(width: wide, height: notchSize.height + Self.chatListHeight + 108)
         }
     }
 
@@ -559,6 +642,8 @@ final class NotchViewModel: ObservableObject {
         let next: Presentation
         if fileDragNear && Preferences.shelfEnabled {
             next = .dropZone
+        } else if chatSession != nil {
+            next = .chat
         } else if celebration != nil {
             next = .celebrating
         } else if attention != nil {
