@@ -1,6 +1,21 @@
 import SwiftUI
 
 /// The right-hand wing in the compact notch.
+/// A tinted symbol that softly pulses – on the (possibly virtual) clock, so recordings show it too.
+struct PulsingSymbol: View {
+    let name: String
+    var size: CGFloat
+    var color: Color
+
+    var body: some View {
+        ClockTimeline(minimumInterval: 1.0 / 30.0) { now in
+            let t = now.timeIntervalSinceReferenceDate
+            TintedSymbol(name: name, size: size, color: color)
+                .opacity(0.55 + 0.45 * (0.5 + 0.5 * cos(t * 3.4)))
+        }
+    }
+}
+
 struct StatusIndicator: View {
     let session: Session
 
@@ -10,31 +25,17 @@ struct StatusIndicator: View {
             case .thinking:
                 WaveDots(color: session.accent)
             case .tool(let tool):
-                Image(systemName: tool.symbol)
-                    .font(.system(size: 12, weight: .semibold))
-                    .foregroundStyle(session.accent)
-                    .symbolEffect(.pulse)
+                PulsingSymbol(name: tool.symbol, size: 12, color: session.accent)
                     .id(tool.name)
                     .transition(.scale.combined(with: .opacity))
             case .waiting:
-                Image(systemName: "exclamationmark.bubble.fill")
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundStyle(session.accent)
-                    .symbolEffect(.pulse)
+                PulsingSymbol(name: "exclamationmark.bubble.fill", size: 13, color: session.accent)
             case .compacting:
-                Image(systemName: "arrow.down.right.and.arrow.up.left")
-                    .font(.system(size: 12, weight: .semibold))
-                    .foregroundStyle(session.accent)
-                    .symbolEffect(.pulse)
+                PulsingSymbol(name: "arrow.down.right.and.arrow.up.left", size: 12, color: session.accent)
             case .error:
-                Image(systemName: "exclamationmark.triangle.fill")
-                    .font(.system(size: 12, weight: .semibold))
-                    .foregroundStyle(session.accent)
-                    .symbolEffect(.pulse)
+                PulsingSymbol(name: "exclamationmark.triangle.fill", size: 12, color: session.accent)
             case .done:
-                Image(systemName: "checkmark")
-                    .font(.system(size: 12, weight: .bold))
-                    .foregroundStyle(session.accent)
+                TintedSymbol(name: "checkmark", size: 12, weight: .bold, color: session.accent)
             case .idle:
                 Circle().fill(session.accent).frame(width: 5, height: 5)
             }
