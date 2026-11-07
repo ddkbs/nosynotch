@@ -26,6 +26,10 @@
     <string>Only if you turn on the live equalizer: lets the bars in the notch move with the music from Spotify or Music. Nothing is recorded or stored.</string>
     <key>NSAppleEventsUsageDescription</key>
     <string>Lets you control Spotify and Music right from the notch (play/pause, next, previous).</string>
+    <key>NSCalendarsFullAccessUsageDescription</key>
+    <string>Only if you turn on the calendar: shows your next meeting in the notch and reminds you 10 minutes before. Nothing leaves your Mac.</string>
+    <key>NSCalendarsUsageDescription</key>
+    <string>Only if you turn on the calendar: shows your next meeting in the notch and reminds you 10 minutes before. Nothing leaves your Mac.</string>
     <key>NSBluetoothAlwaysUsageDescription</key>
     <string>Only if you turn on headphone alerts: shows your AirPods or headphones and their battery in the notch when they connect.</string>
     <key>NSHighResolutionCapable</key>

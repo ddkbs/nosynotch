@@ -21,6 +21,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         playDemo: { [weak self] in self?.playDemo() },
         settingsChanged: { [weak self] in
             if Preferences.bluetoothEnabled { self?.headphones.start() } else { self?.headphones.stop() }
+            if Preferences.calendarEnabled { self?.model.calendar.start() } else { self?.model.calendar.stop() }
             self?.model.objectWillChange.send()
             self?.model.recompute()
         },
@@ -76,6 +77,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             default: break
             }
         }
+        model.calendar.onNotice = { [weak self] in self?.model.showNotice($0) }
+        model.calendar.start()
         power.onNotice = { [weak self] in self?.model.showNotice($0) }
         power.start()
         headphones.onNotice = { [weak self] in self?.model.showNotice($0) }

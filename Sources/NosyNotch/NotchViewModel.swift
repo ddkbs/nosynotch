@@ -59,6 +59,7 @@ final class NotchViewModel: ObservableObject {
     /// Files parked in the notch.
     let shelf: Shelf
     let focus = FocusTimer.shared
+    let calendar: CalendarMonitor
     /// Files are being dragged and the pointer is near the notch.
     @Published var fileDragNear = false {
         didSet { if oldValue != fileDragNear { recompute() } }
@@ -83,6 +84,7 @@ final class NotchViewModel: ObservableObject {
     static let usageRowHeight: CGFloat = 24
     static let nosyCardHeight: CGFloat = 40
     static let shelfRowHeight: CGFloat = 46
+    static let calendarRowHeight: CGFloat = 34
 
     /// Extra height for the Allow / Deny row.
     static let approvalRowHeight: CGFloat = 40
@@ -180,13 +182,14 @@ final class NotchViewModel: ObservableObject {
     private var quietWork: DispatchWorkItem?
 
     init(store: SessionStore, media: NowPlaying, approvals: ApprovalCenter? = nil, usage: UsageStore? = nil,
-         pet: NosyPet? = nil, shelf: Shelf? = nil) {
+         pet: NosyPet? = nil, shelf: Shelf? = nil, calendar: CalendarMonitor? = nil) {
         self.store = store
         self.media = media
         let pet = pet ?? NosyPet(persist: false)
         self.pet = pet
         let shelf = shelf ?? Shelf(persist: false)
         self.shelf = shelf
+        self.calendar = calendar ?? CalendarMonitor()
         let approvals = approvals ?? ApprovalCenter()
         self.approvals = approvals
         let usage = usage ?? UsageStore(load: false)
@@ -201,6 +204,10 @@ final class NotchViewModel: ObservableObject {
         }
         media.onChange = { [weak self] in self?.recompute() }
         focus.onChange = { [weak self] in self?.recompute() }
+        self.calendar.onChange = { [weak self] in
+            self?.objectWillChange.send()
+            self?.recompute()
+        }
         sleepTimer = Timer.scheduledTimer(withTimeInterval: 15, repeats: true) { [weak self] _ in
             MainActor.assumeIsolated { self?.updateSleep() }
         }
@@ -232,6 +239,9 @@ final class NotchViewModel: ObservableObject {
 
     /// Whether the hover view lists Claude sessions (always, unless there are none but something else fills it).
     var showsSessionList: Bool { !store.sessions.isEmpty || (!hasMedia && !showsNosyCard) }
+
+    /// The next meeting, if the calendar is on and one is coming up.
+    var upcomingMeeting: Meeting? { Preferences.calendarEnabled ? calendar.next : nil }
 
     /// Parked files in the hover view.
     var showsShelf: Bool { Preferences.shelfEnabled && !shelf.isEmpty }
@@ -380,6 +390,7 @@ final class NotchViewModel: ObservableObject {
             var height = notchSize.height + 12
             if showsNosyCard { height += Self.nosyCardHeight }
             if showsShelf { height += Self.shelfRowHeight }
+            if upcomingMeeting != nil { height += Self.calendarRowHeight }
             if hasMedia { height += 2 + Self.mediaCardHeight }
             if showsSessionList {
                 height += 10 + CGFloat(min(max(store.sessions.count, 1), Self.maxRows)) * Self.rowHeight
@@ -558,7 +569,8 @@ final class NotchViewModel: ObservableObject {
             next = .limitReset
         } else if notice != nil {
             next = .notice
-        } else if isHovering && (!store.sessions.isEmpty || hasMedia || Preferences.nosyEnabled || showsShelf) {
+        } else if isHovering && (!store.sessions.isEmpty || hasMedia || Preferences.nosyEnabled || showsShelf
+                                 || upcomingMeeting != nil) {
             next = .expanded
         } else if store.hasActivity || store.hasWaiting || quietDone != nil {
             next = .compact

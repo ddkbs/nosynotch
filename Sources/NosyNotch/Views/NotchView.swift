@@ -98,6 +98,9 @@ struct NotchView: View {
                     if model.showsNosyCard {
                         NosyCard(pet: model.pet, trailing: AnyView(FocusButton(timer: model.focus)))
                     }
+                    if let meeting = model.upcomingMeeting {
+                        CalendarRow(meeting: meeting)
+                    }
                     if model.hasMedia {
                         MediaPlayerCard(media: media)
                             .padding(.top, 2)

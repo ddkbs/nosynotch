@@ -32,6 +32,7 @@ enum Preferences {
         static let focusMinutes = "focusMinutes"
         static let breakMinutes = "breakMinutes"
         static let focusMutesAlerts = "focusMutesAlerts"
+        static let calendarEnabled = "calendarEnabled"
     }
 
     private static let defaults = UserDefaults.standard
@@ -70,6 +71,7 @@ enum Preferences {
             Key.focusMinutes: 25,
             Key.breakMinutes: 5,
             Key.focusMutesAlerts: true,
+            Key.calendarEnabled: false,
         ])
     }
 
@@ -169,6 +171,9 @@ enum Preferences {
 
     /// No agent sounds while a focus session runs (the notch still shows everything).
     static var focusMutesAlerts: Bool { defaults.object(forKey: Key.focusMutesAlerts) as? Bool ?? true }
+
+    /// Next meeting in the hover view, heads-up 10 minutes before (needs calendar access, so off until you turn it on).
+    static var calendarEnabled: Bool { defaults.bool(forKey: Key.calendarEnabled) }
 
     /// Drag files onto the notch: Shelf and AirDrop.
     static var shelfEnabled: Bool { defaults.object(forKey: Key.shelfEnabled) as? Bool ?? true }

@@ -86,6 +86,7 @@ final class Recorder {
         let model = NotchViewModel(store: store, media: NowPlaying(observeSystem: false), pet: SettingsRecorder.demoPet,
                                    shelf: Shelf(persist: false))
         model.notchSize = CGSize(width: 185, height: 32)
+        model.onNoticeAction = { _ in }
         model.hasPhysicalNotch = true
         store.onChange = { model.recompute() }
         store.onTransition = { scene.focused ? model.showQuietly($0) : model.handle($0) }
@@ -220,6 +221,12 @@ final class Recorder {
         }
     }
 
+    static var demoMeeting: Meeting {
+        Meeting(id: "demo", title: "Daily standup", start: Clock.now().addingTimeInterval(10 * 60 + 20),
+                end: Clock.now().addingTimeInterval(25 * 60), color: Color(red: 0.36, green: 0.62, blue: 1),
+                location: "Zoom", joinURL: URL(string: "https://zoom.us/j/123"))
+    }
+
     /// Files that exist on every Mac, for the shelf scenes.
     static let demoFiles: [URL] = ["/System/Library/CoreServices/Finder.app", "/etc/hosts",
                                    "/System/Library/Desktop Pictures"]
@@ -332,6 +339,9 @@ final class Recorder {
                     model.focus.stop()
                     model.showNotice(.timerDone(wasFocus: true, minutes: 25))
                 }),
+            ]),
+            Scene(name: "meeting", duration: 5, stillAt: 2.2, steps: [], actions: [
+                (0.5, { $0.showNotice(.meeting(Self.demoMeeting)) }),
             ]),
             Scene(name: "drop-zone", duration: 5, stillAt: 2.0, steps: [], actions: [
                 (0.6, { $0.fileDragNear = true }),
