@@ -8,7 +8,7 @@
 - Website: Sektionen „Meet Nosy“ (SVG-Nosy, Farben, Stimmungen, Teer-Sprung) und „Not just agents“ (MP4s aus `public/demo`). README + `docs/animations.md` aktualisiert, Version 0.3.0.
 - Promo-Session hat `promo/REDDIT.md` geschrieben (eigene Commits).
 - **Nicht getestet** (keine echte Interaktion möglich, kein Bildschirm-Recht für Screenshots): echter Datei-Drag aus dem Finder, AirDrop-Dialog, Antwort per Eintippen, Kalender-/Bluetooth-Berechtigungen, Akku-Events. Alles nur offscreen gerendert bzw. gebaut.
-- **Offen:** nichts gepusht, kein Tag, Website nicht deployed (Vercel baut bei Push auf `main`). Für Release: pushen, Tag `v0.3.0`.
+- Gepusht + Tag `v0.3.0` (David). CI-Smoke-Test schlug fehl: App lebte >1 s nach `/quit` – vermutlich `EKEventStore()` beim Start (blockiert ohne TCC). Fix: Store lazy, Smoke-Test wartet bis 5 s. Tag muss neu gesetzt werden (kein Release/npm war entstanden).
 
 ## 2026-11-06 (Fixes nach Security-Check)
 - `EventServer`: Requests mit `Origin`/`Sec-Fetch-Site` → 403 (Browser), `Content-Length` < 0 → 0. Nicht `Sec-Fetch-Mode` prüfen: Node-`fetch` (CLI) schickt `sec-fetch-mode: cors`. Getestet auf Port 7899 (`NosyNotch -port 7899`).
