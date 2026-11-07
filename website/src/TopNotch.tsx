@@ -691,7 +691,7 @@ export function TopNotch() {
                   <span className="min-w-0 flex-1">
                     <span className="flex items-center gap-1.5">
                       <span className="text-[15px] font-semibold">Nosy Notch</span>
-                      <span className="text-[12px] font-medium text-violet">v{version ?? "0.2.0"}</span>
+                      <span className="text-[12px] font-medium text-violet">v{version ?? "0.3.0"}</span>
                     </span>
                     <span className="block truncate text-[12px] text-white/55">Your notch, keeping an eye on your agents.</span>
                   </span>
