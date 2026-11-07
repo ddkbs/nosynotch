@@ -13,7 +13,8 @@ final class CalendarMonitor: ObservableObject {
     var onChange: (() -> Void)?
 
     static let headsUpMinutes = 10.0
-    private let store = EKEventStore()
+    /// Created only when the calendar is turned on – an event store talks to the privacy daemon right away.
+    private lazy var store = EKEventStore()
     private var timer: Timer?
     private var observer: NSObjectProtocol?
     private var notified = Set<String>()
