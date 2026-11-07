@@ -489,6 +489,14 @@ struct CelebrationView: View {
             .opacity(appeared ? 1 : 0)
 
             Spacer(minLength: 0)
+
+            // Part of the row (not an overlay), so a long answer wraps before it instead of running under it.
+            if let onReply {
+                NotchButton(title: "Reply", style: .quiet) { onReply(session) }
+                    .fixedSize()
+                    .padding(.top, 24)
+                    .opacity(appeared ? 1 : 0)
+            }
         }
         .padding(.horizontal, 22)
         .padding(.top, 14)
@@ -499,14 +507,6 @@ struct CelebrationView: View {
         }
         .overlay(alignment: .topTrailing) {
             DismissButton(action: onDismiss).padding(.top, 8).padding(.trailing, 14)
-        }
-        .overlay(alignment: .bottomTrailing) {
-            if let onReply {
-                NotchButton(title: "Reply", style: .quiet) { onReply(session) }
-                    .padding(.trailing, 18)
-                    .padding(.bottom, 2)
-                    .opacity(appeared ? 1 : 0)
-            }
         }
         .onAppear {
             withAnimation(.spring(response: 0.45, dampingFraction: 0.8).delay(0.15)) { appeared = true }
