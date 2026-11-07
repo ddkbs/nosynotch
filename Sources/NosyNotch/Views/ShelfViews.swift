@@ -40,9 +40,7 @@ private struct DropTile: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            Image(systemName: symbol)
-                .font(.system(size: 20, weight: .semibold))
-                .foregroundStyle(tint)
+            TintedSymbol(name: symbol, size: 20, color: tint)
                 .scaleEffect(targeted ? 1.2 : 1)
                 .offset(y: targeted ? -2 : 0)
                 .frame(width: 30)

@@ -109,16 +109,12 @@ struct NoticeView: View {
         case .timerDone:
             ZStack {
                 Circle().fill(NosyPalette.top.opacity(0.18))
-                Image(systemName: "timer")
-                    .font(.system(size: 19, weight: .semibold))
-                    .foregroundStyle(NosyPalette.top)
+                TintedSymbol(name: "timer", size: 19, color: NosyPalette.top)
             }
         case .meeting(let m):
             ZStack {
                 Circle().fill(m.color.opacity(0.18))
-                Image(systemName: m.joinURL == nil ? "calendar" : "video.fill")
-                    .font(.system(size: 17, weight: .semibold))
-                    .foregroundStyle(m.color)
+                TintedSymbol(name: m.joinURL == nil ? "calendar" : "video.fill", size: 17, color: m.color)
             }
         }
     }
@@ -169,5 +165,28 @@ struct ChargingIcon: View {
                 .scaleEffect(filled ? 1 : 0.4)
         }
         .onAppear { withAnimation(.easeOut(duration: 0.9).delay(0.15)) { filled = true } }
+    }
+}
+
+/// An SF Symbol drawn as a tinted bitmap – looks the same on screen and in the GIF recorder (whose snapshots
+/// lose the colour of plain tinted symbols).
+struct TintedSymbol: View {
+    let name: String
+    var size: CGFloat
+    var weight: NSFont.Weight = .semibold
+    var color: Color
+
+    var body: some View {
+        if let image = Self.image(name, size: size, weight: weight, color: NSColor(color)) {
+            Image(nsImage: image)
+        } else {
+            Image(systemName: name).font(.system(size: size, weight: .semibold)).foregroundStyle(color)
+        }
+    }
+
+    static func image(_ name: String, size: CGFloat, weight: NSFont.Weight, color: NSColor) -> NSImage? {
+        let config = NSImage.SymbolConfiguration(pointSize: size, weight: weight)
+            .applying(NSImage.SymbolConfiguration(paletteColors: [color]))
+        return NSImage(systemSymbolName: name, accessibilityDescription: nil)?.withSymbolConfiguration(config)
     }
 }

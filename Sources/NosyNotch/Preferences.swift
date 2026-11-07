@@ -29,6 +29,9 @@ enum Preferences {
         static let nosyColor = "nosyColor"
         static let batteryEnabled = "batteryEnabled"
         static let bluetoothEnabled = "bluetoothEnabled"
+        static let focusMinutes = "focusMinutes"
+        static let breakMinutes = "breakMinutes"
+        static let focusMutesAlerts = "focusMutesAlerts"
     }
 
     private static let defaults = UserDefaults.standard
@@ -64,6 +67,9 @@ enum Preferences {
             Key.nosyColor: NosyColor.obsidian.rawValue,
             Key.batteryEnabled: true,
             Key.bluetoothEnabled: false,
+            Key.focusMinutes: 25,
+            Key.breakMinutes: 5,
+            Key.focusMutesAlerts: true,
         ])
     }
 
@@ -157,6 +163,12 @@ enum Preferences {
 
     /// Headphones connecting via Bluetooth (needs the Bluetooth permission, so off until you turn it on).
     static var bluetoothEnabled: Bool { defaults.bool(forKey: Key.bluetoothEnabled) }
+
+    static var focusMinutes: Int { max(1, defaults.object(forKey: Key.focusMinutes) as? Int ?? 25) }
+    static var breakMinutes: Int { max(1, defaults.object(forKey: Key.breakMinutes) as? Int ?? 5) }
+
+    /// No agent sounds while a focus session runs (the notch still shows everything).
+    static var focusMutesAlerts: Bool { defaults.object(forKey: Key.focusMutesAlerts) as? Bool ?? true }
 
     /// Drag files onto the notch: Shelf and AirDrop.
     static var shelfEnabled: Bool { defaults.object(forKey: Key.shelfEnabled) as? Bool ?? true }

@@ -27,6 +27,8 @@ final class NotchViewModel: ObservableObject {
         case dropZone
         /// A small system moment: power, headphones, focus timer, meeting.
         case notice
+        /// Nothing else going on, the focus timer runs: Nosy on the left, the ring on the right.
+        case timer
     }
 
     struct Celebration: Equatable {
@@ -56,6 +58,7 @@ final class NotchViewModel: ObservableObject {
     let pet: NosyPet
     /// Files parked in the notch.
     let shelf: Shelf
+    let focus = FocusTimer.shared
     /// Files are being dragged and the pointer is near the notch.
     @Published var fileDragNear = false {
         didSet { if oldValue != fileDragNear { recompute() } }
@@ -197,6 +200,7 @@ final class NotchViewModel: ObservableObject {
             self.decide(approval, gesture == .nod ? .allow : .deny)
         }
         media.onChange = { [weak self] in self?.recompute() }
+        focus.onChange = { [weak self] in self?.recompute() }
         sleepTimer = Timer.scheduledTimer(withTimeInterval: 15, repeats: true) { [weak self] _ in
             MainActor.assumeIsolated { self?.updateSleep() }
         }
@@ -269,6 +273,7 @@ final class NotchViewModel: ObservableObject {
             }
         }
         if limitIsUsedUp { return .exhausted }
+        if focus.isFocusing { return .working }
         if hasMedia && media.isPlaying { return .grooving }
         if isAsleep { return .sleeping }
         if Preferences.nosyPet && pet.isLowOnEnergy { return .sleepy }
@@ -279,7 +284,7 @@ final class NotchViewModel: ObservableObject {
     var nosyOutside: Bool {
         guard Preferences.nosyEnabled else { return false }
         switch presentation {
-        case .hidden, .compact, .media, .peek: return false
+        case .hidden, .compact, .media, .peek, .timer: return false
         default: return true
         }
     }
@@ -369,7 +374,7 @@ final class NotchViewModel: ObservableObject {
         switch presentation {
         case .hidden:
             return CGSize(width: notchSize.width + 2 * flare, height: hasPhysicalNotch ? notchSize.height : 0)
-        case .compact, .media, .peek:
+        case .compact, .media, .peek, .timer:
             return CGSize(width: compactWidth, height: notchSize.height)
         case .expanded:
             var height = notchSize.height + 12
@@ -406,14 +411,14 @@ final class NotchViewModel: ObservableObject {
 
     var bottomRadius: CGFloat {
         switch presentation {
-        case .hidden, .compact, .media, .peek: return min(12, notchSize.height * 0.38)
+        case .hidden, .compact, .media, .peek, .timer: return min(12, notchSize.height * 0.38)
         default: return 26
         }
     }
 
     private static func topRadius(for p: Presentation) -> CGFloat {
         switch p {
-        case .hidden, .compact, .media, .peek: return 6
+        case .hidden, .compact, .media, .peek, .timer: return 6
         default: return 14
         }
     }
@@ -557,6 +562,8 @@ final class NotchViewModel: ObservableObject {
             next = .expanded
         } else if store.hasActivity || store.hasWaiting || quietDone != nil {
             next = .compact
+        } else if focus.isRunning {
+            next = .timer
         } else if hasMedia && (media.isPlaying || Preferences.mediaShowWhenPaused) {
             next = .media
         } else if !store.unseen.isEmpty {

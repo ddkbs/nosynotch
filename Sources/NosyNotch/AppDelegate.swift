@@ -65,6 +65,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         }
 
         windowController = NotchWindowController(model: model)
+        FocusTimer.shared.onFinished = { [weak self] phase, minutes in
+            self?.model.showNotice(.timerDone(wasFocus: phase == .focus, minutes: minutes))
+            if !Preferences.isMuted, let sound = NSSound(named: "Glass") { sound.play() }
+        }
+        model.onNoticeAction = { notice in
+            switch notice {
+            case .timerDone(let wasFocus, _): FocusTimer.shared.start(wasFocus ? .rest : .focus)
+            case .meeting(let meeting): if let url = meeting.joinURL { NSWorkspace.shared.open(url) }
+            default: break
+            }
+        }
         power.onNotice = { [weak self] in self?.model.showNotice($0) }
         power.start()
         headphones.onNotice = { [weak self] in self?.model.showNotice($0) }
@@ -192,6 +203,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             mute.submenu = sub
             menu.addItem(mute)
         }
+        let focus = NSMenuItem(title: FocusTimer.shared.isRunning ? "Focus timer (\(FocusTimer.shared.remainingText) left)" : "Focus timer",
+                               action: nil, keyEquivalent: "")
+        let focusMenu = NSMenu()
+        if FocusTimer.shared.isRunning {
+            focusMenu.addItem(item("Stop", #selector(stopFocus)))
+        } else {
+            for minutes in [15, 25, 50] {
+                let entry = item("\(minutes) minutes", #selector(startFocus(_:)))
+                entry.representedObject = minutes
+                focusMenu.addItem(entry)
+            }
+        }
+        focus.submenu = focusMenu
+        menu.addItem(focus)
         menu.addItem(item("Settings…", #selector(openSettings), key: ","))
         menu.addItem(item("Play demo", #selector(playDemo), key: "d"))
         menu.addItem(.separator())
@@ -225,6 +250,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     func updateStatusIcon() {
         let symbol = Preferences.isMuted ? "speaker.slash" : "sparkle"
         statusItem?.button?.image = NSImage(systemSymbolName: symbol, accessibilityDescription: "Nosy Notch")
+    }
+
+    @objc private func startFocus(_ sender: NSMenuItem) {
+        FocusTimer.shared.start(.focus, minutes: sender.representedObject as? Int)
+    }
+
+    @objc private func stopFocus() {
+        FocusTimer.shared.stop()
     }
 
     @objc private func openSettings() {

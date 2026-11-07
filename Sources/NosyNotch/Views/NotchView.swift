@@ -96,7 +96,7 @@ struct NotchView: View {
             case .expanded:
                 VStack(spacing: 0) {
                     if model.showsNosyCard {
-                        NosyCard(pet: model.pet)
+                        NosyCard(pet: model.pet, trailing: AnyView(FocusButton(timer: model.focus)))
                     }
                     if model.hasMedia {
                         MediaPlayerCard(media: media)
@@ -156,7 +156,7 @@ struct NotchView: View {
                 DropZoneView(onShelf: { urls in model.shelf.add(urls); model.fileDragNear = false },
                              onAirDrop: { urls in model.fileDragNear = false; AirDrop.send(urls) })
                     .transition(.blurFade.combined(with: .scale(scale: 0.85, anchor: .top)))
-            case .hidden, .compact, .media, .peek:
+            case .hidden, .compact, .media, .peek, .timer:
                 EmptyView()
             }
         }
@@ -220,7 +220,10 @@ struct NotchView: View {
             Spacer(minLength: model.notchSize.width)
 
             ZStack {
-                if model.presentation == .peek {
+                if model.presentation == .timer {
+                    FocusRing(timer: model.focus)
+                        .transition(.scale(scale: 0.2).combined(with: .opacity))
+                } else if model.presentation == .peek {
                     NosyPeekBadge(asleep: model.isAsleep, energy: model.pet.energy, showsEnergy: Preferences.nosyPet)
                         .transition(.scale(scale: 0.2).combined(with: .opacity))
                 } else if visible, let primary {

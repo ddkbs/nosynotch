@@ -55,7 +55,8 @@ enum Notifier {
     }
 
     private static func play(_ name: String, if enabled: Bool, volume: Float = 1) {
-        guard enabled, !Preferences.isMuted, let sound = NSSound(named: NSSound.Name(name))?.copy() as? NSSound else { return }
+        let focusing = FocusTimer.shared.isFocusing && Preferences.focusMutesAlerts
+        guard enabled, !Preferences.isMuted, !focusing, let sound = NSSound(named: NSSound.Name(name))?.copy() as? NSSound else { return }
         sound.volume = volume
         sound.play()
     }

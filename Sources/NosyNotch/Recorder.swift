@@ -326,6 +326,13 @@ final class Recorder {
                                               batteries: [.init(label: "L", percent: 82), .init(label: "R", percent: 79),
                                                           .init(label: "Case", percent: 46)])) }),
             ]),
+            Scene(name: "focus", duration: 6, stillAt: 4.5, steps: [], actions: [
+                (0.4, { $0.focus.start(.focus, minutes: 25) }),
+                (3.0, { model in
+                    model.focus.stop()
+                    model.showNotice(.timerDone(wasFocus: true, minutes: 25))
+                }),
+            ]),
             Scene(name: "drop-zone", duration: 5, stillAt: 2.0, steps: [], actions: [
                 (0.6, { $0.fileDragNear = true }),
                 (3.2, { model in
