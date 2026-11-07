@@ -1,5 +1,13 @@
 # WORKLOG
 
+## 2026-11-07 (Reply bei zwei Claude-Instanzen)
+- Ursache: David hat zwei Instanzen von `Claude.app` (gleiche Bundle-ID, zweite mit `--user-data-dir=…/Claude-Zweit`). Reply/Klick hat per Bundle-ID die erste aktiviert → falsches Fenster.
+- Fix: Claude- und Cursor-Hooks schicken `X-Host-Pid: $PPID`; die App geht die Prozesskette hoch bis zur ersten regulären App (`TerminalActivator.hostApp`) und aktiviert genau die. Codex-Hooks bewusst unverändert (geänderte Hooks müssten in Codex neu vertraut werden). CLI baut identischen Befehl (geprüft).
+- App ersetzt beim Start eigene veraltete Hooks durch den aktuellen Befehl (nur wo schon verbunden). `~/.claude` und `~/.claude-zweit` sind aktualisiert.
+- Panne beim Testen: `--install-hooks` mit `CFFIXED_USER_HOME` hat wegen `CLAUDE_CONFIG_DIR` echte Dateien angefasst; `~/.cursor/hooks.json` aus dem Backup zurückgesetzt (war leer), `~/.claude-zweit` nur eigene Hooks geändert.
+- Nach jedem lokalen Build: Bedienungshilfen-Recht für die Dev-App neu setzen (neue ad-hoc-Signatur), sonst kann Reply nicht tippen.
+- **Offen:** Reply real testen; für andere Nutzer braucht es ein Release (v0.3.1) + npm, sonst fehlt die PID im Hook. Nicht gepusht.
+
 ## 2026-11-07 (Nosy + Extras, v0.3.0 vorbereitet)
 - **Nosy** (`Sources/NosyNotch/Nosy/`): Figur in SwiftUI (Bohnen-Körper, Stummelarme, Füßchen, ✦-Antenne, 15 Stimmungen, Accessoires), 8 Farben (Standard Obsidian = Randlicht in Agentenfarbe). Design in 3 Runden mit David abgestimmt (`--nosy-sheet <png>` rendert alle Stimmungen/Farben). Augen im linken Flügel statt Agent-Glyphe, folgen der Maus; Peek bei Maus in der Nähe; schläft nach 10 min (nachts 2 min); hängt unter offener Notch, taucht beim Schließen wie in Teer ein (Splash). Klick = kichern.
 - **Tamagotchi** (`NosyPet`): Energie/XP/Level/Streak in UserDefaults, fertige Tasks füttern (Demo nicht), Energie-Boden 0,12, keine Schuldgefühle. Level-up-Pill auf der Done-Karte. Settings-Seite „Nosy“ (an/aus, Fortschritt + Reset, Farbe, Garderobe).
