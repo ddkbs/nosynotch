@@ -211,3 +211,21 @@ body {
     transform: translateX(480%) skewX(-12deg);
   }
 }
+
+/* Nosy */
+@keyframes nosy-swing { 0%, 100% { transform: rotate(-12deg); } 50% { transform: rotate(12deg); } }
+@keyframes nosy-wave { 0%, 100% { transform: rotate(-14deg); } 50% { transform: rotate(14deg); } }
+@keyframes nosy-antenna { 0%, 100% { transform: rotate(-6deg); } 50% { transform: rotate(6deg); } }
+@keyframes nosy-glow { 0%, 100% { opacity: 0.35; } 50% { opacity: 1; } }
+@keyframes nosy-bob { 0%, 100% { transform: translateY(0) rotate(-3deg); } 50% { transform: translateY(1.5px) rotate(3deg); } }
+@keyframes nosy-hop { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-7px); } }
+.nosy-swing-l { animation: nosy-swing 2.8s ease-in-out infinite; }
+.nosy-swing-r { animation: nosy-swing 2.8s ease-in-out infinite reverse; }
+.nosy-wave { animation: nosy-wave 0.7s ease-in-out infinite; }
+.nosy-antenna { animation: nosy-antenna 4.8s ease-in-out infinite; }
+.nosy-glow { animation: nosy-glow 2.5s ease-in-out infinite; }
+.nosy-sway { animation: nosy-bob 3.6s ease-in-out infinite; transform-origin: 50% 0%; }
+.nosy-hop { animation: nosy-hop 0.5s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) {
+  .nosy-swing-l, .nosy-swing-r, .nosy-wave, .nosy-antenna, .nosy-glow, .nosy-sway, .nosy-hop { animation: none; }
+}

@@ -6,6 +6,8 @@ import { INSTALL_COMMAND, openInstall, REPO_URL, up } from "./lib";
 import { LogoMark } from "./Logo";
 import { SiteMenuBar } from "./MenuBar";
 import { Agents } from "./sections/Agents";
+import { Extras } from "./sections/Extras";
+import { MeetNosy } from "./sections/MeetNosy";
 import { Moments } from "./sections/Moments";
 import { Nod } from "./sections/Nod";
 import Magnet from "./vendor/Magnet";
@@ -108,8 +110,8 @@ function Hero() {
           <span className="text-drape">Your notch watches.</span>
         </motion.h1>
         <motion.p {...up(0.22)} className="mt-7 max-w-[52ch] text-[clamp(15px,1.5vw,18.5px)] leading-relaxed text-white/60">
-          Nosy Notch turns your MacBook's notch into a tiny live display: what your agents are doing,
-          a click to allow their commands, and your music while they rest.
+          Nosy Notch turns your MacBook's notch into a tiny live display – with Nosy, a little helper who
+          lives in it: what your agents are doing, a click to allow or reply, and your music while they rest.
         </motion.p>
         <motion.div {...up(0.32)} className="mt-10 flex flex-wrap items-center justify-center gap-3">
           <PrimaryButton onClick={openInstall}>Get Nosy Notch</PrimaryButton>
@@ -214,6 +216,38 @@ export default function App() {
             body="The real notch, rebuilt from the app's code. Pick a moment, or just watch. When it asks for permission, answer it."
           />
           <Moments />
+        </section>
+
+        <section id="nosy" className="scroll-mt-20 pt-36">
+          <SectionHead
+            kicker="Meet Nosy"
+            color="#E0A0E6"
+            title={
+              <>
+                A tiny helper
+                <br />
+                <span className="text-white/45">that lives in your notch.</span>
+              </>
+            }
+            body="Nosy looks out of the notch, follows your pointer and works along with your agents. Go on, poke it."
+          />
+          <MeetNosy />
+        </section>
+
+        <section id="extras" className="scroll-mt-20 pt-36">
+          <SectionHead
+            kicker="And more"
+            color="#73D9F2"
+            title={
+              <>
+                Not just agents.
+                <br />
+                <span className="text-white/45">Everything that deserves a glance.</span>
+              </>
+            }
+            body="Recorded straight from the app. The ones that need a macOS permission stay off until you turn them on."
+          />
+          <Extras />
         </section>
 
         <section id="agents" className="scroll-mt-20 pt-36">
