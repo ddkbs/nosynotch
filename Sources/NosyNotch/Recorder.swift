@@ -516,7 +516,7 @@ enum SettingsRecorder {
         let actions = SettingsWindowController.Actions(statusLine: { "Listening on 127.0.0.1:7823 · 3 sessions" },
                                                        playDemo: {}, settingsChanged: {}, muteChanged: {},
                                                        pet: Self.demoPet)
-        let pages: [SettingsPage] = [.agents, .nosy, .alerts, .permissions, .usage, .music]
+        let pages: [SettingsPage] = [.agents, .nosy, .alerts, .permissions, .usage, .extras, .music]
         let dir = output.appendingPathComponent("settings", isDirectory: true)
         try? FileManager.default.removeItem(at: dir)
         try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)

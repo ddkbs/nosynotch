@@ -43,7 +43,7 @@ final class SettingsWindowController {
 }
 
 enum SettingsPage: String, CaseIterable, Identifiable {
-    case agents, nosy, alerts, permissions, usage, music, general
+    case agents, nosy, alerts, permissions, usage, extras, music, general
 
     var id: String { rawValue }
 
@@ -51,6 +51,7 @@ enum SettingsPage: String, CaseIterable, Identifiable {
         switch self {
         case .agents: return "Agents"
         case .nosy: return "Nosy"
+        case .extras: return "Extras"
         case .alerts: return "Alerts"
         case .permissions: return "Permissions"
         case .usage: return "Usage"
@@ -63,6 +64,7 @@ enum SettingsPage: String, CaseIterable, Identifiable {
         switch self {
         case .agents: return "sparkles"
         case .nosy: return "face.smiling"
+        case .extras: return "square.grid.2x2"
         case .alerts: return "bell.badge"
         case .permissions: return "hand.raised"
         case .usage: return "gauge.with.dots.needle.50percent"
@@ -75,6 +77,7 @@ enum SettingsPage: String, CaseIterable, Identifiable {
         switch self {
         case .agents: return Theme.claude
         case .nosy: return NosyPalette.middle
+        case .extras: return Color(red: 0.45, green: 0.85, blue: 0.95)
         case .alerts: return Theme.success
         case .permissions: return Theme.amber
         case .usage: return Theme.codex
@@ -124,6 +127,7 @@ struct SettingsView: View {
         switch page {
         case .agents: AgentsPage(actions: actions)
         case .nosy: NosyPage(actions: actions)
+        case .extras: ExtrasPage(actions: actions)
         case .alerts: AlertsPage(actions: actions)
         case .permissions: PermissionsPage()
         case .usage: UsagePage(actions: actions)
@@ -964,6 +968,71 @@ private struct MusicPage: View {
             .frame(maxWidth: .infinity)
             .padding(.vertical, 14)
             .background(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(Color.black))
+        }
+    }
+
+    private func bind(_ value: Binding<Bool>) -> Binding<Bool> {
+        Binding(get: { value.wrappedValue }, set: { value.wrappedValue = $0; actions.settingsChanged() })
+    }
+}
+
+// MARK: - Extras
+
+private struct ExtrasPage: View {
+    let actions: SettingsWindowController.Actions
+
+    @AppStorage(Preferences.Key.shelfEnabled) private var shelf = true
+    @AppStorage(Preferences.Key.batteryEnabled) private var battery = true
+    @AppStorage(Preferences.Key.bluetoothEnabled) private var bluetooth = false
+    @AppStorage(Preferences.Key.calendarEnabled) private var calendar = false
+    @AppStorage(Preferences.Key.focusMinutes) private var focusMinutes = 25
+    @AppStorage(Preferences.Key.breakMinutes) private var breakMinutes = 5
+    @AppStorage(Preferences.Key.focusMutesAlerts) private var focusMutes = true
+    @AppStorage(Preferences.Key.replyMode) private var replyMode = "type"
+
+    private let tint = SettingsPage.extras.tint
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 18) {
+            Card(title: "Files", footer: "Drag files onto the notch: park them on the shelf and drag them out later, or AirDrop them. Only references are kept.") {
+                Row(title: "Shelf and AirDrop", divider: false) { NotchToggle(isOn: bind($shelf), tint: tint) }
+            }
+
+            Card(title: "Reply from the notch", footer: replyMode == "type"
+                 ? "Your reply is pasted into the session's app and sent – macOS asks once for Accessibility."
+                 : "Your reply runs in the background with claude --resume / codex exec resume. The open terminal doesn't show it, the notch does.") {
+                Row(title: "Send replies by", divider: false) {
+                    Segments(options: [("type", "Typing into the app"), ("background", "Running in the background")],
+                             selection: Binding(get: { replyMode }, set: { replyMode = $0; actions.settingsChanged() }), tint: tint)
+                }
+            }
+
+            Card(title: "Focus timer", footer: "Start it from the hover view or the menu bar ✦.") {
+                Row(title: "Focus") {
+                    Segments(options: [(15, "15 min"), (25, "25 min"), (50, "50 min")],
+                             selection: Binding(get: { focusMinutes }, set: { focusMinutes = $0; actions.settingsChanged() }), tint: tint)
+                }
+                Row(title: "Break") {
+                    Segments(options: [(5, "5 min"), (10, "10 min"), (15, "15 min")],
+                             selection: Binding(get: { breakMinutes }, set: { breakMinutes = $0; actions.settingsChanged() }), tint: tint)
+                }
+                Row(title: "Quiet while focusing", subtitle: "No agent sounds – the notch still shows everything", divider: false) {
+                    NotchToggle(isOn: bind($focusMutes), tint: tint)
+                }
+            }
+
+            Card(title: "Around your Mac", footer: "Headphones and the calendar need a macOS permission, so they're off until you turn them on. Nothing leaves your Mac.") {
+                Row(title: "Charging and low battery", subtitle: "A little animation when you plug in, a heads-up at 20 %") {
+                    NotchToggle(isOn: bind($battery), tint: tint)
+                }
+                Row(title: "Headphones", subtitle: "AirPods and other Bluetooth headphones with their battery when they connect") {
+                    NotchToggle(isOn: bind($bluetooth), tint: tint)
+                }
+                Row(title: "Calendar", subtitle: "Your next meeting in the hover view, a heads-up 10 minutes before, Join for video calls",
+                    divider: false) {
+                    NotchToggle(isOn: bind($calendar), tint: tint)
+                }
+            }
         }
     }
 
