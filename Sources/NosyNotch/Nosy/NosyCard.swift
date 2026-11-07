@@ -14,7 +14,7 @@ struct NosyCard: View {
                  text: pet.streak == 1 ? "1 day" : "\(pet.streak) days", help: "Streak · best \(pet.state.bestStreak)")
             stat(symbol: "checkmark.circle.fill", color: Theme.success,
                  text: "\(pet.tasksToday) today", help: "Tasks finished today")
-            if pet.secondsToday >= 60 {
+            if pet.secondsToday >= 60, trailing == nil {
                 stat(symbol: "clock.fill", color: .white.opacity(0.55), text: Self.hours(pet.secondsToday),
                      help: "Agent time today")
             }
@@ -39,6 +39,7 @@ struct NosyCard: View {
             Text("Lv \(pet.level)")
                 .font(.system(size: 12, weight: .bold, design: .rounded))
                 .foregroundStyle(.white)
+                .fixedSize()
         }
         .help("Level \(pet.level) – \(Int(pet.levelProgress * 100)) % to the next")
     }

@@ -15,7 +15,7 @@ final class Recorder {
     struct Scene {
         let name: String
         let duration: TimeInterval
-        var height: CGFloat = 180
+        var height: CGFloat = 214
         /// Seconds after which the pointer "hovers" the notch (nil = never).
         var hoverAt: TimeInterval?
         /// Seconds after which a celebration / alert flash is dismissed (used to set up the hover list).
@@ -250,6 +250,24 @@ final class Recorder {
         let prompt = ev("UserPromptSubmit")
 
         return [
+            Scene(name: "nosy", duration: 8, height: 290, stillAt: 3.6, steps: [], actions: [
+                (0.3, { $0.updateGaze(mouse: CGPoint(x: -150, y: -50), notchCenter: .zero) }),
+                (1.0, { $0.updateGaze(mouse: CGPoint(x: 160, y: -40), notchCenter: .zero) }),
+                (1.7, { $0.updateGaze(mouse: CGPoint(x: 20, y: -30), notchCenter: .zero) }),
+                (2.2, { $0.isHovering = true }),
+                (4.0, { $0.petNosy() }),
+                (5.8, { $0.isHovering = false }),
+                (6.6, { $0.updateGaze(mouse: CGPoint(x: -120, y: -90), notchCenter: .zero) }),
+            ]),
+            Scene(name: "level-up", duration: 6, stillAt: 3.2, steps: [
+                (0.0, ev("SessionStart")),
+                (0.3, prompt),
+                (1.0, ev("PreToolUse", tool: "Edit", input: ["file_path": "\(cwd)/Sources/NotchView.swift"])),
+                (1.8, ev("PostToolUse", tool: "Edit")),
+                (2.2, ev("Stop", last: "Nosy's new look is in – eight colours to pick from.")),
+            ], actions: [
+                (2.21, { $0.celebrateLevel(7) }),
+            ]),
             Scene(name: "thinking", duration: 4.5, stillAt: 3.0, steps: [
                 (0.0, ev("SessionStart")),
                 (0.6, prompt),
@@ -302,7 +320,7 @@ final class Recorder {
                 (0.3, prompt),
                 (1.6, ev("StopFailure", error: "rate_limit", details: "429 Too Many Requests")),
             ]),
-            Scene(name: "hover", duration: 6, height: 240, hoverAt: 1.2, dismissFlashAt: 0.1, stillAt: 4.5, steps: [
+            Scene(name: "hover", duration: 6, height: 290, hoverAt: 1.2, dismissFlashAt: 0.1, stillAt: 4.5, steps: [
                 (0.0, ev("UserPromptSubmit", "a")),
                 (0.0, ev("PreToolUse", "a", tool: "Edit", input: ["file_path": "\(cwd)/Sources/NotchView.swift"])),
                 (0.0, ev("UserPromptSubmit", "b", cwd: "/Users/you/Projects/api-server")),
@@ -312,7 +330,7 @@ final class Recorder {
                 (0.0, ev("PostToolUse", "c", agent: .cursor, cwd: "/Users/you/Projects/website", tool: "Shell")),
                 (0.0, ev("Stop", "c", agent: .cursor, cwd: "/Users/you/Projects/website", last: "Build succeeded.")),
             ]),
-            Scene(name: "codex", duration: 10, height: 200, hoverAt: 6.6, dismissFlashAt: 6.5, stillAt: 8.8, steps: [
+            Scene(name: "codex", duration: 10, height: 250, hoverAt: 6.6, dismissFlashAt: 6.5, stillAt: 8.8, steps: [
                 (0.0, ev("UserPromptSubmit", "claude", cwd: "/Users/you/Projects/website")),
                 (0.0, ev("PreToolUse", "claude", cwd: "/Users/you/Projects/website", tool: "Bash",
                          input: ["command": "npm run build", "description": "npm run build"])),
@@ -326,7 +344,7 @@ final class Recorder {
                 (4.3, ev("Stop", "cx", agent: .codex, cwd: "/Users/you/Projects/api-server",
                          last: "Fixed the login redirect and added a regression test.")),
             ]),
-            Scene(name: "usage", duration: 5, height: 250, hoverAt: 0.8, stillAt: 3.5, usage: true, steps: [
+            Scene(name: "usage", duration: 5, height: 300, hoverAt: 0.8, stillAt: 3.5, usage: true, steps: [
                 (0.0, ev("UserPromptSubmit", "a")),
                 (0.0, ev("PreToolUse", "a", tool: "Edit", input: ["file_path": "\(cwd)/Sources/NotchView.swift"])),
                 (0.0, ev("UserPromptSubmit", "cx", agent: .codex, cwd: "/Users/you/Projects/api-server")),
@@ -350,7 +368,7 @@ final class Recorder {
             Scene(name: "meeting", duration: 5, stillAt: 2.2, steps: [], actions: [
                 (0.5, { $0.showNotice(.meeting(Self.demoMeeting)) }),
             ]),
-            Scene(name: "chat", duration: 6, height: 330, stillAt: 4.0, steps: [
+            Scene(name: "chat", duration: 6, height: 370, stillAt: 4.0, steps: [
                 (0.0, ev("SessionStart", "chat", cwd: "/Users/you/Projects/api-server")),
                 (0.2, ev("UserPromptSubmit", "chat", cwd: "/Users/you/Projects/api-server")),
                 (0.6, ev("Stop", "chat", cwd: "/Users/you/Projects/api-server",
@@ -368,10 +386,10 @@ final class Recorder {
                     model.fileDragNear = false
                 }),
             ]),
-            Scene(name: "shelf", duration: 5, height: 200, hoverAt: 0.8, stillAt: 3.0, steps: [], actions: [
+            Scene(name: "shelf", duration: 5, height: 250, hoverAt: 0.8, stillAt: 3.0, steps: [], actions: [
                 (0.0, { $0.shelf.add(Self.demoFiles) }),
             ]),
-            Scene(name: "media", duration: 7, height: 170, hoverAt: 2.6, stillAt: 5.0, musicAt: 0.5, steps: []),
+            Scene(name: "media", duration: 7, height: 220, hoverAt: 2.6, stillAt: 5.0, musicAt: 0.5, steps: []),
             Scene(name: "handoff", duration: 9, dismissFlashAt: 6.6, musicAt: 0.0, steps: [
                 (1.4, prompt),
                 (2.6, ev("PreToolUse", tool: "Edit", input: ["file_path": "\(cwd)/Sources/NotchView.swift"])),

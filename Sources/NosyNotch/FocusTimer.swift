@@ -99,16 +99,15 @@ struct FocusButton: View {
                         .font(.system(size: 8, weight: .bold))
                         .foregroundStyle(.white.opacity(hovering ? 0.9 : 0.4))
                 } else {
-                    Image(systemName: "timer")
-                        .font(.system(size: 10, weight: .semibold))
-                        .foregroundStyle(NosyPalette.top)
-                    Text("Focus \(Preferences.focusMinutes)m")
+                    TintedSymbol(name: "timer", size: 10, color: NosyPalette.top)
+                    Text("\(Preferences.focusMinutes)m")
                         .font(.system(size: 11, weight: .semibold, design: .rounded))
                         .foregroundStyle(.white.opacity(hovering ? 0.95 : 0.7))
                 }
             }
             .padding(.horizontal, 9)
             .frame(height: 24)
+            .fixedSize()
             .background(Capsule().fill(.white.opacity(hovering ? 0.14 : 0.07)))
             .contentShape(Capsule())
         }
