@@ -55,6 +55,8 @@ const CODEX_EVENTS = [
 ];
 
 // Must stay identical to HookInstaller.command(port:agent:) in the Swift app.
+// X-Host-Pid lets the app find the exact app instance a session runs in. Not for Codex (changed hooks need re-trust).
+const hostPid = (agent) => (agent === 'codex' ? [] : ['-H "X-Host-Pid: $PPID"']);
 const hookCommand = (agent = 'claude') =>
   [
     'curl -s -m 2 -X POST',
@@ -62,6 +64,7 @@ const hookCommand = (agent = 'claude') =>
     "-H 'Expect:'",
     '-H "X-Term-Program: ${TERM_PROGRAM:-}"',
     '-H "X-Bundle-Id: ${__CFBundleIdentifier:-}"',
+    ...hostPid(agent),
     '--data-binary @-',
     `'http://127.0.0.1:${PORT}/event?src=${MARKER}${agent === 'claude' ? '' : `&agent=${agent}`}'`,
     '>/dev/null 2>&1 || true',
@@ -89,6 +92,7 @@ const permissionCommand = (agent = 'claude') => {
     "-H 'Expect:'",
     '-H "X-Term-Program: ${TERM_PROGRAM:-}"',
     '-H "X-Bundle-Id: ${__CFBundleIdentifier:-}"',
+    ...hostPid(agent),
     '--data-binary @-',
     `'http://127.0.0.1:${PORT}/permission?src=${MARKER}${agent === 'claude' ? '' : `&agent=${agent}`}'`,
     '2>/dev/null);',
@@ -114,6 +118,7 @@ const cursorCommand = (event) =>
     "-H 'Expect:'",
     '-H "X-Term-Program: ${TERM_PROGRAM:-}"',
     '-H "X-Bundle-Id: ${__CFBundleIdentifier:-}"',
+    '-H "X-Host-Pid: $PPID"',
     '--data-binary @-',
     `'http://127.0.0.1:${PORT}/event?src=${MARKER}&agent=cursor'`,
     `>/dev/null 2>&1; printf '%s' '${event === 'beforeSubmitPrompt' ? '{"continue":true}' : '{}'}'`,
@@ -127,6 +132,7 @@ function cursorPermissionCommand() {
     "-H 'Expect:'",
     '-H "X-Term-Program: ${TERM_PROGRAM:-}"',
     '-H "X-Bundle-Id: ${__CFBundleIdentifier:-}"',
+    '-H "X-Host-Pid: $PPID"',
     '--data-binary @-',
     `'http://127.0.0.1:${PORT}/permission?src=${MARKER}&agent=cursor'`,
     '2>/dev/null);',

@@ -32,6 +32,8 @@ struct HookEvent {
     let termProgram: String?
     /// Value of `$__CFBundleIdentifier` — the bundle id of the app Claude Code runs in, if macOS set it.
     let hostBundleID: String?
+    /// `$PPID` of the hook shell – the agent's process. Its ancestors lead to the app instance the session runs in.
+    let hostPID: Int32?
 
     init?(data: Data, headers: [String: String] = [:], query: [String: String] = [:]) {
         guard let object = try? JSONSerialization.jsonObject(with: data),
@@ -74,6 +76,7 @@ struct HookEvent {
         self.permissionSuggestions = (json["permission_suggestions"] as? [[String: Any]]) ?? []
         self.termProgram = headers["x-term-program"].flatMap { $0.isEmpty ? nil : $0 }
         self.hostBundleID = headers["x-bundle-id"].flatMap { $0.isEmpty ? nil : $0 }
+        self.hostPID = headers["x-host-pid"].flatMap { Int32($0) }.flatMap { $0 > 1 ? $0 : nil }
     }
 
     /// Cursor hook → the Claude Code name the store understands.
@@ -134,5 +137,6 @@ struct HookEvent {
         self.contextPercent = nil
         self.termProgram = nil
         self.hostBundleID = nil
+        self.hostPID = nil
     }
 }

@@ -42,34 +42,43 @@ enum HookInstaller {
         event == "PermissionRequest" ? 600 : value
     }
 
+    /// `X-Host-Pid`: the hook shell's parent (the agent's process) – lets the app find the exact app instance a
+    /// session runs in, even with two copies of the same app open. Not for Codex: changed Codex hooks need to be
+    /// trusted again.
+    static func hostPidHeader(_ agent: Agent) -> [String] {
+        agent == .codex ? [] : ["-H \"X-Host-Pid: $PPID\""]
+    }
+
     static func permissionCommand(port: UInt16, agent: Agent = .claude) -> String {
         let query = agent == .claude ? "src=\(marker)" : "src=\(marker)&agent=\(agent.rawValue)"
         let token = ApprovalToken.value
-        return [
+        return ([
             "r=$(curl -s -m 590 -X POST",
             "-H 'Content-Type: application/json'",
             "-H 'Expect:'",
             "-H \"X-Term-Program: ${TERM_PROGRAM:-}\"",
             "-H \"X-Bundle-Id: ${__CFBundleIdentifier:-}\"",
+        ] + hostPidHeader(agent) + [
             "--data-binary @-",
             "'http://127.0.0.1:\(port)/permission?\(query)'",
             "2>/dev/null);",
             "case \"$r\" in \"\(token) \"*) printf '%s' \"${r#\(token) }\";; esac; true",
-        ].joined(separator: " ")
+        ]).joined(separator: " ")
     }
 
     static func command(port: UInt16, agent: Agent = .claude) -> String {
         let query = agent == .claude ? "src=\(marker)" : "src=\(marker)&agent=\(agent.rawValue)"
-        return [
+        return ([
             "curl -s -m 2 -X POST",
             "-H 'Content-Type: application/json'",
             "-H 'Expect:'",
             "-H \"X-Term-Program: ${TERM_PROGRAM:-}\"",
             "-H \"X-Bundle-Id: ${__CFBundleIdentifier:-}\"",
+        ] + hostPidHeader(agent) + [
             "--data-binary @-",
             "'http://127.0.0.1:\(port)/event?\(query)'",
             ">/dev/null 2>&1 || true",
-        ].joined(separator: " ")
+        ]).joined(separator: " ")
     }
 
     /// All Claude Code config directories on this Mac, `~/.claude` first.
@@ -123,6 +132,25 @@ enum HookInstaller {
                 ((group["hooks"] as? [[String: Any]]) ?? []).contains { ($0["command"] as? String) == current }
             }
         }
+    }
+
+    /// Hooks from an older version (connected, but not the current command) get the current one – only where our
+    /// hooks already are, nothing new gets connected. Returns the files that were updated.
+    @discardableResult
+    static func upgradeOutdated(port: UInt16) -> [URL] {
+        var updated: [URL] = []
+        for url in settingsURLs where hasOurHooks(at: url) && !isInstalled(at: url) {
+            if (try? install(port: port, at: url)) != nil { updated.append(url) }
+        }
+        if Cursor.hasOurHooks && !Cursor.isInstalled, (try? Cursor.install(port: port)) != nil {
+            updated.append(Cursor.hooksURL)
+        }
+        return updated
+    }
+
+    static func hasOurHooks(at url: URL) -> Bool {
+        guard let hooks = (try? load(url))?["hooks"] as? [String: Any] else { return false }
+        return hooks.values.contains { (($0 as? [[String: Any]]) ?? []).contains(where: isOurs) }
     }
 
     static func install(port: UInt16 = EventServer.defaultPort) throws {
@@ -358,6 +386,7 @@ extension HookInstaller {
                     "-H 'Expect:'",
                     "-H \"X-Term-Program: ${TERM_PROGRAM:-}\"",
                     "-H \"X-Bundle-Id: ${__CFBundleIdentifier:-}\"",
+                    "-H \"X-Host-Pid: $PPID\"",
                     "--data-binary @-",
                     "'http://127.0.0.1:\(port)/permission?src=\(marker)&agent=cursor'",
                     "2>/dev/null);",
@@ -371,6 +400,7 @@ extension HookInstaller {
                 "-H 'Expect:'",
                 "-H \"X-Term-Program: ${TERM_PROGRAM:-}\"",
                 "-H \"X-Bundle-Id: ${__CFBundleIdentifier:-}\"",
+                "-H \"X-Host-Pid: $PPID\"",
                 "--data-binary @-",
                 "'http://127.0.0.1:\(port)/event?src=\(marker)&agent=cursor'",
                 ">/dev/null 2>&1; printf '%s' '\(reply)'",
@@ -379,6 +409,11 @@ extension HookInstaller {
 
         private static func isOurs(_ entry: [String: Any]) -> Bool {
             ((entry["command"] as? String) ?? "").contains(marker)
+        }
+
+        static var hasOurHooks: Bool {
+            guard let hooks = (try? load(hooksURL))?["hooks"] as? [String: Any] else { return false }
+            return hooks.values.contains { (($0 as? [[String: Any]]) ?? []).contains(where: isOurs) }
         }
 
         /// `isInstalled`, re-read at most every 30 s (asked for every Cursor event).

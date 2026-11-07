@@ -65,6 +65,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             }
         }
 
+        // Hooks from an older version get the current command (only where they're already connected).
+        let upgraded = HookInstaller.upgradeOutdated(port: Preferences.port)
+        if !upgraded.isEmpty { NSLog("NosyNotch: updated hooks in \(upgraded.map(\.path))") }
+
         windowController = NotchWindowController(model: model)
         FocusTimer.shared.onFinished = { [weak self] phase, minutes in
             self?.model.showNotice(.timerDone(wasFocus: phase == .focus, minutes: minutes))
