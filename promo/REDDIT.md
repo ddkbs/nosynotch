@@ -18,6 +18,8 @@ Ready-to-copy posts (English) for the v0.3 launch with Nosy, the chat in the not
 
 ## 1. Clips you need
 
+**Finished promo video (44 s, voiceover + music):** `~/Desktop/Projects/nosy_sonstiges/nosy-video/renders/nosy-notch-promo.mp4` (HyperFrames project next to it, rebuild with `python3 build.py`). Good as the main video for r/ClaudeAI, r/SideProject and r/vibecoding.
+
 Upload MP4s, not GIFs (sharper, smaller; Reddit turns GIFs into video anyway). A post holds **one video** or a **gallery** (up to 20 images/GIFs).
 
 | File (suggestion) | Content | Length | Main clip for |
