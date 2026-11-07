@@ -93,31 +93,53 @@ Feel free to try it out and leave your feedback!
 ```
 
 ### r/ClaudeCode
-**Flair:** Showcase / Project · **Media:** `nosy-moods.mp4` (or `chat.mp4`)
+**Flair:** Built with Claude Code (or Showcase) · **Media:** `nosy-moods.mp4` (or `chat.mp4`)
+> Sub rule: simple project sharing goes in the weekly showcase thread. A standalone post must explain **what you built, how Claude Code was used and what you learned**. That's why this text is longer and has those three parts.
 
 **Title**
 ```
-Claude Code hooks → a notch helper that mirrors your session's state (and you can reply to Claude from the notch now)
+I built a little helper that lives in my MacBook notch and keeps an eye on Claude Code for me. Here's how Claude Code built it and what I learned
 ```
 
 **Text**
 ```
-Dev here. Nosy Notch turns Claude Code's hooks into a little character in the MacBook notch. Quick tour of how the states map:
+What I built
 
-- UserPromptSubmit / PreToolUse → Nosy concentrates, the notch shows the tool (Bash, Edit, Grep …) and the elapsed time
-- PreCompact → spiral eyes
-- PermissionRequest → he waves; the hook waits and the notch shows Deny / Always allow / Allow (Claude's own dialog stays open too). Answers carry a local secret, and "Always allow" never passes the setMode suggestion.
-- Stop → he jumps out of the notch, confetti, first lines of the answer
-- StopFailure → shocked ✕✕ eyes with the readable error (rate limit, overloaded …)
-- rate_limits at 100 % → exhausted; when a limit you'd nearly used up resets → "Claude is ready again"
+Nosy Notch is a free Mac app that turns the MacBook notch into a small window into your Claude Code sessions. A little helper called Nosy lives in it:
 
-New: hover a session to read the conversation, and reply right from the notch. Finished turns feed Nosy (energy, level, streak) – no guilt mechanics, he just gets sleepy.
+- While Claude works, the notch shows what it's doing right now and Nosy concentrates along with it
+- When Claude needs your permission, Nosy waves and you can click Allow or Deny right in the notch
+- When Claude is done, Nosy jumps out of the notch for joy and shows the start of the answer
+- You can read the conversation and reply to Claude directly from the notch
+- Hover to see all your sessions, how full each one is and how much of your usage limit is left
+- When nothing is running, Nosy falls asleep in the notch
+- Every finished task gives him energy, levels and a daily streak. He never dies and never makes you feel guilty
+- On the side: music player, a shelf for files with AirDrop, meeting reminders, battery and AirPods status and a focus timer
 
-Every hook is one curl to 127.0.0.1; if the app isn't running, curl fails instantly and Claude carries on. Installs into ~/.claude, $CLAUDE_CONFIG_DIR and every ~/.claude-* account folder. Usage + context come from a silent status line, only if you don't have your own.
+It also works with Codex and Cursor, and everything stays on your Mac.
 
-npx nosynotch · https://github.com/ddkbs/nosynotch
+How I used Claude Code
+
+I didn't write the code myself. I described what I wanted, Claude Code built it, tested it and showed me the result. My job was the idea, testing on my Mac and a lot of feedback like "cuter", "calmer" or "bigger".
+
+- Instead of guessing how Claude Code's permission prompts behave, it ran real test sessions and found out that approving from the notch works while Claude's own prompt stays open.
+- For Nosy, it drew rough sketches in the chat, round after round, until the character felt right. Then it built the animations, including Nosy jumping into the notch like into a puddle.
+- It built its own little recorder to film the animations, so it could look at the result itself instead of asking me every time.
+- I ran a second Claude Code session in parallel for the promo (including this post) while the first one kept building.
+
+What I learned
+
+- Let it test for real. The best moments came when Claude Code tried something in a real session instead of trusting what it assumed.
+- Show, don't describe. Once it could record and look at its own animations, the feedback rounds got much shorter.
+- Sketch before you build. A few rough drawings saved hours of building the wrong character.
+- Keep a worklog. I use several Claude accounts without a shared chat history, so a short WORKLOG.md in the repo keeps every session up to date.
+- Small commits. Every finished piece gets its own commit, so I can undo exactly the part I don't like.
+
+Try it
+
+It's free and open source. On macOS 14+ run: npx nosynotch
+https://github.com/ddkbs/nosynotch
 https://nosynotch.davidkubus.dev
-Free, MIT, local.
 
 Feel free to try it out and leave your feedback!
 ```
