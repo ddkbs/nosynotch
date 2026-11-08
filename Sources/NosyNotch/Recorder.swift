@@ -304,6 +304,12 @@ final class Recorder {
                 (2.2, { $0.sendReply("now add a test for the expired-token case") }),
                 (3.0, { $0.sendReply("then update the changelog") }),
             ]),
+            Scene(name: "clock-meeting", duration: 6, stillAt: 2.0, clockAt: (9, 41, 57), steps: [], actions: [
+                (0.4, { model in
+                    model.previewMeeting = Self.demoMeeting
+                    model.recompute()
+                }),
+            ]),
             Scene(name: "level-up", duration: 6, stillAt: 3.2, steps: [
                 (0.0, ev("SessionStart")),
                 (0.3, prompt),
