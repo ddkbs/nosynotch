@@ -361,6 +361,10 @@ struct SessionRow: View {
 
             Spacer(minLength: 8)
 
+            if session.todos.total > 0 {
+                TodoCount(todos: session.todos, color: session.accent)
+            }
+
             if Preferences.contextEnabled, let context = session.contextPercent {
                 ContextRing(percent: context)
             }
