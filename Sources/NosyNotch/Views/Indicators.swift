@@ -44,6 +44,44 @@ struct StatusIndicator: View {
     }
 }
 
+/// "3/7" – how far the agent is through its task list.
+struct TodoCount: View {
+    let todos: TodoProgress
+    var color: Color
+
+    var body: some View {
+        HStack(spacing: 0) {
+            Text("\(todos.done)")
+                .foregroundStyle(color)
+                .contentTransition(.numericText())
+            Text("/\(todos.total)")
+                .foregroundStyle(.white.opacity(0.5))
+                .contentTransition(.numericText())
+        }
+        .font(.system(size: 11, weight: .semibold, design: .rounded).monospacedDigit())
+        .animation(.spring(response: 0.4, dampingFraction: 0.8), value: todos)
+        .lineLimit(1)
+        .fixedSize()
+    }
+}
+
+/// The right wing while an agent works through a list: the tool's icon (if there's room) and the count.
+struct TodoWing: View {
+    let session: Session
+
+    var body: some View {
+        HStack(spacing: 3) {
+            if case .tool(let tool) = session.state, session.todos.total < 10 {
+                PulsingSymbol(name: tool.symbol, size: 10, color: session.accent)
+                    .id(tool.name)
+                    .transition(.scale.combined(with: .opacity))
+            }
+            TodoCount(todos: session.todos, color: session.accent)
+        }
+        .animation(.spring(response: 0.35, dampingFraction: 0.7), value: session.state)
+    }
+}
+
 /// Three dots bouncing in a wave – "thinking".
 struct WaveDots: View {
     var color: Color

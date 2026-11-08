@@ -262,6 +262,9 @@ struct NotchView: View {
                     } else if model.showsUnseenDot {
                         UnseenDot(count: store.unseen.count)
                             .transition(.scale(scale: 0.2).combined(with: .opacity))
+                    } else if primary.state.isActive, primary.todos.total > 0 {
+                        TodoWing(session: primary)
+                            .transition(.scale(scale: 0.2).combined(with: .opacity))
                     } else {
                         StatusIndicator(session: primary)
                             .transition(.scale(scale: 0.2).combined(with: .opacity))
