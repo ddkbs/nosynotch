@@ -3,9 +3,9 @@
 Each animation with the Claude Code hook that triggers it (Codex sends the same hooks, see [Codex](#codex)). All GIFs are real recordings of the app
 (`./scripts/record-gifs.sh`); only the desktop behind it is staged.
 
-[Thinking](#thinking) · [Working](#working) · [Needs you](#needs-you) · [Done](#done) · [Error](#error) ·
+[Thinking](#thinking) · [Working](#working) · [Task progress](#task-progress) · [Needs you](#needs-you) · [Done](#done) · [Error](#error) ·
 [Compacting](#compacting) · [Unseen](#unseen) · [All sessions](#all-sessions-hover) · [Codex & Cursor](#codex--cursor) · [Usage](#usage-limits) · [Music](#music) · [Back to music](#back-to-music) ·
-[Nosy](#nosy) · [Level up](#level-up) · [Reply](#reply-from-the-notch) · [Shelf & AirDrop](#shelf--airdrop) · [Meeting](#meeting) · [Focus](#focus-timer) · [Clock](#clock) ·
+[Nosy](#nosy) · [Level up](#level-up) · [Earned wardrobe](#earned-wardrobe) · [Reply](#reply-from-the-notch) · [Next prompt](#next-prompt) · [Shelf & AirDrop](#shelf--airdrop) · [Meeting](#meeting) · [Focus](#focus-timer) · [Clock](#clock) ·
 [Charging](#charging) · [AirPods](#airpods) · [Full run](#full-run)
 
 ## Thinking
@@ -32,6 +32,15 @@ The spark spins faster and the right wing shows the tool's icon:
 | TodoWrite | checklist | MCP tools | puzzle piece |
 
 The hover list also says *what* is happening ("Editing Parser.swift", "Running · Run tests").
+
+## Task progress
+
+<img src="gifs/progress.gif" alt="Task progress" width="560">
+
+**Trigger:** `PreToolUse` of the agent's task-list tools (`TodoWrite`, `TaskCreate` / `TaskUpdate`, Codex's `update_plan`, the plan in the Claude desktop app)
+
+While the agent works through a list, the right wing shows how far it is ("3/5") next to the tool's icon, and the hover list shows it per session. A new
+prompt starts counting afresh once the list was finished.
 
 ## Needs you
 
@@ -181,6 +190,15 @@ black, squeezes and dives back in with a splash of tar drops. After 10 minutes w
 
 Every finished task feeds Nosy. Reaching a level shows a shiny "✦ Level N" on the done card and Nosy cheers.
 
+## Earned wardrobe
+
+<img src="gifs/unlock.gif" alt="Earned wardrobe" width="560">
+
+**Trigger:** the `Stop` that reaches an item's goal
+
+Some items come with levels, the party hat with 100 finished tasks, the crown with a 7-day streak and the halo with 30 days. Streaks count by your best one,
+so a missed day never takes anything away. The done card shows "✦ New: Crown".
+
 ## Reply from the notch
 
 <img src="gifs/chat.gif" alt="Reply" width="560">
@@ -188,6 +206,15 @@ Every finished task feeds Nosy. Reaching a level shows a shiny "✦ Level N" on 
 **Trigger:** "Reply" on the done card or the bubble next to a session
 
 The conversation from the session's transcript, refreshed while open, and a reply field.
+
+## Next prompt
+
+<img src="gifs/queue.gif" alt="Next prompt" width="560">
+
+**Trigger:** a reply while the agent is still busy
+
+The reply field turns into "Next prompt for when Claude is done…". Up to three prompts wait in line, each with an ✕ to take it back, and one goes out every
+time a turn ends. It waits until you stop typing and skips a locked screen, and afterwards you're back in the app you were in.
 
 ## Shelf & AirDrop
 
@@ -219,7 +246,11 @@ Two drop targets. Parked files show in the hover view:
 
 With no agent working, no music, no focus timer and nothing unseen, the time sits on the right wing next to Nosy. The digits roll
 when the minute changes, the colon breathes in Nosy's gold, and the clock dims while Nosy sleeps. Hover for the big clock and
-the date. It follows your Mac's 12 / 24-hour setting and only shows under a real notch (Settings → Extras to turn it off).
+the date, and pick a second time zone for it under Settings → Extras. It follows your Mac's 12 / 24-hour setting and only shows under a real notch.
+
+<img src="gifs/clock-meeting.gif" alt="Clock before a meeting" width="560">
+
+With the calendar on, the last 15 minutes before a meeting replace the time with a countdown in the calendar's colour.
 
 ## Charging
 

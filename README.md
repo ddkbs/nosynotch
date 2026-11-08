@@ -120,7 +120,7 @@ like into a puddle of tar – splash included. Bring the pointer close and it pe
 and it falls asleep (sooner at night). Click it and it giggles.
 
 **Energy, levels and streaks** – every finished task feeds Nosy, days with tasks make a streak, XP unlock a little
-wardrobe (headphones, glasses, cap, bow). Deliberately guilt-free: Nosy never gets sad or sick, a missed day just
+wardrobe to earn with levels, streaks and finished tasks (headphones, glasses, cap, bow, party hat, crown, halo). Deliberately guilt-free: Nosy never gets sad or sick, a missed day just
 starts a new streak. Eight colours to pick from – Obsidian, the default, glows in the colour of the agent that's
 working. All of it stays in your Mac's settings, and you can turn Nosy off for the classic agent symbols.
 
@@ -128,8 +128,11 @@ working. All of it stays in your Mac's settings, and you can turn Nosy off for t
 
 ## More in the notch
 
-- **Clock** – when nothing is running, the time sits next to Nosy. Hover for the big clock and the date; agents, music
-  and the focus timer always go first.
+- **Clock** – when nothing is running, the time sits next to Nosy, with a countdown before your next meeting. Hover for
+  the big clock, the date and a second time zone; agents, music and the focus timer always go first.
+- **Task progress** – "3/7" on the wing while an agent works through its list.
+- **Next prompt** – type the follow-up while the agent is busy. It goes out when the turn ends, without pulling you away
+  from what you're doing.
 - **Shelf and AirDrop** – drag files onto the notch: park them on the shelf and drag them out later, or AirDrop them.
 - **Focus timer** – 15 / 25 / 50 minutes from the hover view or the menu bar, a ring in the notch, agent sounds stay
   quiet until the break.
