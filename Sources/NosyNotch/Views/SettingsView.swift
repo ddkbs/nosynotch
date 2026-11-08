@@ -990,15 +990,27 @@ private struct ExtrasPage: View {
     @AppStorage(Preferences.Key.focusMutesAlerts) private var focusMutes = true
     @AppStorage(Preferences.Key.replyMode) private var replyMode = "type"
     @AppStorage(Preferences.Key.clockEnabled) private var clock = true
+    @AppStorage(Preferences.Key.clockZone) private var clockZone = ""
 
     private let tint = SettingsPage.extras.tint
 
     var body: some View {
         VStack(alignment: .leading, spacing: 18) {
             Card(title: "Clock", footer: "Agents, music and the focus timer always go first. Hover the notch for the date.") {
-                Row(title: "Show the time when nothing is running", divider: false) {
+                Row(title: "Show the time when nothing is running") {
                     NotchToggle(isOn: bind($clock), tint: tint)
                 }
+                Row(title: "Second time zone", subtitle: "Next to the big clock when you hover the notch", divider: false) {
+                    Picker("", selection: Binding(get: { clockZone }, set: { clockZone = $0; actions.settingsChanged() })) {
+                        Text("None").tag("")
+                        ForEach(ClockZone.all) { Text($0.city).tag($0.identifier) }
+                    }
+                    .labelsHidden()
+                    .pickerStyle(.menu)
+                    .fixedSize()
+                }
+                .opacity(clock ? 1 : 0.4)
+                .disabled(!clock)
             }
 
             Card(title: "Files", footer: "Drag files onto the notch: park them on the shelf and drag them out later, or AirDrop them. Only references are kept.") {
