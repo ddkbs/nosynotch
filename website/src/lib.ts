@@ -46,6 +46,36 @@ export function formatStars(n: number): string {
   return n >= 1000 ? `${(n / 1000).toFixed(n >= 10000 ? 0 : 1)}k` : String(n);
 }
 
+/** Where to send people when the current installer can't be looked up. */
+export const NODE_DOWNLOAD_PAGE = "https://nodejs.org/en/download";
+
+export type NodeInstaller = { version: string; url: string };
+
+/** One shared lookup per page load: the macOS installer of the newest LTS (the same .pkg for Intel and Apple silicon). */
+let nodeInstaller: Promise<NodeInstaller | null> | null = null;
+function loadNodeInstaller(): Promise<NodeInstaller | null> {
+  nodeInstaller ??= fetch("https://nodejs.org/dist/index.json")
+    .then((r) => (r.ok ? r.json() : []))
+    .then((releases: { version: string; lts: string | false; files: string[] }[]) => {
+      const lts = releases.find((r) => r.lts && r.files.includes("osx-x64-pkg"));
+      return lts ? { version: lts.version, url: `https://nodejs.org/dist/${lts.version}/node-${lts.version}.pkg` } : null;
+    })
+    .catch(() => null);
+  return nodeInstaller;
+}
+
+export function useNodeInstaller(): NodeInstaller | null {
+  const [installer, setInstaller] = useState<NodeInstaller | null>(null);
+  useEffect(() => {
+    let live = true;
+    void loadNodeInstaller().then((i) => live && setInstaller(i));
+    return () => {
+      live = false;
+    };
+  }, []);
+  return installer;
+}
+
 /** Pages ask the install notch to open through this event (hero button, nav notch). */
 export const OPEN_INSTALL = "nosy:open-install";
 export function openInstall() {

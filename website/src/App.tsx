@@ -2,6 +2,7 @@ import { Analytics } from "@vercel/analytics/react";
 import { motion } from "motion/react";
 import { useEffect, useState, type ReactNode } from "react";
 import SpectralDrape from "./backgrounds/SpectralDrape";
+import { GetNode } from "./GetNode";
 import { INSTALL_COMMAND, openInstall, REPO_URL, up } from "./lib";
 import { LogoMark } from "./Logo";
 import { SiteMenuBar } from "./MenuBar";
@@ -117,6 +118,9 @@ function Hero() {
           <PrimaryButton onClick={openInstall}>Get Nosy Notch</PrimaryButton>
           <CopyCommand />
         </motion.div>
+        <motion.p {...up(0.4)} className="mt-5 font-mono text-[11.5px] text-white/40">
+          No Node.js yet? <GetNode />
+        </motion.p>
         <motion.a
           {...up(0.5)}
           href="#moments"
@@ -170,7 +174,9 @@ function Finale() {
           <PrimaryButton onClick={openInstall}>Get Nosy Notch</PrimaryButton>
           <CopyCommand />
         </div>
-        <p className="mt-6 font-mono text-[11.5px] text-white/35">macOS 14+ · Node.js 18+ · no account, no App Store</p>
+        <p className="mt-6 font-mono text-[11.5px] text-white/35">
+          macOS 14+ · Node.js 18+ (<GetNode>get it here</GetNode>) · no account, no App Store
+        </p>
       </div>
     </section>
   );

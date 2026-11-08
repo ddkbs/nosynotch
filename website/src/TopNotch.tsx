@@ -1,5 +1,6 @@
 import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useRef, useState, type ReactNode } from "react";
+import { GetNode } from "./GetNode";
 import { formatStars, INSTALL_COMMAND, OPEN_INSTALL, RELEASES_URL, REPO, REPO_URL, useRepoInfo } from "./lib";
 import { Confetti, DrawnCheck } from "./notch/Confetti";
 import { AGENT_COLOR, CodexGlyph, CursorGlyph, Spark } from "./notch/Glyphs";
@@ -745,7 +746,9 @@ export function TopNotch() {
                 </div>
 
                 <div className="mt-2.5 flex items-center justify-between font-mono text-[10.5px] text-white/35">
-                  <span>macOS 14+ · Node 18+ · free</span>
+                  <span>
+                    macOS 14+ · Node 18+ (<GetNode>get it</GetNode>) · free
+                  </span>
                   <button type="button" onClick={() => setStage("denied")} className="cursor-target transition-colors hover:text-white/80">
                     nah, not today
                   </button>
@@ -779,7 +782,13 @@ export function TopNotch() {
                   </div>
                   <Steps steps={stage === "copied" ? COPY_STEPS : DOWNLOAD_STEPS} />
                   <div className="mt-3 flex items-center justify-between border-t border-white/[0.08] pt-2.5 text-[11.5px] text-white/45">
-                    <span>While it installs…</span>
+                    {stage === "copied" ? (
+                      <span>
+                        “command not found”? <GetNode>Get Node first</GetNode>
+                      </span>
+                    ) : (
+                      <span>While it installs…</span>
+                    )}
                     <Pill kind="gold" href={REPO_URL} onClick={starred}>
                       <StarIcon className="size-3" /> Star on GitHub {stars ? <span className="font-mono text-[11px] text-black/50">{formatStars(stars)}</span> : null}
                     </Pill>
