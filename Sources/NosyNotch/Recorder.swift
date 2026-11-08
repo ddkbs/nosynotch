@@ -32,6 +32,8 @@ final class Recorder {
         var usage = false
         /// Seconds after which a nearly used-up 5-hour limit "resets".
         var limitResetAt: TimeInterval?
+        /// Show the idle clock, starting at this time of day.
+        var clockAt: (hour: Int, minute: Int, second: Int)?
         let steps: [(TimeInterval, HookEvent)]
         /// Anything else to do with the model at a given moment (drag files, plug in power, …).
         var actions: [(TimeInterval, @MainActor (NotchViewModel) -> Void)] = []
@@ -78,7 +80,9 @@ final class Recorder {
 
     private func record(_ scene: Scene, completion: @escaping () -> Void) {
         // Everything below – store dates, flash timeouts, the scripted events – runs on the virtual clock.
-        let start = Date()
+        let start = scene.clockAt.flatMap {
+            Calendar.current.date(bySettingHour: $0.hour, minute: $0.minute, second: $0.second, of: Date())
+        } ?? Date()
         Clock.startVirtual(at: start)
         let clock = RecordingClock(date: start)
 
@@ -88,6 +92,7 @@ final class Recorder {
         model.notchSize = CGSize(width: 185, height: 32)
         model.onNoticeAction = { _ in }
         model.hasPhysicalNotch = true
+        model.recordsClock = scene.clockAt != nil
         store.onChange = { model.recompute() }
         store.onTransition = { scene.focused ? model.showQuietly($0) : model.handle($0) }
         if let t = scene.limitResetAt {
@@ -258,6 +263,14 @@ final class Recorder {
                 (4.0, { $0.petNosy() }),
                 (5.8, { $0.isHovering = false }),
                 (6.6, { $0.updateGaze(mouse: CGPoint(x: -120, y: -90), notchCenter: .zero) }),
+            ]),
+            Scene(name: "clock", duration: 11, height: 250, stillAt: 5.6, clockAt: (9, 41, 57), steps: [
+                (7.6, prompt),
+                (9.2, ev("SessionEnd")),
+            ], actions: [
+                (0.4, { $0.recompute() }),
+                (4.2, { $0.isHovering = true }),
+                (7.0, { $0.isHovering = false }),
             ]),
             Scene(name: "level-up", duration: 6, stillAt: 3.2, steps: [
                 (0.0, ev("SessionStart")),
