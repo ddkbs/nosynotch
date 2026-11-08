@@ -109,8 +109,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private func feedNosy(_ transition: Transition) {
         guard Preferences.nosyEnabled, Preferences.nosyPet, case .finished(let session) = transition,
               !session.id.hasPrefix("demo-") else { return }
+        let locked = NosyAccessory.allCases.filter { !pet.isUnlocked($0) }
         if let level = pet.feed(duration: session.lastTurnDuration) {
             model.celebrateLevel(level)
+        }
+        if let earned = locked.first(where: { pet.isUnlocked($0) }) {
+            model.celebrateUnlock(earned)
         }
     }
 

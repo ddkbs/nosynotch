@@ -448,6 +448,17 @@ final class NotchViewModel: ObservableObject {
     /// Nosy just reached a new level – shown on the "done" card for its duration.
     @Published private(set) var levelUp: Int?
 
+    /// A wardrobe item Nosy just earned – shown on the "done" card, instead of the level if both happen at once.
+    @Published private(set) var unlockedItem: NosyAccessory?
+
+    func celebrateUnlock(_ item: NosyAccessory) {
+        unlockedItem = item
+        nosyReact(.happy, for: 3)
+        Clock.after(max(Preferences.notificationSeconds, 4) + 1) { [weak self] in
+            if self?.unlockedItem == item { self?.unlockedItem = nil }
+        }
+    }
+
     func celebrateLevel(_ level: Int) {
         levelUp = level
         nosyReact(.happy, for: 3)

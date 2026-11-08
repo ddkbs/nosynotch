@@ -127,6 +127,7 @@ struct NotchView: View {
                     CelebrationView(celebration: celebration,
                                     live: store.sessions[celebration.session.id],
                                     levelUp: model.levelUp,
+                                    unlocked: model.unlockedItem,
                                     onReply: { model.openChat($0) },
                                     onTap: { model.dismissFlash() },
                                     onDismiss: { model.dismissFlash() })
@@ -471,6 +472,8 @@ struct CelebrationView: View {
     let live: Session?
     /// Nosy reached this level with this task.
     var levelUp: Int?
+    /// Nosy earned this wardrobe item with this task.
+    var unlocked: NosyAccessory?
     var onReply: ((Session) -> Void)?
     var onTap: () -> Void
     var onDismiss: () -> Void
@@ -503,8 +506,11 @@ struct CelebrationView: View {
                             .font(.system(size: 12, design: .monospaced))
                             .foregroundStyle(.white.opacity(0.5))
                     }
-                    if let levelUp {
-                        LevelUpPill(level: levelUp)
+                    if let unlocked {
+                        LevelUpPill(text: "New: \(unlocked.title)")
+                            .transition(.scale(scale: 0.4).combined(with: .opacity))
+                    } else if let levelUp {
+                        LevelUpPill(text: "Level \(levelUp)")
                             .transition(.scale(scale: 0.4).combined(with: .opacity))
                     }
                 }
@@ -551,16 +557,16 @@ struct CelebrationView: View {
     }
 }
 
-/// "✦ Level 4" – Nosy levelled up with this task.
+/// "✦ Level 4" or "✦ New: Crown" – what Nosy earned with this task.
 struct LevelUpPill: View {
-    let level: Int
+    let text: String
     @State private var shine = false
 
     var body: some View {
         HStack(spacing: 4) {
             SparkleShape().fill(NosyPalette.spark).frame(width: 9, height: 9)
                 .rotationEffect(.degrees(shine ? 180 : 0))
-            Text("Level \(level)")
+            Text(text)
                 .font(.system(size: 11, weight: .bold, design: .rounded))
         }
         .foregroundStyle(.black)
