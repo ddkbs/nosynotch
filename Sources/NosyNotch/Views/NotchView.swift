@@ -155,7 +155,10 @@ struct NotchView: View {
                 }
             case .chat:
                 if let session = model.chatSession {
-                    ChatView(session: session, messages: model.chatMessages, status: model.chatStatus,
+                    ChatView(session: session, messages: model.chatMessages,
+                             status: model.replyQueue.problems[session.id] ?? model.chatStatus,
+                             queued: model.replyQueue.items[session.id] ?? [],
+                             onRemoveQueued: { model.replyQueue.remove($0, from: session.id) },
                              onSend: { model.sendReply($0) },
                              onOpenApp: { TerminalActivator.activate(session) },
                              onClose: { model.closeChat() })

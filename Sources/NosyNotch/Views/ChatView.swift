@@ -5,6 +5,8 @@ struct ChatView: View {
     let session: Session
     let messages: [ChatMessage]
     var status: String?
+    var queued: [ReplyQueue.Item] = []
+    var onRemoveQueued: (ReplyQueue.Item.ID) -> Void = { _ in }
     var onSend: (String) -> Void
     var onOpenApp: () -> Void
     var onClose: () -> Void
@@ -37,6 +39,10 @@ struct ChatView: View {
                     withAnimation(.easeOut(duration: 0.25)) { proxy.scrollTo("end", anchor: .bottom) }
                 }
             }
+            ForEach(queued) { item in
+                QueuedRow(item: item, accent: session.agent.color) { onRemoveQueued(item.id) }
+                    .transition(.blurFade.combined(with: .move(edge: .bottom)))
+            }
             input
             if let status {
                 Text(status)
@@ -49,6 +55,7 @@ struct ChatView: View {
         }
         .padding(.horizontal, 20)
         .padding(.top, 6)
+        .animation(.spring(response: 0.35, dampingFraction: 0.8), value: queued)
         .onExitCommand(perform: onClose)
         .onAppear { DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { focused = true } }
     }
@@ -79,7 +86,8 @@ struct ChatView: View {
 
     private var input: some View {
         HStack(spacing: 8) {
-            TextField("Reply to \(session.agent.name)…", text: $draft, axis: .vertical)
+            TextField(session.isBusy ? "Next prompt for when \(session.agent.name) is done…" : "Reply to \(session.agent.name)…",
+                      text: $draft, axis: .vertical)
                 .textFieldStyle(.plain)
                 .font(.system(size: 12.5))
                 .foregroundStyle(.white)
@@ -87,7 +95,7 @@ struct ChatView: View {
                 .focused($focused)
                 .onSubmit(send)
             Button(action: send) {
-                Image(systemName: "arrow.up")
+                Image(systemName: session.isBusy ? "clock" : "arrow.up")
                     .font(.system(size: 11, weight: .bold))
                     .foregroundStyle(.black)
                     .frame(width: 22, height: 22)
@@ -108,6 +116,40 @@ struct ChatView: View {
         guard !text.isEmpty else { return }
         draft = ""
         onSend(text)
+    }
+}
+
+/// A prompt waiting for the agent to finish, with a way to take it back.
+private struct QueuedRow: View {
+    let item: ReplyQueue.Item
+    let accent: Color
+    var onRemove: () -> Void
+
+    var body: some View {
+        HStack(spacing: 8) {
+            Image(systemName: "clock.fill")
+                .font(.system(size: 10))
+                .foregroundStyle(accent)
+            Text(item.text)
+                .font(.system(size: 12))
+                .foregroundStyle(.white.opacity(0.75))
+                .lineLimit(1)
+                .truncationMode(.tail)
+            Spacer(minLength: 4)
+            Button(action: onRemove) {
+                Image(systemName: "xmark")
+                    .font(.system(size: 9, weight: .bold))
+                    .foregroundStyle(.white.opacity(0.45))
+                    .frame(width: 18, height: 18)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .help("Don't send this")
+        }
+        .padding(.leading, 12)
+        .padding(.trailing, 6)
+        .frame(height: NotchViewModel.queuedRowHeight - 8)
+        .background(RoundedRectangle(cornerRadius: 11, style: .continuous).fill(accent.opacity(0.1)))
     }
 }
 
