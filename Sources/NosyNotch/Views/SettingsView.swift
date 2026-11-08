@@ -989,11 +989,18 @@ private struct ExtrasPage: View {
     @AppStorage(Preferences.Key.breakMinutes) private var breakMinutes = 5
     @AppStorage(Preferences.Key.focusMutesAlerts) private var focusMutes = true
     @AppStorage(Preferences.Key.replyMode) private var replyMode = "type"
+    @AppStorage(Preferences.Key.clockEnabled) private var clock = true
 
     private let tint = SettingsPage.extras.tint
 
     var body: some View {
         VStack(alignment: .leading, spacing: 18) {
+            Card(title: "Clock", footer: "Agents, music and the focus timer always go first. Hover the notch for the date.") {
+                Row(title: "Show the time when nothing is running", divider: false) {
+                    NotchToggle(isOn: bind($clock), tint: tint)
+                }
+            }
+
             Card(title: "Files", footer: "Drag files onto the notch: park them on the shelf and drag them out later, or AirDrop them. Only references are kept.") {
                 Row(title: "Shelf and AirDrop", divider: false) { NotchToggle(isOn: bind($shelf), tint: tint) }
             }
