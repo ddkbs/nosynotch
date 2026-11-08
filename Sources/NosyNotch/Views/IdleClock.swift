@@ -102,7 +102,7 @@ struct ClockWing: View {
         PeriodicClock(every: 1) { now in
             if let meeting, case let left = meeting.start.timeIntervalSince(now), left > 0, left <= Self.countdownFrom {
                 Text("in \(Int((left / 60).rounded(.up)))m")
-                    .font(.system(size: 11, weight: .semibold, design: .rounded).monospacedDigit())
+                    .font(.system(size: 10, weight: .semibold, design: .rounded).monospacedDigit())
                     .foregroundStyle(meeting.color)
                     .contentTransition(.numericText())
                     .animation(.spring(response: 0.45, dampingFraction: 0.82), value: Int(left / 60))
