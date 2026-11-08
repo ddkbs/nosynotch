@@ -1225,7 +1225,9 @@ private struct WardrobeItem: View {
                         }
                     }
                 Text(unlocked ? item.title : item.lockedLabel)
-                    .font(.system(size: 10, weight: .medium))
+                    .font(.system(size: 9, weight: .medium))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
                     .foregroundStyle(.white.opacity(selected ? 0.95 : 0.5))
             }
             .frame(maxWidth: .infinity)
