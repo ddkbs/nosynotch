@@ -93,6 +93,7 @@ final class Recorder {
         model.onNoticeAction = { _ in }
         model.hasPhysicalNotch = true
         model.recordsClock = scene.clockAt != nil
+        model.replyQueue.deliver = { _, _, done in done(.background) }
         store.onChange = { model.recompute() }
         store.onTransition = { scene.focused ? model.showQuietly($0) : model.handle($0) }
         if let t = scene.limitResetAt {
@@ -288,6 +289,20 @@ final class Recorder {
                     ["status": "completed"], ["status": "completed"], ["status": "completed"], ["status": "in_progress"], ["status": "pending"],
                 ]])),
                 (4.8, ev("PreToolUse", tool: "Edit", input: ["file_path": "\(cwd)/README.md"])),
+            ]),
+            Scene(name: "queue", duration: 9, height: 400, stillAt: 3.6, steps: [
+                (0.0, ev("SessionStart", "queue", cwd: "/Users/you/Projects/api-server")),
+                (0.2, ev("UserPromptSubmit", "queue", cwd: "/Users/you/Projects/api-server")),
+                (0.6, ev("PreToolUse", "queue", cwd: "/Users/you/Projects/api-server", tool: "Bash", input: ["description": "Run the tests"])),
+                (5.4, ev("Stop", "queue", cwd: "/Users/you/Projects/api-server", last: "All 214 tests pass.")),
+                (7.4, ev("UserPromptSubmit", "queue", cwd: "/Users/you/Projects/api-server")),
+            ], actions: [
+                (1.2, { model in
+                    guard let session = model.store.sessions["queue"] else { return }
+                    model.previewChat(session, messages: Self.demoChat)
+                }),
+                (2.2, { $0.sendReply("now add a test for the expired-token case") }),
+                (3.0, { $0.sendReply("then update the changelog") }),
             ]),
             Scene(name: "level-up", duration: 6, stillAt: 3.2, steps: [
                 (0.0, ev("SessionStart")),
