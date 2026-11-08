@@ -110,7 +110,7 @@ struct NotchView: View {
                             .padding(.top, 2)
                     }
                     if model.showsSessionList {
-                        SessionList(store: store, onChat: { model.openChat($0) })
+                        SessionList(store: store, queued: model.replyQueue.items, onChat: { model.openChat($0) })
                     }
                     if model.showsShelf {
                         ShelfRow(shelf: model.shelf)
@@ -301,6 +301,7 @@ struct ElapsedText: View {
 
 struct SessionList: View {
     @ObservedObject var store: SessionStore
+    var queued: [String: [ReplyQueue.Item]] = [:]
     var onChat: ((Session) -> Void)?
 
     var body: some View {
@@ -313,7 +314,8 @@ struct SessionList: View {
                     .frame(height: NotchViewModel.rowHeight)
             }
             ForEach(sessions) { session in
-                SessionRow(session: session, onDismiss: { store.dismiss(session.id) }, onChat: { onChat?(session) })
+                SessionRow(session: session, queued: queued[session.id]?.count ?? 0, onDismiss: { store.dismiss(session.id) },
+                           onChat: { onChat?(session) })
                     .frame(height: NotchViewModel.rowHeight)
                     .transition(.opacity.combined(with: .move(edge: .top)))
             }
@@ -326,6 +328,7 @@ struct SessionList: View {
 
 struct SessionRow: View {
     let session: Session
+    var queued = 0
     var onDismiss: () -> Void
     var onChat: (() -> Void)?
     @State private var hovering = false
@@ -363,6 +366,15 @@ struct SessionRow: View {
             }
 
             Spacer(minLength: 8)
+
+            if queued > 0 {
+                HStack(spacing: 3) {
+                    Image(systemName: "clock.fill").font(.system(size: 9))
+                    Text("\(queued)").font(.system(size: 11, weight: .semibold, design: .rounded))
+                }
+                .foregroundStyle(session.agent.color)
+                .help(queued == 1 ? "1 prompt waiting" : "\(queued) prompts waiting")
+            }
 
             if session.todos.total > 0 {
                 TodoCount(todos: session.todos, color: session.accent)
