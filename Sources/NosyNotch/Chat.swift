@@ -100,19 +100,23 @@ enum ReplySender {
         }
     }
 
-    static func send(_ text: String, to session: Session, completion: @escaping @MainActor (Result) -> Void) {
+    /// `returnFocus`: go back to the app you were in afterwards (a queued prompt goes out while you do something else).
+    static func send(_ text: String, to session: Session, returnFocus: Bool = false,
+                     completion: @escaping @MainActor (Result) -> Void) {
         let mode = Preferences.replyMode
         if mode == "background", session.agent != .cursor {
             return completion(runInBackground(text, session: session))
         }
-        typeIntoApp(text, session: session, completion: completion)
+        typeIntoApp(text, session: session, returnFocus: returnFocus, completion: completion)
     }
 
     /// Brings the session's app to the front, pastes the text into it and presses Return.
-    private static func typeIntoApp(_ text: String, session: Session, completion: @escaping @MainActor (Result) -> Void) {
+    private static func typeIntoApp(_ text: String, session: Session, returnFocus: Bool,
+                                    completion: @escaping @MainActor (Result) -> Void) {
         let options = [kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: true] as CFDictionary
         guard AXIsProcessTrustedWithOptions(options) else { return completion(.needsAccessibility) }
 
+        let previous = NSWorkspace.shared.frontmostApplication
         TerminalActivator.activate(session)
         let appName = NSWorkspace.shared.frontmostApplication?.localizedName ?? session.agent.name
         let pasteboard = NSPasteboard.general
@@ -132,6 +136,9 @@ enum ReplySender {
                         key(36)                // Return
                         let front = NSWorkspace.shared.frontmostApplication?.localizedName ?? appName
                         completion(.typed(app: front))
+                        if returnFocus, let previous, previous != NSWorkspace.shared.frontmostApplication {
+                            previous.activate()
+                        }
                     }
                 }
                 // Put back whatever was on the clipboard.
