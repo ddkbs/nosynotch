@@ -11,11 +11,12 @@ struct ClockFace: Equatable {
     let shortWeekday: String
     let date: String
 
-    init(_ now: Date) {
+    init(_ now: Date, in zone: TimeZone = .current) {
         // Recordings look the same on every Mac.
         let locale = Clock.isVirtual ? Locale(identifier: "en_GB") : Locale.autoupdatingCurrent
         var calendar = Calendar.current
         calendar.locale = locale
+        calendar.timeZone = zone
         let parts = calendar.dateComponents([.hour, .minute, .second], from: now)
         let hours = parts.hour ?? 0
 
@@ -34,6 +35,36 @@ struct ClockFace: Equatable {
         weekday = now.formatted(style.weekday(.wide))
         shortWeekday = now.formatted(style.weekday(.abbreviated)).replacingOccurrences(of: ".", with: "").uppercased()
         date = now.formatted(style.day().month(.wide))
+    }
+}
+
+/// A second clock on the big card. The list stays short on purpose: one city per common offset.
+struct ClockZone: Identifiable, Hashable {
+    let city: String
+    let identifier: String
+    var id: String { identifier }
+
+    static let all = [
+        ClockZone(city: "San Francisco", identifier: "America/Los_Angeles"),
+        ClockZone(city: "New York", identifier: "America/New_York"),
+        ClockZone(city: "São Paulo", identifier: "America/Sao_Paulo"),
+        ClockZone(city: "London", identifier: "Europe/London"),
+        ClockZone(city: "Berlin", identifier: "Europe/Berlin"),
+        ClockZone(city: "Dubai", identifier: "Asia/Dubai"),
+        ClockZone(city: "Mumbai", identifier: "Asia/Kolkata"),
+        ClockZone(city: "Singapore", identifier: "Asia/Singapore"),
+        ClockZone(city: "Tokyo", identifier: "Asia/Tokyo"),
+        ClockZone(city: "Sydney", identifier: "Australia/Sydney"),
+    ]
+
+    /// "−6h", "+5:30" compared to here; empty when it's the same.
+    func offsetText(at now: Date) -> String {
+        guard let zone = TimeZone(identifier: identifier) else { return "" }
+        let minutes = (zone.secondsFromGMT(for: now) - TimeZone.current.secondsFromGMT(for: now)) / 60
+        guard minutes != 0 else { return "" }
+        let sign = minutes > 0 ? "+" : "−"
+        let rest = abs(minutes) % 60
+        return "\(sign)\(abs(minutes) / 60)" + (rest == 0 ? "h" : String(format: ":%02d", rest))
     }
 }
 
@@ -102,6 +133,8 @@ struct ClockDayWing: View {
 
 /// The big clock at the top of the hover view.
 struct ClockCard: View {
+    var zone: ClockZone?
+
     var body: some View {
         PeriodicClock(every: 1) { now in
             let face = ClockFace(now)
@@ -116,6 +149,10 @@ struct ClockCard: View {
                     }
                 }
                 Spacer(minLength: 12)
+                if let zone, let timeZone = TimeZone(identifier: zone.identifier) {
+                    secondClock(zone, face: ClockFace(now, in: timeZone), now: now)
+                    Spacer(minLength: 12)
+                }
                 VStack(alignment: .trailing, spacing: 1) {
                     Text(face.weekday)
                         .font(.system(size: 13, weight: .semibold))
@@ -129,5 +166,22 @@ struct ClockCard: View {
             .padding(.horizontal, 24)
             .frame(height: NotchViewModel.clockCardHeight)
         }
+    }
+
+    private func secondClock(_ zone: ClockZone, face: ClockFace, now: Date) -> some View {
+        VStack(alignment: .leading, spacing: 1) {
+            Text(zone.city)
+                .font(.system(size: 11, weight: .medium))
+                .foregroundStyle(.white.opacity(0.5))
+            HStack(alignment: .firstTextBaseline, spacing: 5) {
+                Text("\(face.hour):\(face.minute)")
+                    .font(.system(size: 15, weight: .semibold, design: .rounded).monospacedDigit())
+                    .foregroundStyle(.white.opacity(0.88))
+                Text(zone.offsetText(at: now))
+                    .font(.system(size: 11, weight: .medium, design: .rounded))
+                    .foregroundStyle(NosyPalette.spark.opacity(0.8))
+            }
+        }
+        .lineLimit(1)
     }
 }

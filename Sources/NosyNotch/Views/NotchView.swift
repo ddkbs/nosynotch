@@ -96,7 +96,7 @@ struct NotchView: View {
             case .expanded:
                 VStack(spacing: 0) {
                     if model.showsClock {
-                        ClockCard()
+                        ClockCard(zone: model.clockZone)
                             .transition(.blurFade)
                     }
                     if model.showsNosyCard {

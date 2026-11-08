@@ -35,6 +35,7 @@ enum Preferences {
         static let calendarEnabled = "calendarEnabled"
         static let replyMode = "replyMode"
         static let clockEnabled = "clockEnabled"
+        static let clockZone = "clockZone"
     }
 
     private static let defaults = UserDefaults.standard
@@ -76,6 +77,7 @@ enum Preferences {
             Key.calendarEnabled: false,
             Key.replyMode: "type",
             Key.clockEnabled: true,
+            Key.clockZone: "",
         ])
     }
 
@@ -185,6 +187,12 @@ enum Preferences {
 
     /// The time in the notch while nothing else is going on.
     static var clockEnabled: Bool { defaults.object(forKey: Key.clockEnabled) as? Bool ?? true }
+
+    /// The second time zone on the big clock, if any.
+    static var clockZone: ClockZone? {
+        let identifier = defaults.string(forKey: Key.clockZone) ?? ""
+        return ClockZone.all.first { $0.identifier == identifier }
+    }
 
     /// Drag files onto the notch: Shelf and AirDrop.
     static var shelfEnabled: Bool { defaults.object(forKey: Key.shelfEnabled) as? Bool ?? true }

@@ -341,6 +341,11 @@ final class NotchViewModel: ObservableObject {
     /// The recorder only shows the clock in its own scene, so the idle notch in the others stays as it was.
     var recordsClock = false
 
+    /// The second time zone on the big clock.
+    var clockZone: ClockZone? {
+        Clock.isVirtual ? ClockZone.all.first { $0.city == "New York" } : Preferences.clockZone
+    }
+
     /// Nothing is running – no agent, no timer, no music, nothing left to look at – so the notch shows the time.
     /// Only under a real notch: elsewhere it would be a permanent black pill on an empty menu bar.
     var showsClock: Bool {
