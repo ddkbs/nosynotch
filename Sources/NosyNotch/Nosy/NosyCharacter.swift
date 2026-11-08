@@ -38,7 +38,7 @@ enum NosyMood: Equatable {
 
 /// Things Nosy can wear, unlocked by level.
 enum NosyAccessory: String, CaseIterable, Identifiable {
-    case none, headphones, glasses, cap, bow
+    case none, headphones, glasses, cap, bow, party, crown, halo
 
     var id: String { rawValue }
 
@@ -49,6 +49,9 @@ enum NosyAccessory: String, CaseIterable, Identifiable {
         case .glasses: return "Glasses"
         case .cap: return "Cap"
         case .bow: return "Bow"
+        case .party: return "Party hat"
+        case .crown: return "Crown"
+        case .halo: return "Halo"
         }
     }
 
@@ -68,6 +71,9 @@ enum NosyAccessory: String, CaseIterable, Identifiable {
         case .glasses: return .level(4)
         case .cap: return .level(6)
         case .bow: return .level(8)
+        case .party: return .tasks(100)
+        case .crown: return .streak(days: 7)
+        case .halo: return .streak(days: 30)
         }
     }
 

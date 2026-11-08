@@ -32,6 +32,33 @@ struct NosyFigure: View {
 }
 
 /// One frame of Nosy at time `t`.
+private struct NosyCone: Shape {
+    func path(in rect: CGRect) -> Path {
+        var path = Path()
+        path.move(to: CGPoint(x: rect.midX, y: rect.minY))
+        path.addLine(to: CGPoint(x: rect.maxX, y: rect.maxY))
+        path.addQuadCurve(to: CGPoint(x: rect.minX, y: rect.maxY), control: CGPoint(x: rect.midX, y: rect.maxY + 4))
+        path.closeSubpath()
+        return path
+    }
+}
+
+private struct NosyCrown: Shape {
+    func path(in rect: CGRect) -> Path {
+        var path = Path()
+        let (w, h) = (rect.width, rect.height)
+        path.move(to: CGPoint(x: rect.minX + w * 0.08, y: rect.maxY))
+        path.addLine(to: CGPoint(x: rect.minX, y: rect.minY + h * 0.22))
+        path.addLine(to: CGPoint(x: rect.minX + w * 0.28, y: rect.minY + h * 0.55))
+        path.addLine(to: CGPoint(x: rect.midX, y: rect.minY))
+        path.addLine(to: CGPoint(x: rect.maxX - w * 0.28, y: rect.minY + h * 0.55))
+        path.addLine(to: CGPoint(x: rect.maxX, y: rect.minY + h * 0.22))
+        path.addLine(to: CGPoint(x: rect.maxX - w * 0.08, y: rect.maxY))
+        path.closeSubpath()
+        return path
+    }
+}
+
 private struct NosyPose: View {
     let mood: NosyMood
     let look: CGSize
@@ -272,6 +299,31 @@ private struct NosyPose: View {
             }
             .rotationEffect(.degrees(-15))
             .offset(x: 13, y: -19)
+        case .party:
+            ZStack(alignment: .top) {
+                NosyCone()
+                    .fill(LinearGradient(colors: [NosyPalette.top, NosyPalette.middle, NosyPalette.bottom],
+                                         startPoint: .top, endPoint: .bottom))
+                    .frame(width: 19, height: 24)
+                Circle().fill(NosyPalette.spark).frame(width: 6).offset(y: -3)
+            }
+            .rotationEffect(.degrees(14))
+            .offset(x: 12, y: -28)
+        case .crown:
+            NosyCrown()
+                .fill(LinearGradient(colors: [Color(red: 1, green: 0.9, blue: 0.6), NosyPalette.spark],
+                                     startPoint: .top, endPoint: .bottom))
+                .frame(width: 30, height: 15)
+                .overlay(alignment: .bottom) {
+                    Circle().fill(tint).frame(width: 3.5).offset(y: -3)
+                }
+                .offset(y: -26)
+        case .halo:
+            Ellipse()
+                .stroke(NosyPalette.spark, lineWidth: 2.5)
+                .frame(width: 32, height: 9)
+                .shadow(color: NosyPalette.spark.opacity(0.8), radius: 4)
+                .offset(y: -36 + 1.2 * sin(t * 1.8))
         }
     }
 
