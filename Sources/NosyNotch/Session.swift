@@ -233,6 +233,12 @@ struct Session: Identifiable, Equatable {
 
     var isUnseen: Bool { unseenSince != nil }
 
+    /// Working, or waiting for an answer: a new prompt has to wait its turn.
+    var isBusy: Bool {
+        if case .waiting = state { return true }
+        return state.isActive
+    }
+
     var projectName: String {
         guard let cwd, !cwd.isEmpty else { return agent.name }
         return (cwd as NSString).lastPathComponent

@@ -64,6 +64,9 @@ final class NotchViewModel: ObservableObject {
     let shelf: Shelf
     let focus = FocusTimer.shared
     let calendar: CalendarMonitor
+    /// Prompts waiting for a busy session.
+    let replyQueue = ReplyQueue()
+    private var replyQueueObserver: AnyCancellable?
     /// Files are being dragged and the pointer is near the notch.
     @Published var fileDragNear = false {
         didSet { if oldValue != fileDragNear { recompute() } }
@@ -91,6 +94,7 @@ final class NotchViewModel: ObservableObject {
     static let calendarRowHeight: CGFloat = 34
     static let clockCardHeight: CGFloat = 62
     static let chatListHeight: CGFloat = 170
+    static let queuedRowHeight: CGFloat = 30
 
     /// Extra height for the Allow / Deny row.
     static let approvalRowHeight: CGFloat = 40
@@ -149,6 +153,12 @@ final class NotchViewModel: ObservableObject {
 
     func sendReply(_ text: String) {
         guard let session = chatSession else { return }
+        if session.isBusy {
+            chatStatus = replyQueue.add(text, to: session.id)
+                ? "Goes out when \(session.agent.name) is done"
+                : "That's \(ReplyQueue.maxItems) waiting already – remove one first."
+            return
+        }
         pendingReply = ChatMessage(id: "pending-\(UUID().uuidString)", role: .user, text: text)
         chatMessages.append(pendingReply!)
         chatStatus = "Sending…"
@@ -280,6 +290,10 @@ final class NotchViewModel: ObservableObject {
         self.usage = usage
         usage.onChange = { [weak self] in self?.objectWillChange.send() }
         shelfObserver = shelf.objectWillChange.sink { [weak self] _ in
+            DispatchQueue.main.async { MainActor.assumeIsolated { self?.objectWillChange.send() } }
+        }
+        replyQueue.session = { [weak store] in store?.sessions[$0] }
+        replyQueueObserver = replyQueue.objectWillChange.sink { [weak self] _ in
             DispatchQueue.main.async { MainActor.assumeIsolated { self?.objectWillChange.send() } }
         }
         head.onGesture = { [weak self] gesture in
@@ -506,7 +520,9 @@ final class NotchViewModel: ObservableObject {
         case .notice:
             return CGSize(width: wide, height: notchSize.height + 76)
         case .chat:
-            return CGSize(width: wide, height: notchSize.height + Self.chatListHeight + 108)
+            let queued = chatSession.map { replyQueue.items[$0.id]?.count ?? 0 } ?? 0
+            return CGSize(width: wide, height: notchSize.height + Self.chatListHeight + 108
+                          + CGFloat(queued) * Self.queuedRowHeight)
         }
     }
 
@@ -543,6 +559,7 @@ final class NotchViewModel: ObservableObject {
             failure = nil
             celebration = Celebration(session: session)
             flash(for: Preferences.notificationSeconds)
+            replyQueue.sessionFinished(session.id)
         case .needsAttention(let session):
             celebration = nil
             failure = nil
@@ -557,6 +574,7 @@ final class NotchViewModel: ObservableObject {
             shakes += 1
             flash(for: Preferences.notificationSeconds + 2)
         case .started(let session):
+            replyQueue.sessionStarted(session.id)
             if quietDone?.id == session.id { quietDone = nil }
             if celebration?.session.id == session.id { endFlash() }
             if attention?.id == session.id { endFlash() }
@@ -577,6 +595,7 @@ final class NotchViewModel: ObservableObject {
         if attention?.id == session.id { attention = nil }
         if failure?.id == session.id { failure = nil }
         quietDone = session
+        replyQueue.sessionFinished(session.id)
         quietWork?.cancel()
         let work = DispatchWorkItem { [weak self] in
             MainActor.assumeIsolated {
@@ -639,6 +658,7 @@ final class NotchViewModel: ObservableObject {
 
     func recompute() {
         updateSpectrum()
+        replyQueue.keep(Set(store.sessions.keys))
         defer {
             let canTrack = Bundle.main.bundleURL.pathExtension == "app"
             head.setActive(canTrack && Preferences.headGestures && presentation == .attention && attentionApproval != nil)
