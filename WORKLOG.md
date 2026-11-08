@@ -1,5 +1,13 @@
 # WORKLOG
 
+## 2026-11-08 (Uhr im Leerlauf, Node-Download)
+- **Uhr** (`Views/IdleClock.swift`, neuer Zustand `.clock`, niedrigste Priorität vor `.peek`/`.hidden`): rechter Flügel Zeit, links Nosy (ohne Nosy: Wochentag), Doppelpunkt atmet in Gold, Ziffern rollen, dunkler wenn Nosy schläft. Hover: große Uhr + Datum statt „No active sessions“. Settings → Extras, Standard an.
+- Entscheidungen: „Nichts läuft“ = kein Agent, keine angezeigte Musik, kein Timer, nichts Ungesehenes. Nur unter echter Notch (sonst dauerhafte schwarze Pille). Im Recorder nur in Szene `clock`, damit die anderen GIFs gleich bleiben. Zeit schlägt `.peek`, sonst flackert sie bei Mausnähe.
+- Geprüft per Offscreen-Render (Uhr, Hover, Agent übernimmt, Uhr kommt zurück) und `docs/gifs/clock.gif`. **Nicht** auf echter Notch getestet.
+- Achtung: Der rechte Flügel (46 pt) liegt jetzt dauerhaft über Menüleisten-Icons direkt neben der Notch.
+- **Website:** `GetNode`-Link holt live die neueste LTS aus `nodejs.org/dist/index.json` (CORS offen) und verlinkt direkt die universelle `.pkg`; Fallback `nodejs.org/en/download`. Im Hero, in der Install-Karte, auf der Copied-Karte und im Finale. Browser-Test ok (v26.13.0).
+- **Offen:** Branch `feat/idle-clock-node-download` nicht gemergt/gepusht; Uhr braucht Release, Website geht erst mit Push auf `main` live. Uhr nicht im Website-Grid „Not just agents“ (7. Kachel würde das 3er-Raster brechen).
+
 ## 2026-11-07 (Reply bei zwei Claude-Instanzen)
 - Ursache: David hat zwei Instanzen von `Claude.app` (gleiche Bundle-ID, zweite mit `--user-data-dir=…/Claude-Zweit`). Reply/Klick hat per Bundle-ID die erste aktiviert → falsches Fenster.
 - Fix: Claude- und Cursor-Hooks schicken `X-Host-Pid: $PPID`; die App geht die Prozesskette hoch bis zur ersten regulären App (`TerminalActivator.hostApp`) und aktiviert genau die. Codex-Hooks bewusst unverändert (geänderte Hooks müssten in Codex neu vertraut werden). CLI baut identischen Befehl (geprüft).
