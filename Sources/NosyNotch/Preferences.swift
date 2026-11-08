@@ -34,6 +34,7 @@ enum Preferences {
         static let focusMutesAlerts = "focusMutesAlerts"
         static let calendarEnabled = "calendarEnabled"
         static let replyMode = "replyMode"
+        static let clockEnabled = "clockEnabled"
     }
 
     private static let defaults = UserDefaults.standard
@@ -74,6 +75,7 @@ enum Preferences {
             Key.focusMutesAlerts: true,
             Key.calendarEnabled: false,
             Key.replyMode: "type",
+            Key.clockEnabled: true,
         ])
     }
 
@@ -180,6 +182,9 @@ enum Preferences {
     /// How a reply from the notch reaches the session: "type" = paste it into the session's app (needs
     /// Accessibility), "background" = `claude --resume` / `codex exec resume`.
     static var replyMode: String { defaults.string(forKey: Key.replyMode) ?? "type" }
+
+    /// The time in the notch while nothing else is going on.
+    static var clockEnabled: Bool { defaults.object(forKey: Key.clockEnabled) as? Bool ?? true }
 
     /// Drag files onto the notch: Shelf and AirDrop.
     static var shelfEnabled: Bool { defaults.object(forKey: Key.shelfEnabled) as? Bool ?? true }

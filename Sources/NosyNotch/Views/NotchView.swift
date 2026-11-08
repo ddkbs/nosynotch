@@ -95,6 +95,10 @@ struct NotchView: View {
             switch model.presentation {
             case .expanded:
                 VStack(spacing: 0) {
+                    if model.showsClock {
+                        ClockCard()
+                            .transition(.blurFade)
+                    }
                     if model.showsNosyCard {
                         NosyCard(pet: model.pet, trailing: AnyView(FocusButton(timer: model.focus)))
                     }
@@ -169,7 +173,7 @@ struct NotchView: View {
                 DropZoneView(onShelf: { urls in model.shelf.add(urls); model.fileDragNear = false },
                              onAirDrop: { urls in model.fileDragNear = false; AirDrop.send(urls) })
                     .transition(.blurFade.combined(with: .scale(scale: 0.85, anchor: .top)))
-            case .hidden, .compact, .media, .peek, .timer:
+            case .hidden, .compact, .media, .peek, .timer, .clock:
                 EmptyView()
             }
         }
@@ -226,6 +230,9 @@ struct NotchView: View {
                                 color: model.presentation == .celebrating ? Theme.success : primary.accent)
                         .frame(width: 18, height: 18)
                         .transition(.scale(scale: 0.2).combined(with: .opacity))
+                } else if model.presentation == .clock {
+                    ClockDayWing()
+                        .transition(.scale(scale: 0.2).combined(with: .opacity))
                 }
             }
             .frame(width: Self.wingContent, alignment: .center)
@@ -235,6 +242,9 @@ struct NotchView: View {
             ZStack {
                 if model.presentation == .timer {
                     FocusRing(timer: model.focus)
+                        .transition(.scale(scale: 0.2).combined(with: .opacity))
+                } else if model.presentation == .clock {
+                    ClockWing(dimmed: model.isAsleep)
                         .transition(.scale(scale: 0.2).combined(with: .opacity))
                 } else if model.presentation == .peek {
                     NosyPeekBadge(asleep: model.isAsleep, energy: model.pet.energy, showsEnergy: Preferences.nosyPet)

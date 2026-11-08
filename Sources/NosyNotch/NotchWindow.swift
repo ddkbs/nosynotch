@@ -105,6 +105,7 @@ final class NotchWindowController {
         let notch = NotchGeometry.notch(on: screen)
         model.notchSize = notch.size
         model.hasPhysicalNotch = notch.physical
+        model.recompute()
 
         let canvas = model.canvasSize
         let frame = NSRect(x: screen.frame.midX - canvas.width / 2,

@@ -31,6 +31,8 @@ final class NotchViewModel: ObservableObject {
         case timer
         /// A session's conversation with a reply field.
         case chat
+        /// Nothing at all going on: Nosy on the left, the time on the right.
+        case clock
     }
 
     struct Celebration: Equatable {
@@ -87,6 +89,7 @@ final class NotchViewModel: ObservableObject {
     static let nosyCardHeight: CGFloat = 40
     static let shelfRowHeight: CGFloat = 46
     static let calendarRowHeight: CGFloat = 34
+    static let clockCardHeight: CGFloat = 62
     static let chatListHeight: CGFloat = 170
 
     /// Extra height for the Allow / Deny row.
@@ -319,7 +322,19 @@ final class NotchViewModel: ObservableObject {
     }
 
     /// Whether the hover view lists Claude sessions (always, unless there are none but something else fills it).
-    var showsSessionList: Bool { !store.sessions.isEmpty || (!hasMedia && !showsNosyCard) }
+    var showsSessionList: Bool { !store.sessions.isEmpty || (!hasMedia && !showsNosyCard && !showsClock) }
+
+    /// The recorder only shows the clock in its own scene, so the idle notch in the others stays as it was.
+    var recordsClock = false
+
+    /// Nothing is running – no agent, no timer, no music, nothing left to look at – so the notch shows the time.
+    /// Only under a real notch: elsewhere it would be a permanent black pill on an empty menu bar.
+    var showsClock: Bool {
+        guard Clock.isVirtual ? recordsClock : Preferences.clockEnabled, hasPhysicalNotch else { return false }
+        let musicShown = hasMedia && (media.isPlaying || Preferences.mediaShowWhenPaused)
+        return !store.hasActivity && !store.hasWaiting && quietDone == nil && !focus.isRunning && !musicShown
+            && store.unseen.isEmpty
+    }
 
     /// The next meeting, if the calendar is on and one is coming up.
     var upcomingMeeting: Meeting? { Preferences.calendarEnabled ? calendar.next : nil }
@@ -375,7 +390,7 @@ final class NotchViewModel: ObservableObject {
     var nosyOutside: Bool {
         guard Preferences.nosyEnabled else { return false }
         switch presentation {
-        case .hidden, .compact, .media, .peek, .timer: return false
+        case .hidden, .compact, .media, .peek, .timer, .clock: return false
         default: return true
         }
     }
@@ -465,10 +480,11 @@ final class NotchViewModel: ObservableObject {
         switch presentation {
         case .hidden:
             return CGSize(width: notchSize.width + 2 * flare, height: hasPhysicalNotch ? notchSize.height : 0)
-        case .compact, .media, .peek, .timer:
+        case .compact, .media, .peek, .timer, .clock:
             return CGSize(width: compactWidth, height: notchSize.height)
         case .expanded:
             var height = notchSize.height + 12
+            if showsClock { height += Self.clockCardHeight }
             if showsNosyCard { height += Self.nosyCardHeight }
             if showsShelf { height += Self.shelfRowHeight }
             if upcomingMeeting != nil { height += Self.calendarRowHeight }
@@ -505,14 +521,14 @@ final class NotchViewModel: ObservableObject {
 
     var bottomRadius: CGFloat {
         switch presentation {
-        case .hidden, .compact, .media, .peek, .timer: return min(12, notchSize.height * 0.38)
+        case .hidden, .compact, .media, .peek, .timer, .clock: return min(12, notchSize.height * 0.38)
         default: return 26
         }
     }
 
     private static func topRadius(for p: Presentation) -> CGFloat {
         switch p {
-        case .hidden, .compact, .media, .peek, .timer: return 6
+        case .hidden, .compact, .media, .peek, .timer, .clock: return 6
         default: return 14
         }
     }
@@ -655,7 +671,7 @@ final class NotchViewModel: ObservableObject {
         } else if notice != nil {
             next = .notice
         } else if isHovering && (!store.sessions.isEmpty || hasMedia || Preferences.nosyEnabled || showsShelf
-                                 || upcomingMeeting != nil) {
+                                 || upcomingMeeting != nil || showsClock) {
             next = .expanded
         } else if store.hasActivity || store.hasWaiting || quietDone != nil {
             next = .compact
@@ -665,6 +681,8 @@ final class NotchViewModel: ObservableObject {
             next = .media
         } else if !store.unseen.isEmpty {
             next = .compact
+        } else if showsClock {
+            next = .clock
         } else if Preferences.nosyEnabled && pointerIsNear {
             next = .peek
         } else {
