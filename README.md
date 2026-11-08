@@ -119,8 +119,8 @@ When the notch opens, Nosy drips out of the edge and hangs from it by its paws; 
 like into a puddle of tar – splash included. Bring the pointer close and it peeks out; leave it alone for a while
 and it falls asleep (sooner at night). Click it and it giggles.
 
-**Energy, levels and streaks** – every finished task feeds Nosy, days with tasks make a streak, XP unlock a little
-wardrobe to earn with levels, streaks and finished tasks (headphones, glasses, cap, bow, party hat, crown, halo). Deliberately guilt-free: Nosy never gets sad or sick, a missed day just
+**Energy, levels and streaks** – every finished task feeds Nosy, days with tasks make a streak, and levels, streaks
+and finished tasks earn a little wardrobe (headphones, glasses, cap, bow, party hat, crown, halo). Deliberately guilt-free: Nosy never gets sad or sick, a missed day just
 starts a new streak. Eight colours to pick from – Obsidian, the default, glows in the colour of the agent that's
 working. All of it stays in your Mac's settings, and you can turn Nosy off for the classic agent symbols.
 
