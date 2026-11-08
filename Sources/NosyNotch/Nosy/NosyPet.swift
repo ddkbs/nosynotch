@@ -64,6 +64,18 @@ final class NosyPet: ObservableObject {
 
     var isLowOnEnergy: Bool { state.energy < 0.25 }
 
+    /// Streaks count by the best one ever, so a missed day never takes anything away.
+    func isUnlocked(_ item: NosyAccessory) -> Bool {
+        switch item.unlock {
+        case .level(let needed): return level >= needed
+        case .streak(let days): return state.bestStreak >= days
+        case .tasks(let tasks): return state.totalTasks >= tasks
+        }
+    }
+
+    /// What Nosy can actually put on of the chosen item.
+    func wearing(_ item: NosyAccessory) -> NosyAccessory { isUnlocked(item) ? item : .none }
+
     /// A task finished: more energy, some XP, today's counters and the streak. Returns the new level on a level-up.
     @discardableResult
     func feed(duration: TimeInterval?) -> Int? {

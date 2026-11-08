@@ -52,14 +52,31 @@ enum NosyAccessory: String, CaseIterable, Identifiable {
         }
     }
 
-    /// Level needed to wear it.
-    var level: Int {
+    /// What it takes to wear it.
+    enum Unlock: Equatable {
+        case level(Int)
+        case streak(days: Int)
+        case tasks(Int)
+    }
+
+    static let headphonesLevel = 2
+
+    var unlock: Unlock {
         switch self {
-        case .none: return 1
-        case .headphones: return 2
-        case .glasses: return 4
-        case .cap: return 6
-        case .bow: return 8
+        case .none: return .level(1)
+        case .headphones: return .level(Self.headphonesLevel)
+        case .glasses: return .level(4)
+        case .cap: return .level(6)
+        case .bow: return .level(8)
+        }
+    }
+
+    /// "Lv 4", "7 days", "50 tasks" on a locked item.
+    var lockedLabel: String {
+        switch unlock {
+        case .level(let level): return "Lv \(level)"
+        case .streak(let days): return "\(days) days"
+        case .tasks(let tasks): return "\(tasks) tasks"
         }
     }
 }

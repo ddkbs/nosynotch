@@ -1075,7 +1075,8 @@ private struct NosyPage: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 18) {
-            NosyStage(level: actions.pet?.level ?? 1, accessory: NosyAccessory(rawValue: accessory) ?? .none,
+            NosyStage(level: actions.pet?.level ?? 1,
+                      accessory: actions.pet?.wearing(NosyAccessory(rawValue: accessory) ?? .none) ?? .none,
                       color: NosyColor(rawValue: colorName) ?? .obsidian)
 
             Card(footer: "Nosy looks out of the notch, follows your pointer, works along with your agents, falls asleep when nothing happens and cheers when a task is done. Off = the classic agent symbols.") {
@@ -1107,10 +1108,10 @@ private struct NosyPage: View {
                 .padding(12)
             }
 
-            Card(title: "Wardrobe", footer: "Unlocked with levels. Headphones go on by themselves while music plays.") {
-                HStack(spacing: 10) {
+            Card(title: "Wardrobe", footer: "Unlocked with levels, streaks and finished tasks. Headphones go on by themselves while music plays.") {
+                HStack(spacing: 8) {
                     ForEach(NosyAccessory.allCases) { item in
-                        WardrobeItem(item: item, level: actions.pet?.level ?? 1, selected: accessory == item.rawValue, tint: tint,
+                        WardrobeItem(item: item, unlocked: actions.pet?.isUnlocked(item) ?? (item == .none), selected: accessory == item.rawValue, tint: tint,
                                      color: NosyColor(rawValue: colorName) ?? .obsidian) {
                             accessory = item.rawValue
                             actions.settingsChanged()
@@ -1206,26 +1207,24 @@ private struct ProgressBar: View {
 
 private struct WardrobeItem: View {
     let item: NosyAccessory
-    let level: Int
+    let unlocked: Bool
     let selected: Bool
     let tint: Color
     let color: NosyColor
     let action: () -> Void
 
-    private var unlocked: Bool { level >= item.level }
-
     var body: some View {
         Button(action: action) {
             VStack(spacing: 4) {
-                NosyFigure(mood: .idle, level: 1, accessory: unlocked ? item : .none, tint: Theme.claude, color: color)
-                    .frame(width: 40, height: 50)
+                NosyFigure(mood: .idle, level: 1, accessory: item, tint: Theme.claude, color: color)
+                    .frame(width: 34, height: 43)
                     .opacity(unlocked ? 1 : 0.35)
                     .overlay {
                         if !unlocked {
                             Image(systemName: "lock.fill").font(.system(size: 12)).foregroundStyle(.white.opacity(0.7))
                         }
                     }
-                Text(unlocked ? item.title : "Lv \(item.level)")
+                Text(unlocked ? item.title : item.lockedLabel)
                     .font(.system(size: 10, weight: .medium))
                     .foregroundStyle(.white.opacity(selected ? 0.95 : 0.5))
             }

@@ -277,8 +277,8 @@ private struct NosyPose: View {
 
     /// Headphones go on by themselves while music plays (once unlocked).
     private var effectiveAccessory: NosyAccessory {
-        if mood == .grooving, level >= NosyAccessory.headphones.level { return .headphones }
-        return accessory.level <= level ? accessory : .none
+        if mood == .grooving, level >= NosyAccessory.headphonesLevel { return .headphones }
+        return accessory
     }
 
     @ViewBuilder
