@@ -351,7 +351,10 @@ final class NotchViewModel: ObservableObject {
     }
 
     /// The next meeting, if the calendar is on and one is coming up.
-    var upcomingMeeting: Meeting? { Preferences.calendarEnabled ? calendar.next : nil }
+    var upcomingMeeting: Meeting? { previewMeeting ?? (Preferences.calendarEnabled ? calendar.next : nil) }
+
+    /// For the recorder: a meeting without a calendar.
+    var previewMeeting: Meeting?
 
     /// Parked files in the hover view.
     var showsShelf: Bool { Preferences.shelfEnabled && !shelf.isEmpty }

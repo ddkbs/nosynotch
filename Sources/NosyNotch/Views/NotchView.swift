@@ -247,7 +247,7 @@ struct NotchView: View {
                     FocusRing(timer: model.focus)
                         .transition(.scale(scale: 0.2).combined(with: .opacity))
                 } else if model.presentation == .clock {
-                    ClockWing(dimmed: model.isAsleep)
+                    ClockWing(dimmed: model.isAsleep, meeting: model.upcomingMeeting)
                         .transition(.scale(scale: 0.2).combined(with: .opacity))
                 } else if model.presentation == .peek {
                     NosyPeekBadge(asleep: model.isAsleep, energy: model.pet.energy, showsEnergy: Preferences.nosyPet)
