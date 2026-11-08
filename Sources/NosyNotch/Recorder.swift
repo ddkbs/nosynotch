@@ -310,6 +310,13 @@ final class Recorder {
                     model.recompute()
                 }),
             ]),
+            Scene(name: "unlock", duration: 6, stillAt: 3.2, steps: [
+                (0.0, ev("SessionStart")),
+                (0.3, prompt),
+                (2.2, ev("Stop", last: "Seven days in a row. Nosy has something new to wear.")),
+            ], actions: [
+                (2.21, { $0.celebrateUnlock(.crown) }),
+            ]),
             Scene(name: "level-up", duration: 6, stillAt: 3.2, steps: [
                 (0.0, ev("SessionStart")),
                 (0.3, prompt),
