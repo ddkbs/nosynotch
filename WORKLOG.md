@@ -1,5 +1,14 @@
 # WORKLOG
 
+## 2026-11-08 (Next Prompt, Fortschritt, schlauere Uhr, Garderobe)
+- **Next Prompt** (`ReplyQueue.swift`): Antwort während der Agent arbeitet oder wartet geht in die Warteschlange (max. 3, ✕ pro Eintrag), nach jedem `Stop` genau eine. Entscheidungen: Einfügen wartet bis 1,5 s ohne Tastendruck, nicht bei gesperrtem Bildschirm, danach Fokus zurück zur vorherigen App, denn sonst würde es mitten ins Tippen fahren. Nach dem Senden blockiert `inFlight` bis `UserPromptSubmit`, damit die 5-Minuten-Erinnerung (auch `.finished`) nichts doppelt schickt.
+- **Fortschritt** (`TodoProgress` in `Session.swift`): liest `TodoWrite`, `TaskCreate`/`TaskUpdate` (Formate aus echten Transkripten geprüft), Codex `update_plan` und `*__update_plan` der Desktop-App. Flügel: Icon + „3/7“, ab 10 Schritten nur die Zahl. Fertige Liste wird beim nächsten Prompt geleert.
+- **Uhr:** Countdown „in 8m“ in den letzten 15 min vor einem Termin (nur mit Kalender an), zweite Zeitzone aus fester Stadtliste auf der großen Uhr (Settings → Extras).
+- **Garderobe:** War schon an Level gekoppelt (mein Vorschlag war da ungenau). Neu: Ziele über besten Streak und Aufgabenzahl, Party-Hut (100 Tasks), Krone (7 Tage), Heiligenschein (30 Tage), „✦ New: Crown“ auf der Done-Karte. Bug behoben: `NosyFigure` prüfte Level selbst, die Vorschaubilder (level 1) zeigten nie ein Accessoire; Prüfung jetzt in `NosyPet.wearing`.
+- Geprüft: Offscreen-Renders aller neuen Zustände, Kompilat-Check aller Task-Listen-Formate, Queue-Ablauf im Recorder mit Stub statt echtem Einfügen.
+- **Nicht getestet:** echtes Einfügen aus der Queue mit Fokus-Rückgabe, CGEvent-Tippruhe, echter Kalender-Countdown, alles auf echter Notch.
+- **Offen:** alles auf Branch `feat/idle-clock-node-download`, nur lokal, nichts gemergt. Website zeigt die neuen Features noch nicht. `docs/gifs/settings.gif` ist nicht neu aufgenommen.
+
 ## 2026-11-08 (Uhr im Leerlauf, Node-Download)
 - **Uhr** (`Views/IdleClock.swift`, neuer Zustand `.clock`, niedrigste Priorität vor `.peek`/`.hidden`): rechter Flügel Zeit, links Nosy (ohne Nosy: Wochentag), Doppelpunkt atmet in Gold, Ziffern rollen, dunkler wenn Nosy schläft. Hover: große Uhr + Datum statt „No active sessions“. Settings → Extras, Standard an.
 - Entscheidungen: „Nichts läuft“ = kein Agent, keine angezeigte Musik, kein Timer, nichts Ungesehenes. Nur unter echter Notch (sonst dauerhafte schwarze Pille). Im Recorder nur in Szene `clock`, damit die anderen GIFs gleich bleiben. Zeit schlägt `.peek`, sonst flackert sie bei Mausnähe.
