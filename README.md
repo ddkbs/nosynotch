@@ -52,7 +52,7 @@ npx nosynotch
 
 That one command downloads the app to `~/.nosynotch/`, connects every agent it finds and starts Nosy Notch in the
 background – no Dock icon, just a ✦ in the menu bar. You need [Node.js](https://nodejs.org) 18+ for `npx`
-(`brew install node` works too).
+(`brew install node` works too, or grab the installer from [the website](https://nosynotch.davidkubus.dev)).
 
 Two small things afterwards: restart Claude Code sessions that were already running, and – if you use Codex – trust the
 new hooks once in Codex (ChatGPT app → **Codex → Settings → Hooks**, or `/hooks` in the CLI). Codex runs no hook you
@@ -128,6 +128,8 @@ working. All of it stays in your Mac's settings, and you can turn Nosy off for t
 
 ## More in the notch
 
+- **Clock** – when nothing is running, the time sits next to Nosy. Hover for the big clock and the date; agents, music
+  and the focus timer always go first.
 - **Shelf and AirDrop** – drag files onto the notch: park them on the shelf and drag them out later, or AirDrop them.
 - **Focus timer** – 15 / 25 / 50 minutes from the hover view or the menu bar, a ring in the notch, agent sounds stay
   quiet until the break.

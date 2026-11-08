@@ -5,7 +5,7 @@ Each animation with the Claude Code hook that triggers it (Codex sends the same 
 
 [Thinking](#thinking) · [Working](#working) · [Needs you](#needs-you) · [Done](#done) · [Error](#error) ·
 [Compacting](#compacting) · [Unseen](#unseen) · [All sessions](#all-sessions-hover) · [Codex & Cursor](#codex--cursor) · [Usage](#usage-limits) · [Music](#music) · [Back to music](#back-to-music) ·
-[Nosy](#nosy) · [Level up](#level-up) · [Reply](#reply-from-the-notch) · [Shelf & AirDrop](#shelf--airdrop) · [Meeting](#meeting) · [Focus](#focus-timer) ·
+[Nosy](#nosy) · [Level up](#level-up) · [Reply](#reply-from-the-notch) · [Shelf & AirDrop](#shelf--airdrop) · [Meeting](#meeting) · [Focus](#focus-timer) · [Clock](#clock) ·
 [Charging](#charging) · [AirPods](#airpods) · [Full run](#full-run)
 
 ## Thinking
@@ -210,6 +210,16 @@ Two drop targets. Parked files show in the hover view:
 <img src="gifs/focus.gif" alt="Focus timer" width="560">
 
 **Trigger:** "25m" in the hover view or the menu bar
+
+## Clock
+
+<img src="gifs/clock.gif" alt="Clock" width="560">
+
+**Trigger:** nothing else going on
+
+With no agent working, no music, no focus timer and nothing unseen, the time sits on the right wing next to Nosy. The digits roll
+when the minute changes, the colon breathes in Nosy's gold, and the clock dims while Nosy sleeps. Hover for the big clock and
+the date. It follows your Mac's 12 / 24-hour setting and only shows under a real notch (Settings → Extras to turn it off).
 
 ## Charging
 
