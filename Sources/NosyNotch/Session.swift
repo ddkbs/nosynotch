@@ -155,6 +155,56 @@ extension ToolActivity {
     }
 }
 
+/// How far the agent is through its own task list. Claude Code either sends the whole list (`TodoWrite`, the desktop
+/// app's plan tool) or one change at a time (`TaskCreate` / `TaskUpdate`), Codex its `update_plan`.
+struct TodoProgress: Equatable {
+    /// Step id → status ("pending", "in_progress", "completed").
+    private var steps: [String: String] = [:]
+    /// `TaskCreate` numbers its tasks through the whole session, also after the list was cleared.
+    private var created = 0
+
+    var total: Int { steps.count }
+    var done: Int { steps.values.filter { $0 == "completed" }.count }
+    var isFinished: Bool { total > 0 && done == total }
+
+    mutating func clear() { steps = [:] }
+
+    /// Reads a tool call. Anything that isn't a task-list tool changes nothing.
+    mutating func apply(tool: String, input: [String: Any]) {
+        switch tool {
+        case "TodoWrite": replace(input["todos"])
+        case "update_plan": replace(input["plan"])
+        case "TaskCreate":
+            created += 1
+            steps[String(created)] = "pending"
+        case "TaskUpdate":
+            guard let id = input["taskId"] as? String, let status = input["status"] as? String else { return }
+            created = max(created, Int(id) ?? 0)
+            steps[id] = status == "deleted" ? nil : status
+        default:
+            if tool.hasSuffix("__update_plan") { updatePlan(input) }
+        }
+    }
+
+    private mutating func replace(_ list: Any?) {
+        guard let list = list as? [[String: Any]] else { return }
+        steps = [:]
+        for (index, step) in list.enumerated() { steps[String(index + 1)] = step["status"] as? String ?? "pending" }
+    }
+
+    /// The desktop app's plan tool: a whole list, or moves ("advance", "done", "start") on the one it already has.
+    private mutating func updatePlan(_ input: [String: Any]) {
+        if input["items"] != nil { return replace(input["items"]) }
+        if input["advance"] as? Bool == true {
+            let order = steps.keys.sorted { (Int($0) ?? 0) < (Int($1) ?? 0) }
+            if let current = order.first(where: { steps[$0] == "in_progress" }) { steps[current] = "completed" }
+            if let next = order.first(where: { steps[$0] == "pending" }) { steps[next] = "in_progress" }
+        }
+        for number in input["done"] as? [Int] ?? [] where steps[String(number)] != nil { steps[String(number)] = "completed" }
+        if let number = input["start"] as? Int, steps[String(number)] != nil { steps[String(number)] = "in_progress" }
+    }
+}
+
 struct Session: Identifiable, Equatable {
     let id: String
     var agent: Agent = .claude
@@ -178,6 +228,8 @@ struct Session: Identifiable, Equatable {
     var reminded = false
     /// How full the context window is (0–100), when the agent tells us.
     var contextPercent: Double?
+    /// The agent's own task list, when it keeps one.
+    var todos = TodoProgress()
 
     var isUnseen: Bool { unseenSince != nil }
 

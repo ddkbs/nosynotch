@@ -81,12 +81,14 @@ final class SessionStore: ObservableObject {
             s.turnStartedAt = Clock.now()
             s.toolCount = 0
             s.lastSummary = nil
+            if s.todos.isFinished { s.todos.clear() }
             transition = .started(s)
 
         case "PreToolUse":
             if s.turnStartedAt == nil { s.turnStartedAt = Clock.now() }
             s.state = .tool(ToolActivity(name: event.toolName ?? "Tool", input: event.toolInput))
             s.toolCount += 1
+            if let tool = event.toolName { s.todos.apply(tool: tool, input: event.toolInput) }
 
         case "PostToolUse", "PostToolUseFailure":
             s.state = .thinking
