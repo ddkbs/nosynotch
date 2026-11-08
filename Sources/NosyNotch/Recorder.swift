@@ -272,6 +272,23 @@ final class Recorder {
                 (4.2, { $0.isHovering = true }),
                 (7.0, { $0.isHovering = false }),
             ]),
+            Scene(name: "progress", duration: 9, height: 250, hoverAt: 6.4, stillAt: 5.4, steps: [
+                (0.0, ev("SessionStart")),
+                (0.3, prompt),
+                (0.9, ev("PreToolUse", tool: "TodoWrite", input: ["todos": [
+                    ["status": "in_progress"], ["status": "pending"], ["status": "pending"], ["status": "pending"], ["status": "pending"],
+                ]])),
+                (1.4, ev("PostToolUse", tool: "TodoWrite")),
+                (1.7, ev("PreToolUse", tool: "Edit", input: ["file_path": "\(cwd)/Sources/Parser.swift"])),
+                (2.6, ev("PreToolUse", tool: "TodoWrite", input: ["todos": [
+                    ["status": "completed"], ["status": "in_progress"], ["status": "pending"], ["status": "pending"], ["status": "pending"],
+                ]])),
+                (3.1, ev("PreToolUse", tool: "Bash", input: ["description": "Run the tests"])),
+                (4.3, ev("PreToolUse", tool: "TodoWrite", input: ["todos": [
+                    ["status": "completed"], ["status": "completed"], ["status": "completed"], ["status": "in_progress"], ["status": "pending"],
+                ]])),
+                (4.8, ev("PreToolUse", tool: "Edit", input: ["file_path": "\(cwd)/README.md"])),
+            ]),
             Scene(name: "level-up", duration: 6, stillAt: 3.2, steps: [
                 (0.0, ev("SessionStart")),
                 (0.3, prompt),
