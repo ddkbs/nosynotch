@@ -1,5 +1,13 @@
 # WORKLOG
 
+## 2026-11-12 (Offene Ports)
+- **Ports** (`Ports.swift`, `Views/PortViews.swift`): lauschende TCP-Ports per libproc (kein `lsof`), Elternkette per `sysctl` (libproc scheitert an root-Prozessen wie `login`). Zeigt Port, was es ist (Skript hinter node/python, z. B. „vite“), Ordner (cwd), wer es gestartet hat (Agent + erste App in der Kette), nur-localhost vs. Netzwerk (🌐). Klick öffnet `localhost:PORT`, ✕ = SIGTERM, nach 2 s SIGKILL (mit Startzeit-Check gegen PID-Wiederverwendung).
+- Entscheidungen: Standard nur Dev-Prozesse (von Agent/Terminal/Editor gestartet oder kein App-Prozess); Agents selbst und NosyNotch ausgeblendet, „Include apps“ zeigt den Rest. Apps fragen vor dem Beenden („Quit“-Bestätigung im Chip). Nur eigene Prozesse sichtbar, root-Dienste gar nicht – kein Passwort nötig. Settings → Extras, Standard aus (bei David per `defaults write` an). Session-Zeile zeigt `:5173`, wenn der Agent der Session den Server gestartet hat (PID in der Kette, sonst gleicher Ordner + Agent).
+- `NosyNotch --ports` listet dasselbe im Terminal. Recorder-Szene `ports` + `docs/gifs/ports.gif`; im Recorder wird nie ein echter Prozess beendet.
+- Geprüft: Scan gegen echte Prozesse (vite aus Claude, Raycast-Backend, Spotify, ControlCenter, ollama …), Beenden eines Test-Servers (anderer Prozess auf gleichem Port blieb), Offscreen-Render. Installiert in `build/Nosy Notch.app`, Nosy-Level unverändert (Backup: `~/Desktop/nosynotch-defaults-backup-2026-11-12.plist`).
+- **Nicht getestet:** echtes Hovern/Klicken auf der Notch, Bestätigungs-Flow mit echter Maus.
+- **Offen:** Bedienungshilfen-Recht nach Neubau neu setzen. GIF nicht im README-Raster, Website zeigt Ports nicht. Branch weiter nur lokal.
+
 ## 2026-11-08 (Next Prompt, Fortschritt, schlauere Uhr, Garderobe)
 - **Next Prompt** (`ReplyQueue.swift`): Antwort während der Agent arbeitet oder wartet geht in die Warteschlange (max. 3, ✕ pro Eintrag), nach jedem `Stop` genau eine. Entscheidungen: Einfügen wartet bis 1,5 s ohne Tastendruck, nicht bei gesperrtem Bildschirm, danach Fokus zurück zur vorherigen App, denn sonst würde es mitten ins Tippen fahren. Nach dem Senden blockiert `inFlight` bis `UserPromptSubmit`, damit die 5-Minuten-Erinnerung (auch `.finished`) nichts doppelt schickt.
 - **Fortschritt** (`TodoProgress` in `Session.swift`): liest `TodoWrite`, `TaskCreate`/`TaskUpdate` (Formate aus echten Transkripten geprüft), Codex `update_plan` und `*__update_plan` der Desktop-App. Flügel: Icon + „3/7“, ab 10 Schritten nur die Zahl. Fertige Liste wird beim nächsten Prompt geleert.
