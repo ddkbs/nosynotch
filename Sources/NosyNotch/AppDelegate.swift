@@ -22,6 +22,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         settingsChanged: { [weak self] in
             if Preferences.bluetoothEnabled { self?.headphones.start() } else { self?.headphones.stop() }
             if Preferences.calendarEnabled { self?.model.calendar.start() } else { self?.model.calendar.stop() }
+            self?.model.ports.setWatching(self?.model.isHovering ?? false)
             self?.model.objectWillChange.send()
             self?.model.recompute()
         },

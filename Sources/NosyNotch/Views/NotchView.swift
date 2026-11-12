@@ -110,10 +110,14 @@ struct NotchView: View {
                             .padding(.top, 2)
                     }
                     if model.showsSessionList {
-                        SessionList(store: store, queued: model.replyQueue.items, onChat: { model.openChat($0) })
+                        SessionList(store: store, queued: model.replyQueue.items, onChat: { model.openChat($0) },
+                                    ports: { model.showsPorts ? model.ports.ports(for: $0) : [] })
                     }
                     if model.showsShelf {
                         ShelfRow(shelf: model.shelf)
+                    }
+                    if model.showsPorts {
+                        PortsRow(monitor: model.ports)
                     }
                     let usageRows = model.usageRows
                     if !usageRows.isEmpty {
@@ -304,6 +308,8 @@ struct SessionList: View {
     @ObservedObject var store: SessionStore
     var queued: [String: [ReplyQueue.Item]] = [:]
     var onChat: ((Session) -> Void)?
+    /// The ports each session's agent started.
+    var ports: ((Session) -> [ListeningPort])?
 
     var body: some View {
         let sessions = Array(store.ordered.prefix(NotchViewModel.maxRows))
@@ -316,7 +322,7 @@ struct SessionList: View {
             }
             ForEach(sessions) { session in
                 SessionRow(session: session, queued: queued[session.id]?.count ?? 0, onDismiss: { store.dismiss(session.id) },
-                           onChat: { onChat?(session) })
+                           onChat: { onChat?(session) }, ports: ports?(session) ?? [])
                     .frame(height: NotchViewModel.rowHeight)
                     .transition(.opacity.combined(with: .move(edge: .top)))
             }
@@ -332,6 +338,7 @@ struct SessionRow: View {
     var queued = 0
     var onDismiss: () -> Void
     var onChat: (() -> Void)?
+    var ports: [ListeningPort] = []
     @State private var hovering = false
 
     var body: some View {
@@ -375,6 +382,10 @@ struct SessionRow: View {
                 }
                 .foregroundStyle(session.agent.color)
                 .help(queued == 1 ? "1 prompt waiting" : "\(queued) prompts waiting")
+            }
+
+            if !ports.isEmpty {
+                SessionPorts(ports: ports)
             }
 
             if session.todos.total > 0 {

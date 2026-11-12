@@ -64,6 +64,8 @@ final class NotchViewModel: ObservableObject {
     let shelf: Shelf
     let focus = FocusTimer.shared
     let calendar: CalendarMonitor
+    /// Listening ports (dev servers) and who opened them.
+    let ports = PortMonitor()
     /// Prompts waiting for a busy session.
     let replyQueue = ReplyQueue()
     private var replyQueueObserver: AnyCancellable?
@@ -91,6 +93,7 @@ final class NotchViewModel: ObservableObject {
     static let usageRowHeight: CGFloat = 24
     static let nosyCardHeight: CGFloat = 40
     static let shelfRowHeight: CGFloat = 46
+    static let portsRowHeight: CGFloat = 46
     static let calendarRowHeight: CGFloat = 34
     static let clockCardHeight: CGFloat = 62
     static let chatListHeight: CGFloat = 170
@@ -258,6 +261,7 @@ final class NotchViewModel: ObservableObject {
         didSet {
             guard oldValue != isHovering else { return }
             if isHovering { wakeUp(); noteActivity() }
+            if !Clock.isVirtual { ports.setWatching(isHovering) }
             recompute()
             // Looking at the session list for a moment counts as "seen".
             if isHovering, !store.unseen.isEmpty {
@@ -306,6 +310,11 @@ final class NotchViewModel: ObservableObject {
             self?.objectWillChange.send()
             self?.recompute()
         }
+        ports.onChange = { [weak self] in
+            self?.objectWillChange.send()
+            self?.recompute()
+        }
+        if !Clock.isVirtual { ports.setWatching(false) }
         sleepTimer = Timer.scheduledTimer(withTimeInterval: 15, repeats: true) { [weak self] _ in
             MainActor.assumeIsolated { self?.updateSleep() }
         }
@@ -363,6 +372,9 @@ final class NotchViewModel: ObservableObject {
 
     /// Parked files in the hover view.
     var showsShelf: Bool { Preferences.shelfEnabled && !shelf.isEmpty }
+
+    /// Open ports in the hover view.
+    var showsPorts: Bool { (Clock.isVirtual || Preferences.portsEnabled) && !ports.visible.isEmpty }
 
     /// Nosy's energy / level / streak card at the top of the hover view.
     var showsNosyCard: Bool { Preferences.nosyEnabled && Preferences.nosyPet }
@@ -520,6 +532,7 @@ final class NotchViewModel: ObservableObject {
             if showsClock { height += Self.clockCardHeight }
             if showsNosyCard { height += Self.nosyCardHeight }
             if showsShelf { height += Self.shelfRowHeight }
+            if showsPorts { height += Self.portsRowHeight }
             if upcomingMeeting != nil { height += Self.calendarRowHeight }
             if hasMedia { height += 2 + Self.mediaCardHeight }
             if showsSessionList {
@@ -709,7 +722,7 @@ final class NotchViewModel: ObservableObject {
             next = .limitReset
         } else if notice != nil {
             next = .notice
-        } else if isHovering && (!store.sessions.isEmpty || hasMedia || Preferences.nosyEnabled || showsShelf
+        } else if isHovering && (!store.sessions.isEmpty || hasMedia || Preferences.nosyEnabled || showsShelf || showsPorts
                                  || upcomingMeeting != nil || showsClock) {
             next = .expanded
         } else if store.hasActivity || store.hasWaiting || quietDone != nil {
