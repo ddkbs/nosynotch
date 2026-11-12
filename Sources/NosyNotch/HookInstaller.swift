@@ -133,7 +133,7 @@ enum HookInstaller {
     // MARK: Status line (usage limits)
 
     /// Claude Code passes rate limits (Pro/Max) only to its status line command. We add a silent one that
-    /// forwards the JSON – but only where you don't have a status line of your own.
+    /// forwards the JSON, preserving an existing status line and its output.
     static func statusLineCommand(port: UInt16) -> String {
         "curl -s -m 1 -X POST -H 'Content-Type: application/json' -H 'Expect:' --data-binary @- "
             + "'http://127.0.0.1:\(port)/usage?src=\(marker)' >/dev/null 2>&1; true"
@@ -148,10 +148,35 @@ enum HookInstaller {
         return ((line["command"] as? String) ?? "").contains(marker) ? .ours : .theirs
     }
 
+    /// Stored with the wrapper so reinstalling is idempotent and uninstall restores every option.
+    static let originalStatusLineKey = "nosynotchOriginalStatusLine"
+
+    static func combinedStatusLineCommand(original: String, port: UInt16) -> String {
+        let quoted = "'" + original.replacingOccurrences(of: "'", with: "'\"'\"'") + "'"
+        // The sentinel preserves trailing newlines stripped by shell command substitution.
+        return "nosynotch_payload=$(cat; printf '.'); nosynotch_payload=${nosynotch_payload%.}; "
+            + "printf '%s' \"$nosynotch_payload\" | (" + statusLineCommand(port: port) + "); "
+            + "printf '%s' \"$nosynotch_payload\" | /bin/sh -c " + quoted
+    }
+
     static func installStatusLine(port: UInt16 = EventServer.defaultPort) throws {
-        for url in settingsURLs where statusLine(at: url) != .theirs {
+        for url in settingsURLs {
             var settings = try load(url)
-            settings["statusLine"] = ["type": "command", "command": statusLineCommand(port: port)]
+            let current = settings["statusLine"] as? [String: Any]
+            let ours = statusLine(at: url) == .ours
+            let original = ours ? current?[originalStatusLineKey] as? [String: Any] : current
+            if let original {
+                guard original["type"] as? String == "command",
+                      let command = original["command"] as? String else { continue }
+                var line = original
+                line["command"] = combinedStatusLineCommand(original: command, port: port)
+                line[originalStatusLineKey] = original
+                settings["statusLine"] = line
+            } else {
+                // Leave unrecognized status line formats untouched.
+                if settings["statusLine"] != nil && !ours { continue }
+                settings["statusLine"] = ["type": "command", "command": statusLineCommand(port: port)]
+            }
             try save(settings, to: url)
         }
     }
@@ -159,7 +184,8 @@ enum HookInstaller {
     static func uninstallStatusLine() throws {
         for url in settingsURLs where statusLine(at: url) == .ours {
             var settings = try load(url)
-            settings["statusLine"] = nil
+            let line = settings["statusLine"] as? [String: Any]
+            settings["statusLine"] = line?[originalStatusLineKey]
             try save(settings, to: url)
         }
     }
