@@ -991,6 +991,8 @@ private struct ExtrasPage: View {
     @AppStorage(Preferences.Key.replyMode) private var replyMode = "type"
     @AppStorage(Preferences.Key.clockEnabled) private var clock = true
     @AppStorage(Preferences.Key.clockZone) private var clockZone = ""
+    @AppStorage(Preferences.Key.portsEnabled) private var ports = false
+    @AppStorage(Preferences.Key.portsShowAll) private var portsShowAll = false
 
     private let tint = SettingsPage.extras.tint
 
@@ -1015,6 +1017,17 @@ private struct ExtrasPage: View {
 
             Card(title: "Files", footer: "Drag files onto the notch: park them on the shelf and drag them out later, or AirDrop them. Only references are kept.") {
                 Row(title: "Shelf and AirDrop", divider: false) { NotchToggle(isOn: bind($shelf), tint: tint) }
+            }
+
+            Card(title: "Open ports", footer: "Dev servers you or an agent started, with the folder and who opened them. Click one to open it in the browser, ✕ to stop it. Only your own processes – nothing needs a password.") {
+                Row(title: "Show open ports when I hover the notch") {
+                    NotchToggle(isOn: bind($ports), tint: tint)
+                }
+                Row(title: "Include apps", subtitle: "Spotify, AirPlay, Raycast … – quitting one asks first", divider: false) {
+                    NotchToggle(isOn: bind($portsShowAll), tint: tint)
+                }
+                .opacity(ports ? 1 : 0.4)
+                .disabled(!ports)
             }
 
             Card(title: "Reply from the notch", footer: replyMode == "type"
