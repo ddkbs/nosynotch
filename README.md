@@ -196,6 +196,18 @@ swift run                      # run directly
 ./scripts/record-gifs.sh done  # just one scene ("settings" = the settings window)
 ```
 
+With the macOS 27.2 SDK, standalone Command Line Tools can fail to build SwiftUI `@State`
+macros because they do not include the `SwiftUIMacros` plugin. Use full Xcode with that SDK,
+or select an installed macOS 26.5 SDK when building with Command Line Tools only:
+
+```bash
+SDKROOT=/Library/Developer/CommandLineTools/SDKs/MacOSX26.5.sdk swift build -c release
+SDKROOT=/Library/Developer/CommandLineTools/SDKs/MacOSX26.5.sdk ./scripts/build-app.sh --open
+```
+
+The SDK path must exist on your machine. This workaround was tested with Swift 6.4.2
+and the macOS 26.5 SDK on macOS 27.2.
+
 The recorder renders on a virtual clock, so no frame is ever dropped – a slow Mac just takes longer. Each scene
 becomes a GIF for this README (30 fps, 840 px) and an MP4 + JPG poster in `website/public/demo/`. Options as
 environment variables: `FPS=60` capture rate, `SCALE=3` for sharper 1680 px frames (default 2), `GIF_WIDTH` /

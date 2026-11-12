@@ -53,9 +53,16 @@ enum Clock {
     }
 }
 
+private struct VirtualDateKey: EnvironmentKey {
+    static let defaultValue: Date? = nil
+}
+
 extension EnvironmentValues {
     /// Set by the recorder: the virtual time every `ClockTimeline` below shows instead of the wall clock.
-    @Entry var virtualDate: Date?
+    var virtualDate: Date? {
+        get { self[VirtualDateKey.self] }
+        set { self[VirtualDateKey.self] = newValue }
+    }
 }
 
 /// A drop-in for `TimelineView(.animation(…))` that follows the recorder's virtual clock while recording.
