@@ -134,6 +134,9 @@ working. All of it stays in your Mac's settings, and you can turn Nosy off for t
 - **Next prompt** – type the follow-up while the agent is busy. It goes out when the turn ends, without pulling you away
   from what you're doing.
 - **Shelf and AirDrop** – drag files onto the notch: park them on the shelf and drag them out later, or AirDrop them.
+- **Open ports** – every dev server on your Mac with its folder and who started it (Claude Code in Ghostty, Cursor …).
+  Click to open it in the browser, ✕ to stop it; sessions show the ports their agent opened. Run
+  `NosyNotch --ports` for the same list in the terminal. *(Opt-in.)*
 - **Focus timer** – 15 / 25 / 50 minutes from the hover view or the menu bar, a ring in the notch, agent sounds stay
   quiet until the break.
 - **Calendar** – your next meeting in the hover view and a heads-up 10 minutes before, with Join for Zoom, Meet,
@@ -152,7 +155,7 @@ Click the ✦ in the menu bar → **Settings…**
 - **Alerts** – sounds, mute for 1 h / 8 h / ∞, reminders
 - **Permissions** – the notch buttons and head gestures
 - **Usage** – which limits to show, a heads-up when a limit resets, context rings
-- **Extras** – Shelf and AirDrop, how replies are sent, focus timer, battery, headphones, calendar
+- **Extras** – Shelf and AirDrop, open ports, how replies are sent, focus timer, battery, headphones, calendar
 - **Music** – player and the live equalizer
 
 Mute and the focus timer are also right in the menu bar menu. Everything that needs a macOS permission (controlling
@@ -166,7 +169,7 @@ you turn it on – or asks only the first time you use it.
 Everything stays on your Mac. The hooks talk to `127.0.0.1` only and nothing is uploaded. The only network requests
 are for album covers (Spotify's public oEmbed with the track ID, Apple's iTunes Search with artist and title). The live equalizer analyses the
 player's audio in memory and records nothing; head gestures only read motion while a request is open. The calendar,
-headphone batteries and the conversation in the notch are read locally and never sent anywhere; Nosy's progress and the
+headphone batteries, open ports and the conversation in the notch are read locally and never sent anywhere; Nosy's progress and the
 shelf live in the app's settings. A reply typed in the notch goes to the session's own app (pasted with ⌘V, your
 clipboard is put back) or to the agent's own CLI. Approvals are protected by a secret in
 `~/.nosynotch/approval-token`, so no other process can answer in your name.
@@ -227,6 +230,7 @@ Sources/NosyNotch/
 ├── Nosy/                            Nosy: drawing, moods, energy / levels / streaks, hanging + tar dive
 ├── Chat.swift                       transcripts → conversation, sending replies
 ├── Shelf.swift                      parked files, AirDrop
+├── Ports.swift                      listening ports, who opened them, quitting them
 ├── Notices.swift                    charging, low battery, headphones, meetings
 ├── FocusTimer.swift                 Pomodoro timer
 ├── CalendarMonitor.swift            next meeting (EventKit)
