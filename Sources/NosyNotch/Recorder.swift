@@ -240,6 +240,26 @@ final class Recorder {
         ChatMessage(id: "4", role: .assistant, text: "All **214 tests** pass. Ready to commit when you are."),
     ]
 
+    static let demoPortsFolder = "/Users/you/Projects/acme/website"
+
+    /// Made-up dev servers for the ports scene.
+    static var demoPorts: [ListeningPort] {
+        func port(_ number: Int, _ label: String, _ process: String, cwd: String?, agent: Agent?, app: String?,
+                  bundle: String?, hours: Double, exposed: Bool = false) -> ListeningPort {
+            ListeningPort(port: number, pid: pid_t(40_000 + number), process: process, label: label, path: "/usr/local/bin/\(process)",
+                          command: "\(process) \(label)", cwd: cwd, startedAt: Clock.now().addingTimeInterval(-hours * 3600),
+                          exposed: exposed, agent: agent, hostApp: app, hostBundleID: bundle, ancestors: [],
+                          isDev: true, needsConfirm: false)
+        }
+        return [
+            port(5173, "vite", "node", cwd: demoPortsFolder, agent: .claude, app: "Terminal",
+                 bundle: "com.apple.Terminal", hours: 0.1),
+            port(8000, "uvicorn", "python3", cwd: "/Users/you/Projects/acme/api", agent: nil, app: "Cursor",
+                 bundle: "com.todesktop.230313mzl4w4u92", hours: 3, exposed: true),
+            port(11434, "ollama", "ollama", cwd: nil, agent: nil, app: nil, bundle: nil, hours: 50),
+        ]
+    }
+
     /// Files that exist on every Mac, for the shelf scenes.
     static let demoFiles: [URL] = ["/System/Library/CoreServices/Finder.app", "/etc/hosts",
                                    "/System/Library/Desktop Pictures"]
@@ -446,6 +466,17 @@ final class Recorder {
             ]),
             Scene(name: "shelf", duration: 5, height: 250, hoverAt: 0.8, stillAt: 3.0, steps: [], actions: [
                 (0.0, { $0.shelf.add(Self.demoFiles) }),
+            ]),
+            Scene(name: "ports", duration: 7, height: 260, hoverAt: 0.9, stillAt: 3.0, steps: [
+                (0.0, ev("SessionStart", "web", cwd: Self.demoPortsFolder)),
+                (0.1, ev("UserPromptSubmit", "web", cwd: Self.demoPortsFolder)),
+                (0.2, ev("PreToolUse", "web", cwd: Self.demoPortsFolder, tool: "Bash",
+                         input: ["command": "npm run dev", "description": "Start the dev server"])),
+            ], actions: [
+                (0.0, { $0.ports.preview(Self.demoPorts) }),
+                (4.4, { model in
+                    if let api = model.ports.ports.first(where: { $0.port == 8000 }) { model.ports.quit(api) }
+                }),
             ]),
             Scene(name: "media", duration: 7, height: 220, hoverAt: 2.6, stillAt: 5.0, musicAt: 0.5, steps: []),
             Scene(name: "handoff", duration: 9, dismissFlashAt: 6.6, musicAt: 0.0, steps: [

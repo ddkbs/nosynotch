@@ -338,6 +338,13 @@ final class PortMonitor: ObservableObject {
 
     func quit(_ port: ListeningPort) {
         closing.insert(port.id)
+        if Clock.isVirtual {   // the recorder's made-up ports: never signal a real process
+            Clock.after(0.8) { [weak self] in
+                self?.ports.removeAll { $0.id == port.id }
+                self?.onChange?()
+            }
+            return
+        }
         PortScan.quit(port) { [weak self] in self?.refresh() }
     }
 
