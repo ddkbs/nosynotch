@@ -36,6 +36,8 @@ enum Preferences {
         static let replyMode = "replyMode"
         static let clockEnabled = "clockEnabled"
         static let clockZone = "clockZone"
+        static let portsEnabled = "portsEnabled"
+        static let portsShowAll = "portsShowAll"
     }
 
     private static let defaults = UserDefaults.standard
@@ -78,6 +80,8 @@ enum Preferences {
             Key.replyMode: "type",
             Key.clockEnabled: true,
             Key.clockZone: "",
+            Key.portsEnabled: false,
+            Key.portsShowAll: false,
         ])
     }
 
@@ -193,6 +197,12 @@ enum Preferences {
         let identifier = defaults.string(forKey: Key.clockZone) ?? ""
         return ClockZone.all.first { $0.identifier == identifier }
     }
+
+    /// Listening ports in the hover view, with who opened them and ✕ to quit them.
+    static var portsEnabled: Bool { defaults.bool(forKey: Key.portsEnabled) }
+
+    /// Also list apps (Spotify, AirPlay, Raycast …), not only dev servers.
+    static var portsShowAll: Bool { defaults.bool(forKey: Key.portsShowAll) }
 
     /// Drag files onto the notch: Shelf and AirDrop.
     static var shelfEnabled: Bool { defaults.object(forKey: Key.shelfEnabled) as? Bool ?? true }

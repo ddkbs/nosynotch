@@ -36,6 +36,16 @@ if let index = arguments.firstIndex(of: "--nosy-sheet") {
     exit(0)
 }
 
+// `NosyNotch --ports`: the listening ports the notch would show, with who opened them.
+if arguments.contains("--ports") {
+    let ports = MainActor.assumeIsolated { PortScan.run() }
+    for p in ports {
+        let flags = [p.isDev ? "dev" : "app", p.exposed ? "network" : "local", p.needsConfirm ? "confirm" : nil].compactMap { $0 }
+        print(":\(p.port)\t\(p.label) (\(p.process), pid \(p.pid))\t\(p.folderName ?? "–")\t\(p.origin)\t[\(flags.joined(separator: ", "))]")
+    }
+    exit(0)
+}
+
 // `NosyNotch --record-settings <out-dir>`: the settings window, page by page.
 if let index = arguments.firstIndex(of: "--record-settings") {
     let output = URL(fileURLWithPath: arguments.dropFirst(index + 1).first ?? "docs/frames", isDirectory: true)
