@@ -55,7 +55,15 @@ struct NotchView: View {
         }
         .frame(width: size.width, height: size.height, alignment: .top)
         .onChange(of: model.nosyOutside) { _, outside in
-            if !outside { splashAt = Clock.now().addingTimeInterval(0.16) }
+            if !outside {
+                let start = Clock.now().addingTimeInterval(0.16)
+                splashAt = start
+                // Empty timeline content still ticks: remove the splash after its last frame.
+                Clock.after(0.16 + NosySplash.duration) {
+                    guard splashAt == start else { return }
+                    splashAt = nil
+                }
+            }
         }
     }
 
