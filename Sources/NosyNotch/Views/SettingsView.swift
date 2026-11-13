@@ -874,7 +874,7 @@ private struct UsagePage: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 18) {
-            Card(title: "Limits", footer: "5-hour and weekly limits as bars when you hover the notch. Claude (Pro / Max) only shares them with its status line, so Nosy Notch adds a silent one – unless you already have your own. Codex: read from its session files.") {
+            Card(title: "Limits", footer: "5-hour and weekly limits as bars when you hover the notch. Claude (Pro / Max) only shares them with its status line, so Nosy Notch adds a silent one. If you have your own, it gets the same data and keeps showing as before. Codex: read from its session files.") {
                 Row(title: "Show usage limits") {
                     NotchToggle(isOn: Binding(get: { usageEnabled }, set: setUsage), tint: Theme.codex)
                 }
