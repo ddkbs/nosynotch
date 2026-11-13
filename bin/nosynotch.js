@@ -362,7 +362,12 @@ function readSettings(file) {
 
 function writeSettings(file, settings) {
   fs.mkdirSync(path.dirname(file), { recursive: true });
-  if (fs.existsSync(file)) fs.copyFileSync(file, `${file}.nosynotch.bak`);
+  // Keep the file as it was before we touched it: once our hooks are in, the backup isn't replaced again.
+  if (fs.existsSync(file)) {
+    const backup = `${file}.nosynotch.bak`;
+    const touched = [MARKER, LEGACY.marker].some((m) => fs.readFileSync(file, 'utf8').includes(m));
+    if (!touched || !fs.existsSync(backup)) fs.copyFileSync(file, backup);
+  }
   fs.writeFileSync(file, JSON.stringify(settings, null, 2) + '\n');
 }
 

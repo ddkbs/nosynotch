@@ -154,8 +154,14 @@ enum HookInstaller {
     }
 
     static func install(port: UInt16 = EventServer.defaultPort) throws {
-        for url in settingsURLs { try install(port: port, at: url) }
-        if Preferences.usageEnabled { try installStatusLine(port: port) }
+        // One load-modify-save per file: a second save would back up our own hooks over the real backup.
+        let usage = Preferences.usageEnabled
+        for url in settingsURLs {
+            var settings = try load(url)
+            addHooks(to: &settings, port: port)
+            if usage { addStatusLine(to: &settings, port: port) }
+            try save(settings, to: url)
+        }
     }
 
     // MARK: Status line (usage limits)
@@ -179,9 +185,15 @@ enum HookInstaller {
     static func installStatusLine(port: UInt16 = EventServer.defaultPort) throws {
         for url in settingsURLs where statusLine(at: url) != .theirs {
             var settings = try load(url)
-            settings["statusLine"] = ["type": "command", "command": statusLineCommand(port: port)]
+            addStatusLine(to: &settings, port: port)
             try save(settings, to: url)
         }
+    }
+
+    /// Our silent status line – only where you don't have one of your own.
+    private static func addStatusLine(to settings: inout [String: Any], port: UInt16) {
+        if let line = settings["statusLine"] as? [String: Any], !((line["command"] as? String) ?? "").contains(marker) { return }
+        settings["statusLine"] = ["type": "command", "command": statusLineCommand(port: port)]
     }
 
     static func uninstallStatusLine() throws {
@@ -199,6 +211,11 @@ enum HookInstaller {
 
     private static func install(port: UInt16, at url: URL) throws {
         var settings = try load(url)
+        addHooks(to: &settings, port: port)
+        try save(settings, to: url)
+    }
+
+    private static func addHooks(to settings: inout [String: Any], port: UInt16) {
         var hooks = (settings["hooks"] as? [String: Any]) ?? [:]
 
         for event in events {
@@ -213,7 +230,6 @@ enum HookInstaller {
         }
 
         settings["hooks"] = hooks
-        try save(settings, to: url)
     }
 
     private static func uninstall(at url: URL) throws {
@@ -255,11 +271,16 @@ enum HookInstaller {
         let fm = FileManager.default
         try fm.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
 
-        // Keep a backup of whatever was there before we touched it.
+        // Keep a backup of the file as it was before we touched it. Once our hooks are in, the backup stays:
+        // reconnecting would otherwise replace it with a copy that already has them.
         if fm.fileExists(atPath: url.path) {
             let backup = url.appendingPathExtension("nosynotch.bak")
-            try? fm.removeItem(at: backup)
-            try fm.copyItem(at: url, to: backup)
+            let text = (try? String(contentsOf: url, encoding: .utf8)) ?? ""
+            let touched = ([marker] + legacyMarkers).contains { text.contains($0) }
+            if !touched || !fm.fileExists(atPath: backup.path) {
+                try? fm.removeItem(at: backup)
+                try fm.copyItem(at: url, to: backup)
+            }
         }
 
         let data = try JSONSerialization.data(withJSONObject: settings, options: [.prettyPrinted, .withoutEscapingSlashes])
