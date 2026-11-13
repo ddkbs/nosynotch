@@ -167,10 +167,33 @@ enum HookInstaller {
     // MARK: Status line (usage limits)
 
     /// Claude Code passes rate limits (Pro/Max) only to its status line command. We add a silent one that
-    /// forwards the JSON – but only where you don't have a status line of your own.
+    /// forwards the JSON, or, if you have a status line of your own, feed it the same JSON first.
     static func statusLineCommand(port: UInt16) -> String {
         "curl -s -m 1 -X POST -H 'Content-Type: application/json' -H 'Expect:' --data-binary @- "
             + "'http://127.0.0.1:\(port)/usage?src=\(marker)' >/dev/null 2>&1; true"
+    }
+
+    /// In every command of ours, never in yours (a path with "nosynotch" in it isn't enough).
+    static let usageMark = "/usage?src=\(marker)"
+    static let wrapperHead = "nosynotch_in=$(cat); "
+
+    /// Your own status line, untouched, after ours: your command goes in verbatim on its own lines inside
+    /// `{ … }` (no quoting to get wrong), its output and exit status stay yours. Must match the CLI.
+    static func statusLineCommand(port: UInt16, wrapping original: String) -> String {
+        wrapperHead + "printf '%s\\n' \"$nosynotch_in\" | { \(statusLineCommand(port: port)); }; "
+            + "printf '%s\\n' \"$nosynotch_in\" | {\n\(original)\n}"
+    }
+
+    /// Your command back out of the wrapper; nil if `command` isn't one.
+    static func unwrappedStatusLine(_ command: String) -> String? {
+        guard command.hasPrefix(wrapperHead), command.contains(usageMark), command.hasSuffix("\n}"),
+              let newline = command.firstIndex(of: "\n") else { return nil }
+        return String(command[command.index(after: newline)..<command.index(command.endIndex, offsetBy: -2)])
+    }
+
+    /// A trailing backslash would swallow the closing brace; such a command stays as it is.
+    private static func canWrap(_ command: String) -> Bool {
+        !command.trimmingCharacters(in: .whitespacesAndNewlines).hasSuffix("\\")
     }
 
     enum StatusLine: Equatable {
@@ -179,27 +202,56 @@ enum HookInstaller {
 
     static func statusLine(at url: URL) -> StatusLine {
         guard let line = (try? load(url))?["statusLine"] as? [String: Any] else { return .none }
-        return ((line["command"] as? String) ?? "").contains(marker) ? .ours : .theirs
+        return ((line["command"] as? String) ?? "").contains(usageMark) ? .ours : .theirs
     }
 
     static func installStatusLine(port: UInt16 = EventServer.defaultPort) throws {
-        for url in settingsURLs where statusLine(at: url) != .theirs {
+        for url in settingsURLs {
             var settings = try load(url)
-            addStatusLine(to: &settings, port: port)
-            try save(settings, to: url)
+            if addStatusLine(to: &settings, port: port) { try save(settings, to: url) }
         }
     }
 
-    /// Our silent status line – only where you don't have one of your own.
-    private static func addStatusLine(to settings: inout [String: Any], port: UInt16) {
-        if let line = settings["statusLine"] as? [String: Any], !((line["command"] as? String) ?? "").contains(marker) { return }
-        settings["statusLine"] = ["type": "command", "command": statusLineCommand(port: port)]
+    /// Our silent status line, or yours wrapped so it gets the JSON too. Returns whether anything changed.
+    @discardableResult
+    private static func addStatusLine(to settings: inout [String: Any], port: UInt16) -> Bool {
+        guard var line = settings["statusLine"] as? [String: Any] else {
+            settings["statusLine"] = ["type": "command", "command": statusLineCommand(port: port)]
+            return true
+        }
+        // Only command status lines can be wrapped; anything else is left alone.
+        guard (line["type"] as? String) == "command", let command = line["command"] as? String else { return false }
+        let next: String
+        if let original = unwrappedStatusLine(command) {
+            next = statusLineCommand(port: port, wrapping: original)
+        } else if command.contains(usageMark) {
+            next = statusLineCommand(port: port)
+        } else {
+            guard canWrap(command) else { return false }
+            next = statusLineCommand(port: port, wrapping: command)
+        }
+        guard next != command else { return false }
+        line["command"] = next
+        settings["statusLine"] = line
+        return true
+    }
+
+    /// Gives your status line back exactly as it was, or removes our silent one.
+    private static func removeStatusLine(from settings: inout [String: Any]) {
+        guard var line = settings["statusLine"] as? [String: Any], let command = line["command"] as? String,
+              command.contains(usageMark) else { return }
+        if let original = unwrappedStatusLine(command) {
+            line["command"] = original
+            settings["statusLine"] = line
+        } else {
+            settings["statusLine"] = nil
+        }
     }
 
     static func uninstallStatusLine() throws {
         for url in settingsURLs where statusLine(at: url) == .ours {
             var settings = try load(url)
-            settings["statusLine"] = nil
+            removeStatusLine(from: &settings)
             try save(settings, to: url)
         }
     }

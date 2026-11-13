@@ -99,11 +99,37 @@ const permissionCommand = (agent = 'claude') => {
     `case "$r" in "${token} "*) printf '%s' "\${r#${token} }";; esac; true`,
   ].join(' ');
 };
-// Claude Code only passes usage limits to its status line – a silent one forwards them (only if you have none).
-// Must match HookInstaller.statusLineCommand.
+// Claude Code only passes usage limits to its status line – a silent one forwards them; your own status line
+// gets wrapped so it still runs with the same JSON. Must match HookInstaller.statusLineCommand.
 const STATUS_LINE_COMMAND =
   "curl -s -m 1 -X POST -H 'Content-Type: application/json' -H 'Expect:' --data-binary @- " +
   `'http://127.0.0.1:${PORT}/usage?src=${MARKER}' >/dev/null 2>&1; true`;
+const USAGE_MARK = `/usage?src=${MARKER}`;
+const WRAPPER_HEAD = 'nosynotch_in=$(cat); ';
+// Your command goes in verbatim on its own lines inside { … }: no quoting, output and exit status stay yours.
+const wrapStatusLine = (original) =>
+  WRAPPER_HEAD + `printf '%s\\n' "$nosynotch_in" | { ${STATUS_LINE_COMMAND}; }; ` +
+  `printf '%s\\n' "$nosynotch_in" | {\n${original}\n}`;
+function unwrapStatusLine(command) {
+  if (!command.startsWith(WRAPPER_HEAD) || !command.includes(USAGE_MARK) || !command.endsWith('\n}')) return null;
+  return command.slice(command.indexOf('\n') + 1, -2);
+}
+/** Our silent status line, or yours wrapped. Other kinds, and commands ending in a backslash, stay as they are. */
+function withUsageStatusLine(line) {
+  if (!line) return { type: 'command', command: STATUS_LINE_COMMAND };
+  if (line.type !== 'command' || typeof line.command !== 'string') return line;
+  const original = unwrapStatusLine(line.command);
+  if (original !== null) return { ...line, command: wrapStatusLine(original) };
+  if (line.command.includes(USAGE_MARK)) return { ...line, command: STATUS_LINE_COMMAND };
+  if (line.command.trim().endsWith('\\')) return line;
+  return { ...line, command: wrapStatusLine(line.command) };
+}
+/** Your status line back exactly as it was; undefined where it was only ours. */
+function withoutUsageStatusLine(line) {
+  if (typeof line?.command !== 'string' || !line.command.includes(USAGE_MARK)) return line;
+  const original = unwrapStatusLine(line.command);
+  return original === null ? undefined : { ...line, command: original };
+}
 // Cursor's agent: ~/.cursor/hooks.json, camelCase events, JSON expected on stdout. Must match HookInstaller.Cursor.
 const CURSOR_EVENTS = [
   'sessionStart', 'sessionEnd', 'beforeSubmitPrompt', 'preToolUse', 'postToolUse', 'postToolUseFailure',
@@ -418,7 +444,7 @@ function installHooksIn(file, events = HOOK_EVENTS, agent = 'claude') {
     hooks[name] = groups;
   }
   settings.hooks = hooks;
-  if (agent === 'claude' && !settings.statusLine) settings.statusLine = { type: 'command', command: STATUS_LINE_COMMAND };
+  if (agent === 'claude') settings.statusLine = withUsageStatusLine(settings.statusLine);
   writeSettings(file, settings);
   ok(`Hooks added to ${pretty(file)} ${dim(`(backup: ${path.basename(file)}.nosynotch.bak)`)}`);
 }
@@ -432,8 +458,12 @@ function removeHooks() {
 function removeHooksIn(file) {
   if (!fs.existsSync(file)) return;
   const settings = readSettings(file);
-  const ownStatusLine = typeof settings.statusLine?.command === 'string' && settings.statusLine.command.includes(MARKER);
-  if (ownStatusLine) delete settings.statusLine;
+  const ownStatusLine = typeof settings.statusLine?.command === 'string' && settings.statusLine.command.includes(USAGE_MARK);
+  if (ownStatusLine) {
+    const restored = withoutUsageStatusLine(settings.statusLine);
+    if (restored) settings.statusLine = restored;
+    else delete settings.statusLine;
+  }
   if (!settings.hooks && !ownStatusLine) return;
   settings.hooks = settings.hooks || {};
   for (const name of Object.keys(settings.hooks)) {
