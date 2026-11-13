@@ -84,6 +84,22 @@ struct ClockTimeline<Content: View>: View {
     }
 }
 
+/// Like `ClockTimeline`, but redraws only at the dates `schedule` lists – for views that change rarely.
+struct ScheduledClock<Schedule: TimelineSchedule, Content: View>: View {
+    var schedule: Schedule
+    @ViewBuilder var content: (Date) -> Content
+
+    @Environment(\.virtualDate) private var virtualDate
+
+    var body: some View {
+        if let virtualDate {
+            content(virtualDate)
+        } else {
+            TimelineView(schedule) { content($0.date) }
+        }
+    }
+}
+
 /// A drop-in for `TimelineView(.periodic(from: .now, by:))` that follows the recorder's virtual clock.
 struct PeriodicClock<Content: View>: View {
     var interval: TimeInterval
