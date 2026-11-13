@@ -1,5 +1,13 @@
 # WORKLOG
 
+## 2026-11-13 (Issues #1, #2, #4, #6, #9 – CPU, Backup, Statuszeile)
+- **Übernommen von ehames** (Co-authored-by, lokal auf diesem Branch): #5 Settings-Fenster wird beim Schließen freigegeben (~46 % CPU im Leerlauf), #7 Splash wird nach dem letzten Frame entfernt (~5 % CPU), #8 `@Entry` ausgeschrieben → Build nur mit Command Line Tools + 26.5-SDK klappt (getestet).
+- **Eigen:** Nosys Augen im Flügel (auch neben der Uhr) zeichnen in ruhigen Stimmungen nur noch beim Blinzeln (`NosyBlinkSchedule`, ~0,6/s statt 30/s, Kanten per Skript geprüft), Schlaf-Zzz mit 20 FPS.
+- **#2:** Install = ein Laden-Ändern-Speichern pro Datei; `.nosynotch.bak` wird nie durch eine Datei mit unseren Hooks ersetzt (App + CLI).
+- **#9 selbst gelöst, PR #10 geschlossen (ohne Kommentar):** eigene Statuszeile wird wörtlich in `{ … }` eingebettet (kein Quoting, keine Zusatz-Keys in settings.json – Claude Code könnte unbekannte Keys anmeckern). Erkennung über `/usage?src=nosynotch` statt nur „nosynotch“ (sonst zählt ein Pfad mit nosynotch als unsere). Befehle mit `\` am Ende bleiben unangetastet. Getestet im Fake-Home (env -i + CFFIXED_USER_HOME, echte Dateien per mtime geprüft): Ausgabe/stderr/Exit bleiben, JSON kommt an, sh + zsh, idempotent, Trennen stellt exakt wieder her, App und CLI erzeugen denselben Befehl.
+- **Nicht getestet:** CPU-Messung im echten Leerlauf (App nicht neu installiert – Bedienungshilfen-Recht), echte Claude-Statuszeile live.
+- **Offen:** Branch pushen/mergen (38+7 Commits, nur lokal), danach PRs #5, #7, #8 schließen und Issues beantworten; #3 (opencode) nur beantworten.
+
 ## 2026-11-12 (Offene Ports)
 - **Ports** (`Ports.swift`, `Views/PortViews.swift`): lauschende TCP-Ports per libproc (kein `lsof`), Elternkette per `sysctl` (libproc scheitert an root-Prozessen wie `login`). Zeigt Port, was es ist (Skript hinter node/python, z. B. „vite“), Ordner (cwd), wer es gestartet hat (Agent + erste App in der Kette), nur-localhost vs. Netzwerk (🌐). Klick öffnet `localhost:PORT`, ✕ = SIGTERM, nach 2 s SIGKILL (mit Startzeit-Check gegen PID-Wiederverwendung).
 - Entscheidungen: Standard nur Dev-Prozesse (von Agent/Terminal/Editor gestartet oder kein App-Prozess); Agents selbst und NosyNotch ausgeblendet, „Include apps“ zeigt den Rest. Apps fragen vor dem Beenden („Quit“-Bestätigung im Chip). Nur eigene Prozesse sichtbar, root-Dienste gar nicht – kein Passwort nötig. Settings → Extras, Standard aus (bei David per `defaults write` an). Session-Zeile zeigt `:5173`, wenn der Agent der Session den Server gestartet hat (PID in der Kette, sonst gleicher Ordner + Agent).
