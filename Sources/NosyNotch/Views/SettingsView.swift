@@ -4,7 +4,7 @@ import SwiftUI
 /// The settings window (menu bar ✦ → Settings…, or `npx nosynotch settings`). Dark and black like the notch:
 /// a sidebar with a live mini notch on the left, cards on the right.
 @MainActor
-final class SettingsWindowController {
+final class SettingsWindowController: NSObject, NSWindowDelegate {
     struct Actions {
         var statusLine: () -> String
         var playDemo: () -> Void
@@ -19,6 +19,7 @@ final class SettingsWindowController {
 
     init(actions: Actions) {
         self.actions = actions
+        super.init()
     }
 
     func show(page: SettingsPage = .agents) {
@@ -33,12 +34,22 @@ final class SettingsWindowController {
             window.appearance = NSAppearance(named: .darkAqua)
             window.backgroundColor = .black
             window.isReleasedWhenClosed = false
+            window.delegate = self
             window.setContentSize(SettingsView.size)
             window.center()
             self.window = window
         }
         NSApp.activate(ignoringOtherApps: true)
         window?.makeKeyAndOrderFront(nil)
+    }
+
+    func windowWillClose(_ notification: Notification) {
+        guard let closingWindow = notification.object as? NSWindow,
+              closingWindow === window else { return }
+        // A retained hosting controller keeps its TimelineViews running after close.
+        // Tear down the view tree and create fresh settings on the next open.
+        closingWindow.contentViewController = nil
+        window = nil
     }
 }
 
