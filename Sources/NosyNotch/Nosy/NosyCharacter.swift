@@ -196,7 +196,31 @@ enum NosyTime {
         return local >= at && local < at + 0.13
     }
 
+    /// The next moment after `t` at which `isBlinking` flips (a blink starts or ends).
+    static func nextBlinkEdge(after t: TimeInterval, seed: Double = 0) -> TimeInterval {
+        let period = 3.6
+        var cycle = floor(t / period)
+        while true {
+            let at = cycle * period + fract(sin((cycle + seed) * 12.9898) * 43_758.5453) * (period - 0.4)
+            // A hair past each edge, so `isBlinking` sees the new side despite rounding.
+            for edge in [at, at + 0.13] where edge + 0.001 > t { return edge + 0.001 }
+            cycle += 1
+        }
+    }
+
     static func fract(_ x: Double) -> Double { x - floor(x) }
+}
+
+/// Redraws only when Nosy blinks: for moods where the eyes otherwise hold still.
+struct NosyBlinkSchedule: TimelineSchedule {
+    func entries(from startDate: Date, mode: TimelineScheduleMode) -> AnyIterator<Date> {
+        var next: Date? = startDate
+        return AnyIterator {
+            guard let current = next else { return nil }
+            next = Date(timeIntervalSinceReferenceDate: NosyTime.nextBlinkEdge(after: current.timeIntervalSinceReferenceDate))
+            return current
+        }
+    }
 }
 
 // MARK: - Eyes

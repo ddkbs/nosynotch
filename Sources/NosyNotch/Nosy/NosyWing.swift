@@ -26,22 +26,37 @@ struct NosyWingEyes: View {
     var tint: Color = NosyPalette.spark
 
     var body: some View {
-        ClockTimeline(minimumInterval: 1.0 / 30.0) { now in
-            let t = now.timeIntervalSinceReferenceDate
-            ZStack {
-                // A soft glow so the eyes sit in the notch instead of on it.
-                Ellipse()
-                    .fill(RadialGradient(colors: [tint.opacity(0.28), .clear], center: .center, startRadius: 0, endRadius: 16))
-                    .frame(width: 34, height: 20)
-                NosyEyes(mood: mood, look: look, time: t, ink: .white, spacing: 3.5)
-                    .frame(width: 22, height: 9.5)
-                    .offset(y: bob(t))
-                if mood == .sleeping {
-                    NosyZzz(t: t).scaleEffect(0.8).offset(x: 14, y: -2)
-                }
-                if mood == .giggle {
-                    NosyHearts(t: t).scaleEffect(0.7).offset(y: -4)
-                }
+        // The wing sits in the notch all day: calm moods only redraw to blink, sleep's z's drift at 20 FPS.
+        if movesOnItsOwn {
+            ClockTimeline(minimumInterval: mood == .sleeping ? 1.0 / 20.0 : 1.0 / 30.0) { eyes(at: $0) }
+        } else {
+            ScheduledClock(schedule: NosyBlinkSchedule()) { eyes(at: $0) }
+        }
+    }
+
+    /// Moods that animate between blinks (bobbing, wandering or spiral eyes, z's, hearts).
+    private var movesOnItsOwn: Bool {
+        switch mood {
+        case .working, .grooving, .happy, .charging, .waking, .shocked, .sleeping, .giggle, .dizzy: return true
+        default: return false
+        }
+    }
+
+    private func eyes(at now: Date) -> some View {
+        let t = now.timeIntervalSinceReferenceDate
+        return ZStack {
+            // A soft glow so the eyes sit in the notch instead of on it.
+            Ellipse()
+                .fill(RadialGradient(colors: [tint.opacity(0.28), .clear], center: .center, startRadius: 0, endRadius: 16))
+                .frame(width: 34, height: 20)
+            NosyEyes(mood: mood, look: look, time: t, ink: .white, spacing: 3.5)
+                .frame(width: 22, height: 9.5)
+                .offset(y: bob(t))
+            if mood == .sleeping {
+                NosyZzz(t: t).scaleEffect(0.8).offset(x: 14, y: -2)
+            }
+            if mood == .giggle {
+                NosyHearts(t: t).scaleEffect(0.7).offset(y: -4)
             }
         }
     }
