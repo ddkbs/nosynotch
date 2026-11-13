@@ -186,7 +186,7 @@ instantly and the agent carries on as if nothing happened – hooks never slow i
 
 | | Where the hooks live | Extra |
 |---|---|---|
-| Claude Code | `settings.json` in `~/.claude`, `$CLAUDE_CONFIG_DIR` and every `~/.claude-*` account folder | Usage limits and context via a silent status line – only if you don't have your own |
+| Claude Code | `settings.json` in `~/.claude`, `$CLAUDE_CONFIG_DIR` and every `~/.claude-*` account folder | Usage limits and context via a silent status line – your own status line keeps working and is restored on disconnect |
 | Codex | `~/.codex/hooks.json` | Limits and context from its session files |
 | Cursor | `~/.cursor/hooks.json` | Prints `{}` so Cursor never waits on it – except `beforeShellExecution` for commands outside the sandbox, which waits for Allow / Deny |
 
