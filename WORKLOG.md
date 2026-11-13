@@ -4,6 +4,7 @@
 - Branch `feat/idle-clock-node-download` per Fast-Forward nach `main`, Version 0.4.0 (statt 0.3.1, weil Uhr, Next Prompt, Fortschritt und Ports neue Features sind), Tag `v0.4.0` gepusht. CI grün, GitHub-Release mit Universal-Binary da. Issues #1 #2 #4 #6 #9 per „Fixes #n“ automatisch geschlossen; PRs #5 #7 #8 #10 ohne Kommentar geschlossen (Davids Wunsch).
 - Vorher lokal: Universal-Release-Build + Smoke-Test im Fake-Home auf Port 7899 (Health, Event, Quit), echte Settings unverändert.
 - `npm publish` von David selbst (CI ohne `NPM_TOKEN` übersprungen): erst 404 = abgelaufener Token in `~/.npmrc` (npm meldet das als 404), nach `npm login` + Browser-Bestätigung beim Publish → `+ nosynotch@0.4.0`. Registry zeigte direkt danach noch 0.3.0 (Verzögerung).
+- Historie umgeschrieben (David wollte ehames nicht als Contributor): `Co-authored-by: Edgardo Hames` aus 3 Commits entfernt (filter-branch, Inhalt identisch), `main`, Feature-Branch und Tag `v0.4.0` force-gepusht; Release + npm unverändert. Erneut ausgelöster Tag-Build abgebrochen (Release gibt es schon). Lokales Backup: Branch `backup/pre-rewrite`. Künftig keine Co-Autor-Zeilen für Fremd-Fixes.
 - **Offen:** Neue Features weiter nicht auf echter Notch getestet. Website-Deploy nach Push auf main nicht geprüft. #3 (opencode) unbeantwortet.
 
 ## 2026-11-13 (Issues #1, #2, #4, #6, #9 – CPU, Backup, Statuszeile)
