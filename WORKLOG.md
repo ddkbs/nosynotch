@@ -1,5 +1,10 @@
 # WORKLOG
 
+## 2026-11-13 (Release v0.4.0)
+- Branch `feat/idle-clock-node-download` per Fast-Forward nach `main`, Version 0.4.0 (statt 0.3.1, weil Uhr, Next Prompt, Fortschritt und Ports neue Features sind), Tag `v0.4.0` gepusht. CI grün, GitHub-Release mit Universal-Binary da. Issues #1 #2 #4 #6 #9 per „Fixes #n“ automatisch geschlossen; PRs #5 #7 #8 #10 ohne Kommentar geschlossen (Davids Wunsch).
+- Vorher lokal: Universal-Release-Build + Smoke-Test im Fake-Home auf Port 7899 (Health, Event, Quit), echte Settings unverändert.
+- **Offen:** `npm publish` (CI ohne `NPM_TOKEN` übersprungen) – bis dahin lädt `npx nosynotch` weiter v0.3.0, weil das CLI das Release seiner eigenen Version holt. Neue Features weiter nicht auf echter Notch getestet. Website-Deploy nach Push auf main nicht geprüft. #3 (opencode) unbeantwortet.
+
 ## 2026-11-13 (Issues #1, #2, #4, #6, #9 – CPU, Backup, Statuszeile)
 - **Übernommen von ehames** (Co-authored-by, lokal auf diesem Branch): #5 Settings-Fenster wird beim Schließen freigegeben (~46 % CPU im Leerlauf), #7 Splash wird nach dem letzten Frame entfernt (~5 % CPU), #8 `@Entry` ausgeschrieben → Build nur mit Command Line Tools + 26.5-SDK klappt (getestet).
 - **Eigen:** Nosys Augen im Flügel (auch neben der Uhr) zeichnen in ruhigen Stimmungen nur noch beim Blinzeln (`NosyBlinkSchedule`, ~0,6/s statt 30/s, Kanten per Skript geprüft), Schlaf-Zzz mit 20 FPS.
