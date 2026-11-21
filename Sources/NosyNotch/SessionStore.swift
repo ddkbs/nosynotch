@@ -21,7 +21,7 @@ enum Transition {
 @MainActor
 final class SessionStore: ObservableObject {
     @Published private(set) var sessions: [String: Session] = [:] {
-        didSet { onChange?() }
+        didSet { scheduleMaintenance(); onChange?() }
     }
 
     /// Called after `sessions` changed.
@@ -35,16 +35,39 @@ final class SessionStore: ObservableObject {
 
     static let reminderDelay: TimeInterval = 5 * 60
 
-    private var sweepTimer: Timer?
+    private let maintenance = Deadline()
+    private let startTimers: Bool
 
-    init() {
-        sweepTimer = Timer.scheduledTimer(withTimeInterval: 15, repeats: true) { [weak self] _ in
-            MainActor.assumeIsolated {
-                self?.sweep()
-                self?.remind()
+    private let remindersEnabled: () -> Bool
+
+    init(startTimers: Bool = true, remindersEnabled: @escaping () -> Bool = { Preferences.remindAfterFiveMinutes }) {
+        self.remindersEnabled = remindersEnabled
+        self.startTimers = startTimers
+    }
+
+    private func scheduleMaintenance() {
+        guard startTimers else { return }
+        let now = Clock.now()
+        var dates: [Date] = []
+        for s in sessions.values {
+            let age: TimeInterval?
+            switch s.state {
+            case .thinking, .compacting: age = 600
+            case .tool: age = 1800
+            case .done: age = s.isUnseen ? 12 * 3600 : 3600
+            case .idle, .error: age = 3600
+            default: age = nil
+            }
+            if let age { dates.append(s.lastUpdate + age + 0.001) }
+            if remindersEnabled(), !s.reminded {
+                if s.state == .done, let since = s.unseenSince { dates.append(since + Self.reminderDelay) }
+                else if let since = s.waitingSince { dates.append(since + Self.reminderDelay) }
             }
         }
+        maintenance.schedule(at: dates.min().map { max(now, $0) }) { [weak self] in self?.performMaintenance() }
     }
+
+    func settingsChanged() { performMaintenance() }
 
     /// Sessions ordered by importance, then recency.
     var ordered: [Session] {
@@ -199,9 +222,16 @@ final class SessionStore: ObservableObject {
         for s in sessions.values where s.isUnseen { markSeen(s.id) }
     }
 
+    /// One maintenance pass; also callable with the virtual clock without waiting for a wall-clock timer.
+    func performMaintenance() {
+        defer { scheduleMaintenance() }
+        sweep()
+        remind()
+    }
+
     /// Fire the 5-minute reminder for unseen "done" and unanswered "waiting" sessions.
     private func remind() {
-        guard Preferences.remindAfterFiveMinutes else { return }
+        guard remindersEnabled() else { return }
         let now = Clock.now()
         for (id, s) in sessions where !s.reminded {
             var due: Transition?

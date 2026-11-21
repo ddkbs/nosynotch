@@ -86,7 +86,9 @@ final class NotchViewModel: ObservableObject {
     @Published private(set) var pointerIsNear = false
     private var lastActivity = Clock.now()
     private var shelfObserver: AnyCancellable?
-    private var sleepTimer: Timer?
+    private let sleepDeadline = Deadline()
+    private let startTimers: Bool
+    private var sleepWasBusy = false
     static let sleepAfter: TimeInterval = 10 * 60
     static let sleepAfterAtNight: TimeInterval = 2 * 60
 
@@ -116,7 +118,11 @@ final class NotchViewModel: ObservableObject {
     @Published private(set) var chatSessionID: String?
     @Published private(set) var chatMessages: [ChatMessage] = []
     @Published private(set) var chatStatus: String?
-    private var chatTimer: Timer?
+    private var chatObserver: FileChangeObserver?
+    private var observedChatPath: String?
+    private var observedChatSummary: String?
+    private var observingChat = false
+    private var chatLoadGeneration = 0
     private var pendingReply: ChatMessage?
 
     /// The session whose conversation is open (gone when the session ended).
@@ -129,17 +135,20 @@ final class NotchViewModel: ObservableObject {
         chatSessionID = session.id
         chatStatus = nil
         pendingReply = nil
+        observingChat = true
+        updateChatObservation(reload: false)
         loadChat()
-        chatTimer?.invalidate()
-        chatTimer = Timer.scheduledTimer(withTimeInterval: 1.5, repeats: true) { [weak self] _ in
-            MainActor.assumeIsolated { self?.loadChat() }
-        }
         recompute()
     }
 
     /// For the recorder: a conversation without a transcript file.
     func previewChat(_ session: Session, messages: [ChatMessage], status: String? = nil) {
         celebration = nil
+        observingChat = false
+        chatObserver?.cancel()
+        chatObserver = nil
+        observedChatPath = nil
+        observedChatSummary = nil
         chatSessionID = session.id
         chatMessages = messages
         chatStatus = status
@@ -147,8 +156,12 @@ final class NotchViewModel: ObservableObject {
     }
 
     func closeChat() {
-        chatTimer?.invalidate()
-        chatTimer = nil
+        observingChat = false
+        observedChatPath = nil
+        observedChatSummary = nil
+        chatLoadGeneration += 1
+        chatObserver?.cancel()
+        chatObserver = nil
         chatSessionID = nil
         chatMessages = []
         recompute()
@@ -171,8 +184,26 @@ final class NotchViewModel: ObservableObject {
         }
     }
 
+    private func updateChatObservation(reload: Bool = true) {
+        guard observingChat else { return }
+        guard let session = chatSession else { closeChat(); return }
+        let changedPath = observedChatPath != session.transcriptPath
+        guard changedPath || observedChatSummary != session.lastSummary else { return }
+        observedChatSummary = session.lastSummary
+        if changedPath {
+            chatObserver?.cancel()
+            observedChatPath = session.transcriptPath
+            chatObserver = session.transcriptPath.map { path in
+                FileChangeObserver(path: path) { [weak self] in self?.loadChat() }
+            }
+        }
+        if reload { loadChat() }
+    }
+
     private func loadChat() {
         guard let session = chatSession else { return closeChat() }
+        chatLoadGeneration += 1
+        let generation = chatLoadGeneration
         let path = session.transcriptPath
         let fallback = session.lastSummary
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
@@ -180,7 +211,7 @@ final class NotchViewModel: ObservableObject {
             if messages.isEmpty, let fallback { messages = [ChatMessage(id: "summary", role: .assistant, text: fallback)] }
             DispatchQueue.main.async {
                 MainActor.assumeIsolated {
-                    guard let self, self.chatSessionID == session.id else { return }
+                    guard let self, self.chatSessionID == session.id, self.chatLoadGeneration == generation else { return }
                     // Keep showing a just-sent reply until the transcript has it.
                     if let pending = self.pendingReply {
                         if messages.contains(where: { $0.role == .user && $0.text == pending.text }) {
@@ -280,7 +311,9 @@ final class NotchViewModel: ObservableObject {
     private var quietWork: DispatchWorkItem?
 
     init(store: SessionStore, media: NowPlaying, approvals: ApprovalCenter? = nil, usage: UsageStore? = nil,
-         pet: NosyPet? = nil, shelf: Shelf? = nil, calendar: CalendarMonitor? = nil) {
+         pet: NosyPet? = nil, shelf: Shelf? = nil, calendar: CalendarMonitor? = nil,
+         startTimers: Bool = true) {
+        self.startTimers = startTimers
         self.store = store
         self.media = media
         let pet = pet ?? NosyPet(persist: false)
@@ -315,9 +348,7 @@ final class NotchViewModel: ObservableObject {
             self?.recompute()
         }
         if !Clock.isVirtual { ports.setWatching(false) }
-        sleepTimer = Timer.scheduledTimer(withTimeInterval: 15, repeats: true) { [weak self] _ in
-            MainActor.assumeIsolated { self?.updateSleep() }
-        }
+        updateSleep()
         approvals.onChange = { [weak self] in
             guard let self else { return }
             self.objectWillChange.send()   // size depends on whether buttons are shown
@@ -488,8 +519,13 @@ final class NotchViewModel: ObservableObject {
     /// Called with every pointer move: where Nosy looks, and whether it peeks out.
     func updateGaze(mouse: CGPoint, notchCenter: CGPoint) {
         guard Preferences.nosyEnabled else { return }
-        gaze.update(mouse: mouse, notchCenter: notchCenter)
-        let near = gaze.nearness > (pointerIsNear ? 0.2 : 0.4)
+        let notchBounds = CGRect(x: notchCenter.x - notchSize.width / 2,
+                                 y: notchCenter.y - notchSize.height / 2,
+                                 width: notchSize.width, height: notchSize.height)
+        // Enter on the notch itself; a small exit margin prevents flicker at its edge.
+        let margin: CGFloat = pointerIsNear ? 6 : 0
+        let near = notchBounds.insetBy(dx: -margin, dy: -margin).contains(mouse)
+        if presentation != .hidden || near { gaze.update(mouse: mouse, notchCenter: notchCenter) }
         if near != pointerIsNear {
             pointerIsNear = near
             if near { wakeUp() }
@@ -500,6 +536,7 @@ final class NotchViewModel: ObservableObject {
     private func noteActivity() {
         lastActivity = Clock.now()
         if isAsleep { isAsleep = false }
+        updateSleep()
     }
 
     private func wakeUp() {
@@ -508,12 +545,23 @@ final class NotchViewModel: ObservableObject {
         nosyReact(.waking, for: 1.4)
     }
 
-    private func updateSleep() {
-        if store.hasActivity || store.hasWaiting || isHovering || media.isPlaying { lastActivity = Clock.now() }
-        let hour = Calendar.current.component(.hour, from: Clock.now())
+    func updateSleep() {
+        let now = Clock.now()
+        let busy = store.hasActivity || store.hasWaiting || isHovering || media.isPlaying
+        if busy || sleepWasBusy { lastActivity = now }
+        sleepWasBusy = busy
+        let calendar = Calendar.current
+        let hour = calendar.component(.hour, from: now)
         let limit = hour >= 23 || hour < 6 ? Self.sleepAfterAtNight : Self.sleepAfter
-        let asleep = Clock.now().timeIntervalSince(lastActivity) > limit
+        let asleep = !busy && now.timeIntervalSince(lastActivity) > limit
         if asleep != isAsleep { isAsleep = asleep }
+        guard startTimers else { return }
+        guard Preferences.nosyEnabled, !busy else { sleepDeadline.cancel(); return }
+        var dates = [6, 23].compactMap {
+            calendar.nextDate(after: now, matching: DateComponents(hour: $0), matchingPolicy: .nextTime)
+        }
+        if !asleep { dates.append(lastActivity + limit + 0.001) }
+        sleepDeadline.schedule(at: dates.min()) { [weak self] in self?.updateSleep() }
     }
 
     // MARK: - Geometry
@@ -680,18 +728,24 @@ final class NotchViewModel: ObservableObject {
     /// capture, and macOS may ask about it again. It closes when the player quits or the option is turned off.
     private func updateSpectrum() {
         let canTap = Bundle.main.bundleURL.pathExtension == "app"
-        let wanted = canTap && Preferences.liveEqualizer && Preferences.mediaEnabled ? media.track?.source.bundleID : nil
-        if wanted != tappedPlayer { tappedPlayer = media.isPlaying ? wanted : (wanted == nil ? nil : tappedPlayer) }
-        spectrum.follow(bundleID: tappedPlayer)
+        let equalizerVisible = presentation == .media
+        let wanted = canTap && equalizerVisible && media.isPlaying && Preferences.liveEqualizer && Preferences.mediaEnabled
+            ? media.track?.source.bundleID : nil
+        if wanted != tappedPlayer {
+            tappedPlayer = wanted
+            spectrum.follow(bundleID: wanted)
+        }
         // Spotify sometimes plays through a new helper process after a long pause – reattach if it went quiet.
         if media.isPlaying && !wasPlaying { spectrum.reattachIfSilent() }
         wasPlaying = media.isPlaying
     }
 
     func recompute() {
-        updateSpectrum()
+        updateChatObservation()
+        updateSleep()
         replyQueue.keep(Set(store.sessions.keys))
         defer {
+            updateSpectrum()
             let canTrack = Bundle.main.bundleURL.pathExtension == "app"
             head.setActive(canTrack && Preferences.headGestures && presentation == .attention && attentionApproval != nil)
         }

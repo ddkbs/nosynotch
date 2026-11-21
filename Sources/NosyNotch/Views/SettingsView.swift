@@ -15,16 +15,34 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
     }
 
     private var window: NSWindow?
+    private let visibility = SettingsAnimationVisibility()
+    private var visibilityObservers: [NSObjectProtocol] = []
     private let actions: Actions
 
     init(actions: Actions) {
         self.actions = actions
         super.init()
+        for name in [NSApplication.didHideNotification, NSApplication.didUnhideNotification] {
+            visibilityObservers.append(NotificationCenter.default.addObserver(forName: name, object: nil, queue: .main) { [weak self] _ in
+                MainActor.assumeIsolated { self?.refreshVisibility() }
+            })
+        }
     }
+
+    deinit { for observer in visibilityObservers { NotificationCenter.default.removeObserver(observer) } }
+
+    private func refreshVisibility() {
+        let paused = window.map { !$0.occlusionState.contains(.visible) || $0.isMiniaturized || NSApp.isHidden } ?? true
+        if visibility.paused != paused { visibility.paused = paused }
+    }
+
+    func windowDidChangeOcclusionState(_ notification: Notification) { refreshVisibility() }
+    func windowDidMiniaturize(_ notification: Notification) { refreshVisibility() }
+    func windowDidDeminiaturize(_ notification: Notification) { refreshVisibility() }
 
     func show(page: SettingsPage = .agents) {
         if window == nil {
-            let host = NSHostingController(rootView: SettingsView(actions: actions, page: page))
+            let host = NSHostingController(rootView: VisibleSettings(actions: actions, page: page, visibility: visibility))
             let window = NSWindow(contentViewController: host)
             window.title = "Nosy Notch"
             window.styleMask = [.titled, .closable, .miniaturizable, .fullSizeContentView]
@@ -41,6 +59,7 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
         }
         NSApp.activate(ignoringOtherApps: true)
         window?.makeKeyAndOrderFront(nil)
+        refreshVisibility()
     }
 
     func windowWillClose(_ notification: Notification) {
@@ -50,6 +69,22 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
         // Tear down the view tree and create fresh settings on the next open.
         closingWindow.contentViewController = nil
         window = nil
+    }
+}
+
+@MainActor
+private final class SettingsAnimationVisibility: ObservableObject {
+    @Published var paused = true
+}
+
+private struct VisibleSettings: View {
+    let actions: SettingsWindowController.Actions
+    let page: SettingsPage
+    @ObservedObject var visibility: SettingsAnimationVisibility
+
+    var body: some View {
+        SettingsView(actions: actions, page: page)
+            .environment(\.animationsPaused, visibility.paused)
     }
 }
 

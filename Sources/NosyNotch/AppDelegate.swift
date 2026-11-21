@@ -15,6 +15,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private let headphones = HeadphoneMonitor()
     private var server: EventServer?
     private var statusItem: NSStatusItem?
+    private var statusSymbol: String?
+    private var muteExpiryTimer: Timer?
     private var serverError: String?
     private lazy var settings = SettingsWindowController(actions: .init(
         statusLine: { [weak self] in self?.statusLine ?? "" },
@@ -22,6 +24,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         settingsChanged: { [weak self] in
             if Preferences.bluetoothEnabled { self?.headphones.start() } else { self?.headphones.stop() }
             if Preferences.calendarEnabled { self?.model.calendar.start() } else { self?.model.calendar.stop() }
+            self?.store.settingsChanged()
+            self?.usage.checkResets()
             self?.model.ports.setWatching(self?.model.isHovering ?? false)
             self?.model.objectWillChange.send()
             self?.model.recompute()
@@ -177,10 +181,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         item.menu = menu
         statusItem = item
         updateStatusIcon()
-        // Mute runs out on its own – keep the icon honest.
-        Timer.scheduledTimer(withTimeInterval: 30, repeats: true) { [weak self] _ in
-            MainActor.assumeIsolated { self?.updateStatusIcon() }
-        }
     }
 
     private var statusLine: String {
@@ -260,8 +260,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
     /// The menu bar ✦ gets a slash while muted.
     func updateStatusIcon() {
-        let symbol = Preferences.isMuted ? "speaker.slash" : "sparkle"
-        statusItem?.button?.image = NSImage(systemSymbolName: symbol, accessibilityDescription: "Nosy Notch")
+        muteExpiryTimer?.invalidate()
+        muteExpiryTimer = nil
+        let until = Preferences.mutedUntil
+        let symbol = until == nil ? "sparkle" : "speaker.slash"
+        if symbol != statusSymbol, let button = statusItem?.button {
+            button.image = NSImage(systemSymbolName: symbol, accessibilityDescription: "Nosy Notch")
+            statusSymbol = symbol
+        }
+        // Only timed mute needs a wakeup; an unchanged icon needs no polling or redraw.
+        if let until, until != .distantFuture {
+            muteExpiryTimer = Timer.scheduledTimer(withTimeInterval: max(0.01, until.timeIntervalSinceNow),
+                                                   repeats: false) { [weak self] _ in
+                MainActor.assumeIsolated { self?.updateStatusIcon() }
+            }
+        }
     }
 
     @objc private func startFocus(_ sender: NSMenuItem) {

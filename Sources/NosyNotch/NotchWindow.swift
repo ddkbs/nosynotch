@@ -52,7 +52,7 @@ final class NotchWindowController {
     private let panel: NotchPanel
     private var screen: NSScreen?
     private var globalMonitor: Any?
-    private var hoverTimer: Timer?
+    private var localMonitor: Any?
     private var screenObserver: NSObjectProtocol?
     private var dragMonitor: Any?
     private var chatObserver: AnyCancellable?
@@ -68,6 +68,9 @@ final class NotchWindowController {
         host.sizingOptions = []
         host.wantsLayer = true
         host.layer?.backgroundColor = .clear
+        host.addTrackingArea(NSTrackingArea(rect: .zero,
+            options: [.mouseEnteredAndExited, .activeAlways, .inVisibleRect], owner: host, userInfo: nil))
+        panel.acceptsMouseMovedEvents = true
         panel.contentView = host
 
         layout()
@@ -94,9 +97,22 @@ final class NotchWindowController {
                 self?.updateHover()
             }
         }
+        localMonitor = NSEvent.addLocalMonitorForEvents(matching: [.mouseMoved, .leftMouseDragged, .mouseExited]) { [weak self] event in
+            MainActor.assumeIsolated {
+                guard let self, event.window === self.panel else { return }
+                if event.type == .leftMouseDragged { self.updateFileDrag() }
+                self.updateHover()
+            }
+            return event
+        }
         dragMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDown, .leftMouseUp]) { [weak self] event in
             MainActor.assumeIsolated { self?.mouseButton(down: event.type == .leftMouseDown) }
         }
+    }
+
+    deinit {
+        for monitor in [globalMonitor, localMonitor, dragMonitor].compactMap({ $0 }) { NSEvent.removeMonitor(monitor) }
+        if let screenObserver { NotificationCenter.default.removeObserver(screenObserver) }
     }
 
     func layout() {
@@ -128,6 +144,7 @@ final class NotchWindowController {
 
     private func mouseButton(down: Bool) {
         if down {
+            guard Preferences.shelfEnabled else { return }
             dragChangeCount = NSPasteboard(name: .drag).changeCount
         } else if draggingFiles {
             draggingFiles = false
@@ -163,7 +180,8 @@ final class NotchWindowController {
         }
         var rect = notchRect
         if rect.height < 1 { rect.size.height = model.notchSize.height; rect.origin.y -= model.notchSize.height }
-        let inside = rect.insetBy(dx: -6, dy: -6).contains(mouse)
+        let margin: CGFloat = model.isHovering ? 6 : 0
+        let inside = rect.insetBy(dx: -margin, dy: -margin).contains(mouse)
 
         // A drag that ended over our own window never reaches the global monitor – the button state tells.
         if model.fileDragNear, NSEvent.pressedMouseButtons & 1 == 0 {
@@ -181,14 +199,6 @@ final class NotchWindowController {
         let interactive = inside && model.presentation != .hidden
         if panel.ignoresMouseEvents == interactive { panel.ignoresMouseEvents = !interactive }
 
-        if inside, hoverTimer == nil {
-            // While hovering, our window receives the mouse events, so poll to notice the exit.
-            hoverTimer = Timer.scheduledTimer(withTimeInterval: 0.08, repeats: true) { [weak self] _ in
-                MainActor.assumeIsolated { self?.updateHover() }
-            }
-        } else if !inside, let timer = hoverTimer {
-            timer.invalidate()
-            hoverTimer = nil
-        }
+
     }
 }

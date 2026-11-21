@@ -15,16 +15,23 @@ final class CalendarMonitor: ObservableObject {
     static let headsUpMinutes = 10.0
     /// Created only when the calendar is turned on – an event store talks to the privacy daemon right away.
     private lazy var store = EKEventStore()
-    private var timer: Timer?
+    private let deadline = Deadline()
+    private var snapshot: [Meeting] = []
+    private var horizon: Date?
     private var observer: NSObjectProtocol?
     private var notified = Set<String>()
     private var running = false
+    private let snapshotProvider: (() -> [Meeting])?
+
+    init(snapshotProvider: (() -> [Meeting])? = nil) { self.snapshotProvider = snapshotProvider }
 
     /// EventKit needs the usage text from the app bundle; `swift run` has none.
     private var canAsk: Bool { Bundle.main.bundleURL.pathExtension == "app" }
 
     func start() {
-        guard Preferences.calendarEnabled, canAsk, !running else { return }
+        guard !running else { return }
+        if snapshotProvider != nil { running = true; refresh(); return }
+        guard Preferences.calendarEnabled, canAsk else { return }
         running = true
         store.requestFullAccessToEvents { [weak self] granted, _ in
             Task { @MainActor in
@@ -32,9 +39,6 @@ final class CalendarMonitor: ObservableObject {
                 self.accessDenied = !granted
                 guard granted, self.running else { return }
                 self.refresh()
-                self.timer = Timer.scheduledTimer(withTimeInterval: 30, repeats: true) { [weak self] _ in
-                    MainActor.assumeIsolated { self?.refresh() }
-                }
                 self.observer = NotificationCenter.default.addObserver(forName: .EKEventStoreChanged, object: self.store,
                                                                        queue: .main) { [weak self] _ in
                     MainActor.assumeIsolated { self?.refresh() }
@@ -45,8 +49,9 @@ final class CalendarMonitor: ObservableObject {
 
     func stop() {
         running = false
-        timer?.invalidate()
-        timer = nil
+        deadline.cancel()
+        snapshot = []
+        horizon = nil
         if let observer { NotificationCenter.default.removeObserver(observer) }
         observer = nil
         next = nil
@@ -55,12 +60,27 @@ final class CalendarMonitor: ObservableObject {
 
     func refresh() {
         let now = Clock.now()
+        if let snapshotProvider {
+            snapshot = snapshotProvider()
+            horizon = now + 12 * 3600
+            updateUpcoming(snapshot, now: now)
+            scheduleUpdate()
+            return
+        }
         let predicate = store.predicateForEvents(withStart: now.addingTimeInterval(-60), end: now.addingTimeInterval(12 * 3600),
                                                  calendars: nil)
         let events = store.events(matching: predicate)
             .filter { !$0.isAllDay && $0.endDate > now && $0.status != .canceled }
             .sorted { $0.startDate < $1.startDate }
-        let meeting = events.first.map(Self.meeting)
+        snapshot = events.map(Self.meeting)
+        horizon = now + 12 * 3600
+        updateUpcoming(snapshot, now: now)
+        scheduleUpdate()
+    }
+
+    /// Evaluates a fetched snapshot without accessing EventKit or asking for calendar permissions.
+    func updateUpcoming(_ meetings: [Meeting], now: Date = Clock.now()) {
+        let meeting = meetings.filter { $0.end > now }.min { $0.start < $1.start }
         if meeting != next {
             next = meeting
             onChange?()
@@ -71,6 +91,21 @@ final class CalendarMonitor: ObservableObject {
         if minutes <= Self.headsUpMinutes, minutes > -1, !notified.contains(key) {
             notified.insert(key)
             onNotice?(.meeting(meeting))
+        }
+    }
+
+    private func scheduleUpdate() {
+        guard running else { deadline.cancel(); return }
+        let now = Clock.now()
+        var dates = [horizon].compactMap { $0 }
+        if let next {
+            dates.append(next.end)
+            let reminder = next.start - Self.headsUpMinutes * 60
+            if reminder > now { dates.append(reminder) }
+        }
+        deadline.schedule(at: dates.min()) { [weak self] in
+            guard let self, self.running else { return }
+            self.refresh()
         }
     }
 
@@ -105,6 +140,10 @@ struct CalendarRow: View {
     let meeting: Meeting
 
     var body: some View {
+        PeriodicClock(every: 60) { _ in content }
+    }
+
+    private var content: some View {
         HStack(spacing: 10) {
             RoundedRectangle(cornerRadius: 2).fill(meeting.color).frame(width: 4, height: 18)
             Text(meeting.title)
