@@ -8,6 +8,7 @@ import Network
 ///                    until the user decides in the notch
 ///   POST /usage   – body: Claude Code status line JSON (rate limits)
 ///   GET  /health  – returns "ok"
+///   GET  /diagnostics – aggregate UI state, without session content
 ///   POST /quit    – terminates the app (used by `npx nosynotch stop`)
 ///   POST /settings – opens the settings window (used by `npx nosynotch settings`)
 /// State is only touched on `queue` (and set up before `start()`), hence `@unchecked Sendable`.
@@ -20,6 +21,7 @@ final class EventServer: @unchecked Sendable {
     private let onEvent: @Sendable (HookEvent) -> Void
     var onQuit: (@Sendable () -> Void)?
     var onSettings: (@Sendable () -> Void)?
+    var onDiagnostics: (@Sendable (@escaping @Sendable (String) -> Void) -> Void)?
     var onUsage: (@Sendable (Data) -> Void)?
     /// A permission hook waits for an answer. Call `reply` exactly once with the hook's stdout (nil = no decision).
     var onPermission: (@Sendable (HookEvent, @escaping @Sendable (String?) -> Void) -> Void)?
@@ -114,6 +116,13 @@ final class EventServer: @unchecked Sendable {
             guard let onPermission else { return send("200 OK", body: "", on: connection) }
             onPermission(event) { [weak self] output in
                 self?.queue.async { self?.send("200 OK", body: output ?? "", on: connection) }
+            }
+            return
+        }
+
+        if request.method == "GET", request.path == "/diagnostics", let onDiagnostics {
+            onDiagnostics { [weak self] report in
+                self?.queue.async { self?.send("200 OK", body: report, on: connection) }
             }
             return
         }

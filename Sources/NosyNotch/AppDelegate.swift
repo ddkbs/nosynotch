@@ -153,6 +153,27 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
                 self.approvals.add(event, reply: reply)
             }
         }
+        // Aggregate UI state only: no session identifiers, paths, commands or conversation content.
+        server.onDiagnostics = { [weak self] reply in
+            Task { @MainActor in
+                guard let self else { return reply("{}") }
+                let display = self.model
+                let report: [String: Any] = [
+                    "sessions": self.store.sessions.count,
+                    "activeSessions": self.store.sessions.values.filter { $0.state.isActive }.count,
+                    "displays": [
+                        ["presentation": String(describing: display.presentation),
+                         "mood": String(describing: display.nosyMood),
+                         "hovering": display.isHovering,
+                         "nosyOutside": display.nosyOutside,
+                         "physicalNotch": display.hasPhysicalNotch,
+                         "clockVisible": display.presentation == .clock] as [String: Any],
+                    ],
+                ]
+                let data = try? JSONSerialization.data(withJSONObject: report, options: [.sortedKeys])
+                reply(data.flatMap { String(data: $0, encoding: .utf8) } ?? "{}")
+            }
+        }
         server.onQuit = {
             Task { @MainActor in NSApp.terminate(nil) }
         }
