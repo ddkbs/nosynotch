@@ -146,6 +146,8 @@ struct ClockCard: View {
                         Text(period)
                             .font(.system(size: 13, weight: .semibold, design: .rounded))
                             .foregroundStyle(.white.opacity(0.45))
+                            .lineLimit(1)
+                            .fixedSize(horizontal: true, vertical: false)
                     }
                 }
                 Spacer(minLength: 12)
