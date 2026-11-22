@@ -38,13 +38,18 @@ struct ClockFace: Equatable {
     }
 }
 
-/// A second clock on the big card. The list stays short on purpose: one city per common offset.
+/// A second clock backed by the time-zone database supplied with macOS.
 struct ClockZone: Identifiable, Hashable {
     let city: String
     let identifier: String
     var id: String { identifier }
 
-    static let all = [
+    /// The region distinguishes cities with similar names and remains searchable.
+    var region: String {
+        identifier.split(separator: "/").dropLast().joined(separator: " / ").replacingOccurrences(of: "_", with: " ")
+    }
+
+    static let suggested = [
         ClockZone(city: "San Francisco", identifier: "America/Los_Angeles"),
         ClockZone(city: "New York", identifier: "America/New_York"),
         ClockZone(city: "São Paulo", identifier: "America/Sao_Paulo"),
@@ -56,6 +61,39 @@ struct ClockZone: Identifiable, Hashable {
         ClockZone(city: "Tokyo", identifier: "Asia/Tokyo"),
         ClockZone(city: "Sydney", identifier: "Australia/Sydney"),
     ]
+
+    static let all: [ClockZone] = Set(TimeZone.knownTimeZoneIdentifiers + suggested.map(\.identifier) + ["UTC"])
+        .compactMap { resolve($0) }
+        .sorted {
+            let order = $0.city.localizedStandardCompare($1.city)
+            return order == .orderedSame ? $0.identifier < $1.identifier : order == .orderedAscending
+        }
+
+    static func resolve(_ identifier: String) -> ClockZone? {
+        guard !identifier.isEmpty, TimeZone(identifier: identifier) != nil else { return nil }
+        if let suggestedZone = suggested.first(where: { $0.identifier == identifier }) {
+            return suggestedZone
+        }
+        let city = identifier.split(separator: "/").last.map(String.init) ?? identifier
+        return ClockZone(city: city.replacingOccurrences(of: "_", with: " "), identifier: identifier)
+    }
+
+    static func matching(_ query: String) -> [ClockZone] {
+        let words = query.split(whereSeparator: { $0.isWhitespace }).map(String.init)
+        return all.filter { zone in
+            words.allSatisfy { word in
+                "\(zone.city) \(zone.region) \(zone.identifier)".range(of: word,
+                    options: [.caseInsensitive, .diacriticInsensitive]) != nil
+            }
+        }
+    }
+
+    func utcOffsetText(at date: Date) -> String {
+        guard let zone = TimeZone(identifier: identifier) else { return "" }
+        let minutes = zone.secondsFromGMT(for: date) / 60
+        if minutes == 0 { return "UTC" }
+        return String(format: "UTC%@%02d:%02d", minutes < 0 ? "−" : "+", abs(minutes) / 60, abs(minutes) % 60)
+    }
 
     /// "−6h", "+5:30" compared to here; empty when it's the same.
     func offsetText(at now: Date) -> String {
