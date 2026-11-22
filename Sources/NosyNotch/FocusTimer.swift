@@ -11,12 +11,16 @@ final class FocusTimer: ObservableObject {
     @Published private(set) var phase: Phase = .focus
     @Published private(set) var endsAt: Date?
     @Published private(set) var minutes = 25
-    /// Ticks once a second while running, so views can redraw.
-    @Published private(set) var now = Clock.now()
+    var now: Date { Clock.now() }
 
     var onFinished: ((Phase, Int) -> Void)?
     var onChange: (() -> Void)?
-    private var ticker: Timer?
+    private let completion = Deadline()
+    private let startTimers: Bool
+
+    init(startTimers: Bool = true) {
+        self.startTimers = startTimers
+    }
 
     var isRunning: Bool { endsAt != nil }
     var isFocusing: Bool { isRunning && phase == .focus }
@@ -33,25 +37,25 @@ final class FocusTimer: ObservableObject {
     func start(_ phase: Phase = .focus, minutes: Int? = nil) {
         self.phase = phase
         self.minutes = minutes ?? (phase == .focus ? Preferences.focusMinutes : Preferences.breakMinutes)
-        now = Clock.now()
         endsAt = now.addingTimeInterval(Double(self.minutes * 60))
-        ticker?.invalidate()
-        ticker = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in
-            MainActor.assumeIsolated { self?.tick() }
+        if startTimers {
+            completion.schedule(at: endsAt) { [weak self] in self?.tick() }
         }
         onChange?()
     }
 
     func stop() {
-        ticker?.invalidate()
-        ticker = nil
+        completion.cancel()
         endsAt = nil
         onChange?()
     }
 
-    private func tick() {
-        now = Clock.now()
-        guard let endsAt, now >= endsAt else { return }
+    func tick() {
+        guard let endsAt else { return }
+        guard now >= endsAt else {
+            if startTimers { completion.schedule(at: endsAt) { [weak self] in self?.tick() } }
+            return
+        }
         let finished = phase, length = minutes
         stop()
         onFinished?(finished, length)
@@ -64,6 +68,10 @@ struct FocusRing: View {
     var size: CGFloat = 18
 
     var body: some View {
+        PeriodicClock(every: 1) { _ in content }
+    }
+
+    @ViewBuilder private var content: some View {
         let color = timer.phase == .focus ? NosyPalette.top : Theme.success
         ZStack {
             Circle().stroke(.white.opacity(0.12), lineWidth: 2.2)
@@ -86,6 +94,11 @@ struct FocusButton: View {
     @State private var hovering = false
 
     var body: some View {
+        if timer.isRunning { PeriodicClock(every: 1) { _ in content } }
+        else { content }
+    }
+
+    @ViewBuilder private var content: some View {
         Button {
             timer.isRunning ? timer.stop() : timer.start(.focus)
         } label: {

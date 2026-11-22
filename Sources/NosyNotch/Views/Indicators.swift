@@ -1,4 +1,5 @@
 import SwiftUI
+import QuartzCore
 
 /// The right-hand wing in the compact notch.
 /// A tinted symbol that softly pulses – on the (possibly virtual) clock, so recordings show it too.
@@ -7,12 +8,60 @@ struct PulsingSymbol: View {
     var size: CGFloat
     var color: Color
 
+    @Environment(\.virtualDate) private var virtualDate
+    @Environment(\.animationsPaused) private var paused
+
     var body: some View {
-        ClockTimeline(minimumInterval: 1.0 / 30.0) { now in
-            let t = now.timeIntervalSinceReferenceDate
-            TintedSymbol(name: name, size: size, color: color)
-                .opacity(0.55 + 0.45 * (0.5 + 0.5 * cos(t * 3.4)))
+        if Clock.isVirtual || virtualDate != nil {
+            // Offscreen recordings need an explicit frame at the recorder's virtual time.
+            ClockTimeline(minimumInterval: 1.0 / 30.0) { now in
+                let t = now.timeIntervalSinceReferenceDate
+                TintedSymbol(name: name, size: size, color: color)
+                    .opacity(0.55 + 0.45 * (0.5 + 0.5 * cos(t * 3.4)))
+            }
+        } else {
+            LayerPulsingSymbol(name: name, size: size, color: color, paused: paused)
         }
+    }
+}
+
+/// Animate the opacity of a static symbol in Core Animation, without rebuilding SwiftUI every frame.
+private struct LayerPulsingSymbol: NSViewRepresentable {
+    let name: String
+    let size: CGFloat
+    let color: Color
+    let paused: Bool
+
+    func makeNSView(context: Context) -> NSImageView {
+        let view = NSImageView()
+        view.wantsLayer = true
+        view.imageScaling = .scaleProportionallyUpOrDown
+        return view
+    }
+
+    func updateNSView(_ view: NSImageView, context: Context) {
+        view.image = TintedSymbol.image(name, size: size, weight: .semibold, color: NSColor(color))
+        guard let layer = view.layer else { return }
+        if paused {
+            layer.removeAnimation(forKey: "nosyPulse")
+        } else if layer.animation(forKey: "nosyPulse") == nil {
+            let pulse = CABasicAnimation(keyPath: "opacity")
+            pulse.fromValue = 0.55
+            pulse.toValue = 1.0
+            pulse.duration = .pi / 3.4
+            pulse.autoreverses = true
+            pulse.repeatCount = .infinity
+            pulse.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
+            layer.add(pulse, forKey: "nosyPulse")
+        }
+    }
+
+    func sizeThatFits(_ proposal: ProposedViewSize, nsView: NSImageView, context: Context) -> CGSize? {
+        nsView.image?.size ?? CGSize(width: size, height: size)
+    }
+
+    static func dismantleNSView(_ view: NSImageView, coordinator: ()) {
+        view.layer?.removeAnimation(forKey: "nosyPulse")
     }
 }
 
@@ -87,7 +136,7 @@ struct WaveDots: View {
     var color: Color
 
     var body: some View {
-        ClockTimeline(minimumInterval: 1.0 / 60.0) { now in
+        PeriodicClock(every: 1.0 / 15.0) { now in
             let t = now.timeIntervalSinceReferenceDate
             HStack(spacing: 3) {
                 ForEach(0..<3, id: \.self) { i in

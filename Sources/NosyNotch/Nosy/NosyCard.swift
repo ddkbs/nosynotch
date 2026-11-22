@@ -7,6 +7,10 @@ struct NosyCard: View {
     var trailing: AnyView?
 
     var body: some View {
+        PeriodicClock(every: 60) { _ in content }
+    }
+
+    private var content: some View {
         HStack(spacing: 14) {
             levelBadge
             energy

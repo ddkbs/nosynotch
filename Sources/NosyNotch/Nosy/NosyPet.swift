@@ -25,24 +25,26 @@ final class NosyPet: ObservableObject {
 
     @Published private(set) var state: State
     private let persist: Bool
-    private var timer: Timer?
 
-    init(persist: Bool = true) {
+    private let defaults: UserDefaults
+
+    init(persist: Bool = true, defaults: UserDefaults = .standard, startTimers: Bool = true) {
         self.persist = persist
-        if persist, let data = UserDefaults.standard.data(forKey: Self.defaultsKey),
+        self.defaults = defaults
+        if persist, let data = defaults.data(forKey: Self.defaultsKey),
            let saved = try? JSONDecoder().decode(State.self, from: data) {
             state = saved
         } else {
             state = State()
         }
         decay()
-        guard persist else { return }
-        timer = Timer.scheduledTimer(withTimeInterval: 300, repeats: true) { [weak self] _ in
-            MainActor.assumeIsolated { self?.decay() }
-        }
     }
 
-    var energy: Double { state.energy }
+    var energy: Double {
+        let hours = max(0, Clock.now().timeIntervalSince(state.lastDecay) / 3600)
+        return max(Self.energyFloor, state.energy - (hours > 0.01 ? hours * Self.decayPerHour : 0))
+    }
+
     var level: Int { Self.level(forXP: state.xp) }
 
     /// 0…1 on the way to the next level.
@@ -62,7 +64,7 @@ final class NosyPet: ObservableObject {
         return last == Self.dayString(now) || last == Self.dayString(now.addingTimeInterval(-86_400)) ? state.streak : 0
     }
 
-    var isLowOnEnergy: Bool { state.energy < 0.25 }
+    var isLowOnEnergy: Bool { energy < 0.25 }
 
     /// Streaks count by the best one ever, so a missed day never takes anything away.
     func isUnlocked(_ item: NosyAccessory) -> Bool {
@@ -129,7 +131,7 @@ final class NosyPet: ObservableObject {
 
     private func save() {
         guard persist, let data = try? JSONEncoder().encode(state) else { return }
-        UserDefaults.standard.set(data, forKey: Self.defaultsKey)
+        defaults.set(data, forKey: Self.defaultsKey)
     }
 
     // MARK: - Levels

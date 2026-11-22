@@ -73,13 +73,14 @@ private struct ClockDigits: View {
     let face: ClockFace
     let size: CGFloat
     var weight: Font.Weight = .semibold
+    var blinksColon = true
 
     var body: some View {
         HStack(spacing: size * 0.04) {
             Text(face.hour).contentTransition(.numericText())
             Text(":")
                 .foregroundStyle(NosyPalette.spark)
-                .opacity(face.second.isMultiple(of: 2) ? 1 : 0.3)
+                .opacity(!blinksColon || face.second.isMultiple(of: 2) ? 1 : 0.3)
                 .animation(.easeInOut(duration: 0.8), value: face.second)
             Text(face.minute).contentTransition(.numericText())
         }
@@ -91,6 +92,26 @@ private struct ClockDigits: View {
     }
 }
 
+/// Compact clocks only change at minute boundaries or a meeting's countdown boundary.
+struct ClockWingSchedule: TimelineSchedule {
+    var meetingStart: Date?
+
+    func entries(from startDate: Date, mode: TimelineScheduleMode) -> AnyIterator<Date> {
+        var next = startDate
+        return AnyIterator {
+            let current = next
+            let seconds = current.timeIntervalSinceReferenceDate
+            next = Date(timeIntervalSinceReferenceDate: (floor(seconds / 60) + 1) * 60)
+            if let meetingStart, meetingStart > current {
+                let minutes = ceil(meetingStart.timeIntervalSince(current) / 60)
+                let edge = meetingStart.addingTimeInterval(-(minutes - 1) * 60)
+                if edge > current { next = min(next, edge) }
+            }
+            return current
+        }
+    }
+}
+
 /// The time on the right wing of the quiet notch. Dims while Nosy sleeps, counts down before a meeting.
 struct ClockWing: View {
     var dimmed = false
@@ -99,7 +120,7 @@ struct ClockWing: View {
     private static let countdownFrom: TimeInterval = 15 * 60
 
     var body: some View {
-        PeriodicClock(every: 1) { now in
+        ScheduledClock(schedule: ClockWingSchedule(meetingStart: meeting?.start)) { now in
             if let meeting, case let left = meeting.start.timeIntervalSince(now), left > 0, left <= Self.countdownFrom {
                 Text("in \(Int((left / 60).rounded(.up)))m")
                     .font(.system(size: 10, weight: .semibold, design: .rounded).monospacedDigit())
@@ -110,7 +131,7 @@ struct ClockWing: View {
                     .fixedSize()
                     .help(meeting.title)
             } else {
-                ClockDigits(face: ClockFace(now), size: 11)
+                ClockDigits(face: ClockFace(now), size: 11, blinksColon: false)
                     .foregroundStyle(.white.opacity(dimmed ? 0.5 : 0.92))
                     .animation(.easeInOut(duration: 0.6), value: dimmed)
             }

@@ -26,9 +26,9 @@ struct NosyWingEyes: View {
     var tint: Color = NosyPalette.spark
 
     var body: some View {
-        // The wing sits in the notch all day: calm moods only redraw to blink, sleep's z's drift at 20 FPS.
+        // The wing sits in the notch all day: calm moods only redraw to blink, the small moving moods use a reduced cadence.
         if movesOnItsOwn {
-            ClockTimeline(minimumInterval: mood == .sleeping ? 1.0 / 20.0 : 1.0 / 30.0) { eyes(at: $0) }
+            PeriodicClock(every: mood == .sleeping ? 1.0 / 8.0 : 1.0 / 12.0) { eyes(at: $0) }
         } else {
             ScheduledClock(schedule: NosyBlinkSchedule()) { eyes(at: $0) }
         }

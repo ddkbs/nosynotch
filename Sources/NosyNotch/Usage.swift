@@ -34,27 +34,51 @@ final class UsageStore: ObservableObject {
 
     /// A limit that was nearly used up has reset: (agent, "5-hour" / "weekly").
     var onReset: ((Agent, String) -> Void)?
-    private var resetTimer: Timer?
+    private let resetDeadline = Deadline()
+    private let startTimers: Bool
     private static let notifiedKey = "notifiedLimitResets"
 
-    init(load: Bool = true) {
+    private let defaults: UserDefaults
+    private let resetNotificationsEnabled: () -> Bool
+
+    init(load: Bool = true, defaults: UserDefaults = .standard, startTimers: Bool = true,
+         resetNotificationsEnabled: @escaping () -> Bool = { Preferences.notifyLimitReset }) {
+        self.startTimers = startTimers && load
+        self.defaults = defaults
+        self.resetNotificationsEnabled = resetNotificationsEnabled
         guard load else { return }
-        if let data = UserDefaults.standard.data(forKey: Self.defaultsKey),
+        if let data = defaults.data(forKey: Self.defaultsKey),
            let saved = try? JSONDecoder().decode([String: AgentUsage].self, from: data) {
             claude = saved["claude"]
             codex = saved["codex"]
         }
-        resetTimer = Timer.scheduledTimer(withTimeInterval: 20, repeats: true) { [weak self] _ in
-            MainActor.assumeIsolated { self?.checkResets() }
+        scheduleReset()
+    }
+
+    private func scheduleReset() {
+        guard startTimers else { return }
+        guard resetNotificationsEnabled() else { resetDeadline.cancel(); return }
+        let now = Clock.now()
+        let notified = Set(defaults.stringArray(forKey: Self.notifiedKey) ?? [])
+        var dates: [Date] = []
+        for (agent, usage) in [(Agent.claude, claude), (.codex, codex)] {
+            for (label, window) in [("5-hour", usage?.fiveHour), ("weekly", usage?.week)] {
+                guard let window, window.usedPercent >= Preferences.limitResetThreshold,
+                      let date = window.resetsAt, now.timeIntervalSince(date) < 12 * 3600,
+                      !notified.contains("\(agent.rawValue)-\(label)-\(Int(date.timeIntervalSince1970))") else { continue }
+                dates.append(max(now, date))
+            }
         }
+        resetDeadline.schedule(at: dates.min()) { [weak self] in self?.checkResets() }
     }
 
     /// A window whose reset time has passed while it was at ≥ 80 % fires `onReset` once. Works with the last
     /// known numbers, so it also fires when the agent isn't running – and once after launch if it reset meanwhile
     /// (up to 12 hours late).
     func checkResets(now: Date = Clock.now()) {
-        guard Preferences.notifyLimitReset else { return }
-        var notified = Set(UserDefaults.standard.stringArray(forKey: Self.notifiedKey) ?? [])
+        defer { scheduleReset() }
+        guard resetNotificationsEnabled() else { return }
+        var notified = Set(defaults.stringArray(forKey: Self.notifiedKey) ?? [])
         let before = notified.count
         for (agent, usage) in [(Agent.claude, claude), (.codex, codex)] {
             guard let usage else { continue }
@@ -69,7 +93,7 @@ final class UsageStore: ObservableObject {
         }
         if notified.count != before {
             // Keep the list short – old keys can never match again.
-            UserDefaults.standard.set(Array(notified.sorted().suffix(40)), forKey: Self.notifiedKey)
+            defaults.set(Array(notified.sorted().suffix(40)), forKey: Self.notifiedKey)
         }
     }
 
@@ -82,6 +106,7 @@ final class UsageStore: ObservableObject {
     }
 
     func set(_ usage: AgentUsage?, for agent: Agent) {
+        defer { scheduleReset() }
         // Judge the old window before fresh numbers (new reset time, low usage) replace it.
         checkResets()
         switch agent {
@@ -225,6 +250,6 @@ final class UsageStore: ObservableObject {
         var all: [String: AgentUsage] = [:]
         all["claude"] = claude
         all["codex"] = codex
-        if let data = try? JSONEncoder().encode(all) { UserDefaults.standard.set(data, forKey: Self.defaultsKey) }
+        if let data = try? JSONEncoder().encode(all) { defaults.set(data, forKey: Self.defaultsKey) }
     }
 }
