@@ -53,15 +53,15 @@ final class NotchWindowController {
     private var screen: NSScreen?
     private var globalMonitor: Any?
     private var hoverTimer: Timer?
-    private var screenObserver: NSObjectProtocol?
     private var dragMonitor: Any?
     private var chatObserver: AnyCancellable?
     /// The drag pasteboard's change count when the mouse went down – a new drag changes it.
     private var dragChangeCount = 0
     private var draggingFiles = false
 
-    init(model: NotchViewModel) {
+    init(model: NotchViewModel, screen: NSScreen? = NotchGeometry.preferredScreen()) {
         self.model = model
+        self.screen = screen
         self.panel = NotchPanel(contentRect: NSRect(x: 0, y: 0, width: 600, height: 300))
 
         let host = NSHostingView(rootView: NotchView(model: model, store: model.store, media: model.media))
@@ -82,12 +82,6 @@ final class NotchWindowController {
             }
         }
 
-        screenObserver = NotificationCenter.default.addObserver(
-            forName: NSApplication.didChangeScreenParametersNotification, object: nil, queue: .main
-        ) { [weak self] _ in
-            MainActor.assumeIsolated { self?.layout() }
-        }
-
         globalMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.mouseMoved, .leftMouseDragged]) { [weak self] event in
             MainActor.assumeIsolated {
                 if event.type == .leftMouseDragged { self?.updateFileDrag() }
@@ -99,9 +93,25 @@ final class NotchWindowController {
         }
     }
 
-    func layout() {
-        guard let screen = NotchGeometry.preferredScreen() else { return }
-        self.screen = screen
+    deinit {
+        hoverTimer?.invalidate()
+        for monitor in [globalMonitor, dragMonitor].compactMap({ $0 }) { NSEvent.removeMonitor(monitor) }
+    }
+
+    func close() {
+        hoverTimer?.invalidate()
+        hoverTimer = nil
+        panel.orderOut(nil)
+        panel.contentView = nil
+        panel.close()
+        model.closeChat()
+        model.isHovering = false
+        model.fileDragNear = false
+    }
+
+    func layout(on newScreen: NSScreen? = nil) {
+        if let newScreen { screen = newScreen }
+        guard let screen else { return }
         let notch = NotchGeometry.notch(on: screen)
         model.notchSize = notch.size
         model.hasPhysicalNotch = notch.physical
@@ -190,5 +200,54 @@ final class NotchWindowController {
             timer.invalidate()
             hoverTimer = nil
         }
+    }
+}
+
+/// One independently interactive notch per connected display, backed by the same application data.
+@MainActor
+final class NotchDisplayController {
+    private let model: NotchViewModel
+    private var windows: [CGDirectDisplayID: NotchWindowController] = [:]
+    private var models: [CGDirectDisplayID: NotchViewModel] = [:]
+    private var screenObserver: NSObjectProtocol?
+
+    init(model: NotchViewModel) {
+        self.model = model
+        reconcileScreens()
+        screenObserver = NotificationCenter.default.addObserver(
+            forName: NSApplication.didChangeScreenParametersNotification, object: nil, queue: .main
+        ) { [weak self] _ in
+            MainActor.assumeIsolated { self?.reconcileScreens() }
+        }
+    }
+
+    deinit {
+        if let screenObserver { NotificationCenter.default.removeObserver(screenObserver) }
+    }
+
+    private func reconcileScreens() {
+        let screens = NSScreen.screens
+        let ids = Set(screens.compactMap { ($0.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? NSNumber)?.uint32Value })
+        for id in Array(windows.keys) where !ids.contains(id) {
+            windows.removeValue(forKey: id)?.close()
+            models.removeValue(forKey: id)
+        }
+        // Reassign the owner to a connected screen after closing the lid or unplugging a monitor.
+        if !models.values.contains(where: { $0 === model }), let screen = screens.first,
+           let id = (screen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? NSNumber)?.uint32Value {
+            windows.removeValue(forKey: id)?.close()
+            models[id] = model
+            windows[id] = NotchWindowController(model: model, screen: screen)
+        }
+        for screen in screens {
+            guard let id = (screen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? NSNumber)?.uint32Value else { continue }
+            if let window = windows[id] { window.layout(on: screen); continue }
+            let display = NotchViewModel(store: model.store, media: model.media, approvals: model.approvals,
+                                         usage: model.usage, pet: model.pet, shelf: model.shelf, sharedWith: model)
+            models[id] = display
+            windows[id] = NotchWindowController(model: display, screen: screen)
+        }
+        model.updatePortWatching()
+        model.updateDisplayServices()
     }
 }
