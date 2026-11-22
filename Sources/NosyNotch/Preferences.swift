@@ -195,7 +195,7 @@ enum Preferences {
     /// The second time zone on the big clock, if any.
     static var clockZone: ClockZone? {
         let identifier = defaults.string(forKey: Key.clockZone) ?? ""
-        return ClockZone.all.first { $0.identifier == identifier }
+        return ClockZone.resolve(identifier)
     }
 
     /// Listening ports in the hover view, with who opened them and ✕ to quit them.

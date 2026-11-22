@@ -1014,13 +1014,10 @@ private struct ExtrasPage: View {
                     NotchToggle(isOn: bind($clock), tint: tint)
                 }
                 Row(title: "Second time zone", subtitle: "Next to the big clock when you hover the notch", divider: false) {
-                    Picker("", selection: Binding(get: { clockZone }, set: { clockZone = $0; actions.settingsChanged() })) {
-                        Text("None").tag("")
-                        ForEach(ClockZone.all) { Text($0.city).tag($0.identifier) }
-                    }
-                    .labelsHidden()
-                    .pickerStyle(.menu)
-                    .fixedSize()
+                    ClockZonePicker(selection: Binding(get: { clockZone }, set: {
+                        clockZone = $0
+                        actions.settingsChanged()
+                    }))
                 }
                 .opacity(clock ? 1 : 0.4)
                 .disabled(!clock)
@@ -1081,6 +1078,99 @@ private struct ExtrasPage: View {
 
     private func bind(_ value: Binding<Bool>) -> Binding<Bool> {
         Binding(get: { value.wrappedValue }, set: { value.wrappedValue = $0; actions.settingsChanged() })
+    }
+}
+
+/// Show commonly used cities until the user searches the system time-zone database.
+private struct ClockZonePicker: View {
+    @Binding var selection: String
+    @State private var isPresented = false
+    @State private var query = ""
+    @State private var referenceDate = Date()
+    @FocusState private var searching: Bool
+
+    var body: some View {
+        Button {
+            query = ""
+            referenceDate = Date()
+            isPresented = true
+        } label: {
+            HStack(spacing: 6) {
+                Text(ClockZone.resolve(selection)?.city ?? "None")
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+                Image(systemName: "chevron.up.chevron.down")
+                    .font(.system(size: 9, weight: .semibold))
+            }
+            .frame(maxWidth: 150)
+        }
+        .accessibilityLabel("Second time zone")
+        .popover(isPresented: $isPresented, arrowEdge: .trailing) {
+            let isSearching = query.contains { !$0.isWhitespace }
+            let zones = isSearching ? ClockZone.matching(query) : ClockZone.suggested
+            VStack(alignment: .leading, spacing: 12) {
+                Text("Second time zone").font(.headline)
+                TextField("Search city or region", text: $query)
+                    .textFieldStyle(.roundedBorder)
+                    .focused($searching)
+                    .onExitCommand { isPresented = false }
+                ScrollView {
+                    LazyVStack(spacing: 2) {
+                        choice(nil)
+                        if !isSearching, let current = ClockZone.resolve(selection), !zones.contains(current) {
+                            choice(current)
+                        }
+                        if zones.isEmpty {
+                            Text("No matching time zones")
+                                .foregroundStyle(.secondary)
+                                .padding()
+                        }
+                        ForEach(zones) { zone in choice(zone) }
+                    }
+                }
+                .frame(height: 300)
+                .id(isSearching)
+                Text("Reference cities from macOS. UTC offsets follow daylight saving time.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            .padding(16)
+            .frame(width: 350)
+            .onAppear { searching = true }
+        }
+    }
+
+    private func choice(_ zone: ClockZone?) -> some View {
+        let identifier = zone?.identifier ?? ""
+        return Button {
+            selection = identifier
+            isPresented = false
+        } label: {
+            HStack(spacing: 10) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(zone?.city ?? "None")
+                        .foregroundStyle(.primary)
+                    if let zone, !zone.region.isEmpty {
+                        Text(zone.region).font(.caption).foregroundStyle(.secondary)
+                    }
+                }
+                Spacer()
+                if let zone {
+                    Text(zone.utcOffsetText(at: referenceDate))
+                        .font(.caption.monospacedDigit())
+                        .foregroundStyle(.secondary)
+                }
+                Image(systemName: "checkmark")
+                    .opacity(selection == identifier ? 1 : 0)
+            }
+            .padding(.horizontal, 8)
+            .padding(.vertical, 6)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .contentShape(Rectangle())
+            .background(selection == identifier ? Color.primary.opacity(0.08) : .clear,
+                        in: RoundedRectangle(cornerRadius: 6))
+        }
+        .buttonStyle(.plain)
     }
 }
 
