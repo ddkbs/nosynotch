@@ -51,11 +51,11 @@ final class NotchViewModel: ObservableObject {
     let approvals: ApprovalCenter
     let usage: UsageStore
     /// Live band levels of the playing music (only with the live equalizer turned on).
-    let spectrum = AudioSpectrum()
+    let spectrum: AudioSpectrum
     private var tappedPlayer: String?
     private var wasPlaying = false
     /// Nod / shake with AirPods while a permission request is open (opt-in).
-    let head = HeadGestures()
+    let head: HeadGestures
     /// Where Nosy looks (the pointer).
     let gaze = NosyGaze()
     /// Energy, level and streak.
@@ -65,10 +65,44 @@ final class NotchViewModel: ObservableObject {
     let focus = FocusTimer.shared
     let calendar: CalendarMonitor
     /// Listening ports (dev servers) and who opened them.
-    let ports = PortMonitor()
+    let ports: PortMonitor
     /// Prompts waiting for a busy session.
-    let replyQueue = ReplyQueue()
+    let replyQueue: ReplyQueue
     private var replyQueueObserver: AnyCancellable?
+    // Each display owns its geometry and interaction; expensive services and decisions are shared.
+    private weak var displayOwner: NotchViewModel?
+    private let otherDisplays = NSHashTable<NotchViewModel>.weakObjects()
+
+    var displays: [NotchViewModel] {
+        if let displayOwner { return displayOwner.displays }
+        return [self] + otherDisplays.allObjects
+    }
+
+    func forEachDisplay(_ action: (NotchViewModel) -> Void) {
+        for display in displays { action(display) }
+    }
+
+    private func refreshDisplays() {
+        forEachDisplay { $0.objectWillChange.send(); $0.recompute() }
+    }
+
+    func updateDisplayServices() {
+        if let displayOwner { displayOwner.updateDisplayServices(); return }
+        updateSharedAnimations()
+    }
+
+    func updatePortWatching() {
+        if !Clock.isVirtual { ports.setWatching(displays.contains { $0.isHovering }) }
+    }
+
+    private func updateSharedAnimations() {
+        updateSpectrum()
+        let canTrack = Bundle.main.bundleURL.pathExtension == "app"
+        head.setActive(canTrack && Preferences.headGestures && displays.contains {
+            $0.presentation == .attention && $0.attentionApproval != nil
+        })
+    }
+
     /// Files are being dragged and the pointer is near the notch.
     @Published var fileDragNear = false {
         didSet { if oldValue != fileDragNear { recompute() } }
@@ -238,7 +272,7 @@ final class NotchViewModel: ObservableObject {
         guard let onNoticeAction else { return nil }
         return { [weak self] in
             onNoticeAction(notice)
-            self?.dismissNotice()
+            self?.forEachDisplay { $0.dismissNotice() }
         }
     }
 
@@ -261,7 +295,7 @@ final class NotchViewModel: ObservableObject {
         didSet {
             guard oldValue != isHovering else { return }
             if isHovering { wakeUp(); noteActivity() }
-            if !Clock.isVirtual { ports.setWatching(isHovering) }
+            updatePortWatching()
             recompute()
             // Looking at the session list for a moment counts as "seen".
             if isHovering, !store.unseen.isEmpty {
@@ -280,19 +314,27 @@ final class NotchViewModel: ObservableObject {
     private var quietWork: DispatchWorkItem?
 
     init(store: SessionStore, media: NowPlaying, approvals: ApprovalCenter? = nil, usage: UsageStore? = nil,
-         pet: NosyPet? = nil, shelf: Shelf? = nil, calendar: CalendarMonitor? = nil) {
+         pet: NosyPet? = nil, shelf: Shelf? = nil, calendar: CalendarMonitor? = nil,
+         sharedWith owner: NotchViewModel? = nil) {
+        self.displayOwner = owner
+        self.spectrum = owner?.spectrum ?? AudioSpectrum()
+        self.head = owner?.head ?? HeadGestures()
+        self.ports = owner?.ports ?? PortMonitor()
+        self.replyQueue = owner?.replyQueue ?? ReplyQueue()
         self.store = store
         self.media = media
         let pet = pet ?? NosyPet(persist: false)
         self.pet = pet
         let shelf = shelf ?? Shelf(persist: false)
         self.shelf = shelf
-        self.calendar = calendar ?? CalendarMonitor()
+        self.calendar = owner?.calendar ?? calendar ?? CalendarMonitor()
         let approvals = approvals ?? ApprovalCenter()
         self.approvals = approvals
         let usage = usage ?? UsageStore(load: false)
         self.usage = usage
-        usage.onChange = { [weak self] in self?.objectWillChange.send() }
+        if owner == nil {
+            usage.onChange = { [weak self] in self?.refreshDisplays() }
+        }
         shelfObserver = shelf.objectWillChange.sink { [weak self] _ in
             DispatchQueue.main.async { MainActor.assumeIsolated { self?.objectWillChange.send() } }
         }
@@ -300,33 +342,36 @@ final class NotchViewModel: ObservableObject {
         replyQueueObserver = replyQueue.objectWillChange.sink { [weak self] _ in
             DispatchQueue.main.async { MainActor.assumeIsolated { self?.objectWillChange.send() } }
         }
-        head.onGesture = { [weak self] gesture in
-            guard let self, let approval = self.attentionApproval else { return }
-            self.decide(approval, gesture == .nod ? .allow : .deny)
-        }
-        media.onChange = { [weak self] in self?.recompute() }
-        focus.onChange = { [weak self] in self?.recompute() }
-        self.calendar.onChange = { [weak self] in
-            self?.objectWillChange.send()
-            self?.recompute()
-        }
-        ports.onChange = { [weak self] in
-            self?.objectWillChange.send()
-            self?.recompute()
-        }
-        if !Clock.isVirtual { ports.setWatching(false) }
-        sleepTimer = Timer.scheduledTimer(withTimeInterval: 15, repeats: true) { [weak self] _ in
-            MainActor.assumeIsolated { self?.updateSleep() }
-        }
-        approvals.onChange = { [weak self] in
-            guard let self else { return }
-            self.objectWillChange.send()   // size depends on whether buttons are shown
-            // A request for a session that was already "waiting" brings no new transition – show it anyway.
-            if self.attention == nil, let approval = approvals.pending.last,
-               let session = self.store.sessions[approval.sessionID] {
-                self.handle(.needsAttention(session))
-            } else {
-                self.recompute()
+        if let owner {
+            owner.otherDisplays.add(self)
+            if let approval = approvals.pending.last, let session = store.sessions[approval.sessionID] {
+                handle(.needsAttention(session))
+            }
+            onNoticeAction = { [weak owner] notice in owner?.onNoticeAction?(notice) }
+        } else {
+            sleepTimer = Timer.scheduledTimer(withTimeInterval: 15, repeats: true) { [weak self] _ in
+                MainActor.assumeIsolated { self?.forEachDisplay { $0.updateSleep() } }
+            }
+            head.onGesture = { [weak self] gesture in
+                guard let display = self?.displays.first(where: { $0.attentionApproval != nil }),
+                      let approval = display.attentionApproval else { return }
+                display.decide(approval, gesture == .nod ? .allow : .deny)
+            }
+            media.onChange = { [weak self] in self?.refreshDisplays() }
+            focus.onChange = { [weak self] in self?.refreshDisplays() }
+            self.calendar.onChange = { [weak self] in self?.refreshDisplays() }
+            ports.onChange = { [weak self] in self?.refreshDisplays() }
+            if !Clock.isVirtual { ports.setWatching(false) }
+            approvals.onChange = { [weak self] in
+                self?.forEachDisplay { display in
+                    display.objectWillChange.send()
+                    if display.attention == nil, let approval = approvals.pending.last,
+                       let session = display.store.sessions[approval.sessionID] {
+                        display.handle(.needsAttention(session))
+                    } else {
+                        display.recompute()
+                    }
+                }
             }
         }
     }
@@ -356,9 +401,9 @@ final class NotchViewModel: ObservableObject {
     }
 
     /// Nothing is running – no agent, no timer, no music, nothing left to look at – so the notch shows the time.
-    /// Only under a real notch: elsewhere it would be a permanent black pill on an empty menu bar.
+    /// External displays use a virtual notch so idle content is available on every screen.
     var showsClock: Bool {
-        guard Clock.isVirtual ? recordsClock : Preferences.clockEnabled, hasPhysicalNotch else { return false }
+        guard Clock.isVirtual ? recordsClock : Preferences.clockEnabled else { return false }
         let musicShown = hasMedia && (media.isPlaying || Preferences.mediaShowWhenPaused)
         return !store.hasActivity && !store.hasWaiting && quietDone == nil && !focus.isRunning && !musicShown
             && store.unseen.isEmpty
@@ -664,12 +709,15 @@ final class NotchViewModel: ObservableObject {
         if let celebration { store.markSeen(celebration.session.id) }
         // ✕ on a permission request: hand it back to the terminal / Codex prompt right away.
         if let approval = attentionApproval { approvals.release(approval.id) }
-        endFlash()
+        forEachDisplay { $0.endFlash() }
     }
 
     func decide(_ approval: PendingApproval, _ decision: ApprovalDecision) {
+        // A second display may still hold the old button while the first click is being rendered.
+        guard approvals.pending.contains(where: { $0.id == approval.id }) else { return }
         approvals.decide(approval.id, decision)
         store.resume(approval.sessionID, allowed: decision != .deny, tool: approval.tool)
+        forEachDisplay { if $0.attention?.id == approval.sessionID { $0.endFlash() } }
         endFlash()
     }
 
@@ -689,11 +737,9 @@ final class NotchViewModel: ObservableObject {
     }
 
     func recompute() {
-        updateSpectrum()
         replyQueue.keep(Set(store.sessions.keys))
         defer {
-            let canTrack = Bundle.main.bundleURL.pathExtension == "app"
-            head.setActive(canTrack && Preferences.headGestures && presentation == .attention && attentionApproval != nil)
+            updateDisplayServices()
         }
         // Attention is over as soon as that session moves on (e.g. permission granted).
         if let a = attention {

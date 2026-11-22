@@ -10,7 +10,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private lazy var shelf = Shelf()
     private lazy var model = NotchViewModel(store: store, media: nowPlaying, approvals: approvals, usage: usage, pet: pet,
                                             shelf: shelf)
-    private var windowController: NotchWindowController?
+    private var windowController: NotchDisplayController?
     private let power = PowerMonitor()
     private let headphones = HeadphoneMonitor()
     private var server: EventServer?
@@ -22,9 +22,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         settingsChanged: { [weak self] in
             if Preferences.bluetoothEnabled { self?.headphones.start() } else { self?.headphones.stop() }
             if Preferences.calendarEnabled { self?.model.calendar.start() } else { self?.model.calendar.stop() }
-            self?.model.ports.setWatching(self?.model.isHovering ?? false)
-            self?.model.objectWillChange.send()
-            self?.model.recompute()
+            self?.model.updatePortWatching()
+            self?.model.forEachDisplay { $0.objectWillChange.send() }
+            self?.model.forEachDisplay { $0.recompute() }
         },
         muteChanged: { [weak self] in self?.updateStatusIcon() },
         pet: pet
@@ -33,24 +33,24 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         Preferences.register()
 
-        store.onChange = { [weak self] in self?.model.recompute() }
+        store.onChange = { [weak self] in self?.model.forEachDisplay { $0.recompute() } }
         store.onTransition = { [weak self] transition in
             self?.feedNosy(transition)
             // Done / needs you while you're looking at that very app (Claude, terminal, Codex …):
             // stay in the small notch, no sound.
             if let session = transition.quietCandidate, Self.isLookingAt(session) {
                 self?.store.markSeen(session.id)
-                self?.model.showQuietly(transition)
+                self?.model.forEachDisplay { $0.showQuietly(transition) }
                 return
             }
-            self?.model.handle(transition)
+            self?.model.forEachDisplay { $0.handle(transition) }
             Notifier.notify(transition)
         }
 
         store.onReminder = { [weak self] transition in
             guard let self, let session = transition.quietCandidate else { return }
             if Self.isLookingAt(session) { return self.store.markSeen(session.id) }
-            self.model.handle(transition)
+            self.model.forEachDisplay { $0.handle(transition) }
             Notifier.remind(transition)
         }
         // Switching to the app a session runs in counts as "seen".
@@ -70,9 +70,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         let upgraded = HookInstaller.upgradeOutdated(port: Preferences.port)
         if !upgraded.isEmpty { NSLog("NosyNotch: updated hooks in \(upgraded.map(\.path))") }
 
-        windowController = NotchWindowController(model: model)
+        windowController = NotchDisplayController(model: model)
         FocusTimer.shared.onFinished = { [weak self] phase, minutes in
-            self?.model.showNotice(.timerDone(wasFocus: phase == .focus, minutes: minutes))
+            self?.model.forEachDisplay { $0.showNotice(.timerDone(wasFocus: phase == .focus, minutes: minutes)) }
             if !Preferences.isMuted, let sound = NSSound(named: "Glass") { sound.play() }
         }
         model.onNoticeAction = { notice in
@@ -82,18 +82,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             default: break
             }
         }
-        model.calendar.onNotice = { [weak self] in self?.model.showNotice($0) }
+        model.calendar.onNotice = { [weak self] notice in self?.model.forEachDisplay { $0.showNotice(notice) } }
         model.calendar.start()
-        power.onNotice = { [weak self] in self?.model.showNotice($0) }
+        power.onNotice = { [weak self] notice in self?.model.forEachDisplay { $0.showNotice(notice) } }
         power.start()
-        headphones.onNotice = { [weak self] in self?.model.showNotice($0) }
+        headphones.onNotice = { [weak self] notice in self?.model.forEachDisplay { $0.showNotice(notice) } }
         headphones.start()
         startServer()
         setUpStatusItem()
         Notifier.requestAuthorizationIfNeeded()
         usage.onContext = { [weak self] id, percent in self?.store.setContext(id, percent: percent) }
         usage.onReset = { [weak self] agent, window in
-            self?.model.showLimitReset(agent: agent, window: window)
+            self?.model.forEachDisplay { $0.showLimitReset(agent: agent, window: window) }
             Notifier.limitReset(agent: agent, window: window)
         }
         usage.checkResets()
@@ -112,10 +112,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
               !session.id.hasPrefix("demo-") else { return }
         let locked = NosyAccessory.allCases.filter { !pet.isUnlocked($0) }
         if let level = pet.feed(duration: session.lastTurnDuration) {
-            model.celebrateLevel(level)
+            model.forEachDisplay { $0.celebrateLevel(level) }
         }
         if let earned = locked.first(where: { pet.isUnlocked($0) }) {
-            model.celebrateUnlock(earned)
+            model.forEachDisplay { $0.celebrateUnlock(earned) }
         }
     }
 
